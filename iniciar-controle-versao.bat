@@ -93,7 +93,18 @@ if not errorlevel 1 (
     goto end
 )
 
-echo ❌ Nenhum gerenciador de pacotes encontrado (npm, pnpm, yarn)!
+echo ❌ Nenhum gerenciador de pacotes encontrado!
+echo 📦 Instale: npm, yarn ou pnpm
 pause
+goto end
+
+:open_folder
+echo.
+echo 📁 Abrindo pasta do projeto...
+start .
+goto end
 
 :end
+echo.
+echo 👋 Obrigado por usar o sistema!
+echo.
