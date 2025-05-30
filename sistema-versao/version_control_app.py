@@ -19,7 +19,7 @@ from git_commands import GitCommands
 from project_commands import ProjectCommands
 from gui_components import (
     StatusBar, CommitsList, SaveVersionPanel, BranchesList, 
-    ProjectControlPanel, ConfigDialog, StatsDialog, CommitDetailsDialog
+    ProjectControlPanel, VercelControlPanel, ConfigDialog, StatsDialog, CommitDetailsDialog
 )
 
 
@@ -103,7 +103,11 @@ class VersionControlApp:
         
         # Controle do projeto
         self.project_panel = ProjectControlPanel(right_frame)
-        self.project_panel.grid(row=2, column=0, sticky=(tk.W, tk.E))
+        self.project_panel.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        # Controle da Vercel
+        self.vercel_panel = VercelControlPanel(right_frame)
+        self.vercel_panel.grid(row=3, column=0, sticky=(tk.W, tk.E))
         
         # Configurar grid weights
         self.root.columnconfigure(0, weight=1)
@@ -169,12 +173,21 @@ class VersionControlApp:
         self.project_panel.browser_btn.config(command=self.open_browser)
         self.project_panel.config_btn.config(command=self.show_config)
         self.project_panel.stats_btn.config(command=self.show_stats)
+        
+        # Vercel panel
+        self.vercel_panel.install_btn.config(command=self.install_vercel_cli)
+        self.vercel_panel.login_btn.config(command=self.vercel_login)
+        self.vercel_panel.preview_btn.config(command=self.vercel_deploy_preview)
+        self.vercel_panel.production_btn.config(command=self.vercel_deploy_production)
+        self.vercel_panel.dashboard_btn.config(command=self.open_vercel_dashboard)
+        self.vercel_panel.config_btn.config(command=self.create_vercel_config)
     
     def refresh_all(self):
         """Atualiza todos os dados"""
         self.refresh_commits()
         self.refresh_status()
         self.refresh_branches()
+        self.refresh_vercel_status()
         self.update_status_bar()
     
     def refresh_commits(self):
@@ -191,6 +204,11 @@ class VersionControlApp:
         """Atualiza lista de branches"""
         branches, current = self.git.get_branches()
         self.branches_list.load_branches(branches)
+    
+    def refresh_vercel_status(self):
+        """Atualiza status da Vercel"""
+        vercel_cli_installed = self.project.check_vercel_cli()
+        self.vercel_panel.update_status(vercel_cli_installed)
     
     def update_status_bar(self):
         """Atualiza barra de status"""
@@ -436,6 +454,88 @@ class VersionControlApp:
         
         dialog = StatsDialog(self.root, stats_data)
         dialog.show()
+    
+    # ========== AÇÕES DA VERCEL ==========
+    
+    def install_vercel_cli(self):
+        """Instala Vercel CLI"""
+        def install_in_thread():
+            success, result = self.project.install_vercel_cli()
+            self.root.after(0, lambda: self.on_vercel_install_complete(success, result))
+        
+        threading.Thread(target=install_in_thread, daemon=True).start()
+    
+    def on_vercel_install_complete(self, success, result):
+        """Callback da instalação da Vercel CLI"""
+        if success:
+            messagebox.showinfo("Sucesso", f"✅ {result}")
+            self.refresh_vercel_status()
+        else:
+            messagebox.showerror("Erro", f"❌ {result}")
+    
+    def vercel_login(self):
+        """Faz login na Vercel"""
+        success, result = self.project.vercel_login()
+        if success:
+            messagebox.showinfo("Vercel Login", f"✅ {result}\n\n🌐 Complete o login no navegador que abriu.")
+        else:
+            messagebox.showerror("Erro", f"❌ {result}")
+    
+    def vercel_deploy_preview(self):
+        """Deploy de preview na Vercel"""
+        if messagebox.askyesno("Deploy Preview", 
+                              "🔍 Fazer deploy de PREVIEW na Vercel?\n\n" +
+                              "Este será um deploy de teste que não afeta a produção."):
+            success, result = self.project.vercel_deploy(production=False)
+            if success:
+                messagebox.showinfo("Deploy Iniciado", f"✅ {result}\n\n" +
+                                  "📋 Acompanhe o progresso na janela de console que abriu.")
+            else:
+                messagebox.showerror("Erro", f"❌ {result}")
+    
+    def vercel_deploy_production(self):
+        """Deploy de produção na Vercel"""
+        confirm = messagebox.askyesno("Deploy Produção", 
+                                    "🌐 Fazer deploy de PRODUÇÃO na Vercel?\n\n" +
+                                    "⚠️ ATENÇÃO: Este deploy irá para o site principal!\n" +
+                                    "Certifique-se de que tudo está funcionando corretamente.",
+                                    icon='warning')
+        
+        if confirm:
+            # Segunda confirmação para produção
+            final_confirm = messagebox.askyesno("Confirmação Final", 
+                                              "Tem certeza ABSOLUTA?\n\n" +
+                                              "🚨 Este deploy irá SUBSTITUIR o site em produção!",
+                                              icon='warning')
+            
+            if final_confirm:
+                success, result = self.project.vercel_deploy(production=True)
+                if success:
+                    messagebox.showinfo("Deploy Produção Iniciado", f"✅ {result}\n\n" +
+                                      "📋 Acompanhe o progresso na janela de console.")
+                else:
+                    messagebox.showerror("Erro", f"❌ {result}")
+    
+    def open_vercel_dashboard(self):
+        """Abre dashboard da Vercel"""
+        success, result = self.project.open_vercel_dashboard()
+        if not success:
+            messagebox.showerror("Erro", f"❌ {result}")
+    
+    def create_vercel_config(self):
+        """Cria configuração da Vercel"""
+        if self.project.check_vercel_config():
+            if not messagebox.askyesno("Arquivo Existe", 
+                                     "Já existe um arquivo vercel.json.\n\n" +
+                                     "Deseja sobrescrever?"):
+                return
+        
+        success, result = self.project.create_vercel_config()
+        if success:
+            messagebox.showinfo("Sucesso", f"✅ {result}\n\n" +
+                              "📁 Arquivo vercel.json criado no projeto.")
+        else:
+            messagebox.showerror("Erro", f"❌ {result}")
     
     # ========== AUTO FUNÇÕES ==========
     

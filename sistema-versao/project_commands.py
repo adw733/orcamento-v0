@@ -8,6 +8,7 @@ Gerencia comandos específicos do projeto (npm, dev server, etc.)
 import subprocess
 import os
 import webbrowser
+import json
 
 
 class ProjectCommands:
@@ -145,6 +146,133 @@ class ProjectCommands:
         status = {
             'package_json': self.check_package_json(),
             'node_modules': os.path.exists(os.path.join(self.project_path, 'node_modules')),
-            'available_commands': self.get_available_commands()
+            'available_commands': self.get_available_commands(),
+            'vercel_cli': self.check_vercel_cli()
         }
         return status
+    
+    def check_vercel_cli(self):
+        """Verifica se Vercel CLI está instalado"""
+        try:
+            result = subprocess.run('vercel --version', shell=True, 
+                                  capture_output=True, check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
+    
+    def install_vercel_cli(self):
+        """Instala Vercel CLI globalmente"""
+        commands = ['npm install -g vercel', 'yarn global add vercel', 'pnpm add -g vercel']
+        
+        for cmd in commands:
+            manager = cmd.split()[0]
+            try:
+                # Verificar se o gerenciador existe
+                subprocess.run(f'{manager} --version', shell=True, 
+                             capture_output=True, check=True)
+                
+                # Instalar Vercel CLI
+                success, output, error = self.run_command(cmd)
+                if success:
+                    return True, f"Vercel CLI instalado com {manager}"
+                    
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                continue
+        
+        return False, "Nenhum gerenciador de pacotes encontrado para instalar Vercel CLI"
+    
+    def vercel_login(self):
+        """Faz login na Vercel"""
+        if not self.check_vercel_cli():
+            return False, "Vercel CLI não está instalado"
+        
+        try:
+            os.chdir(self.project_path)
+            # Usar subprocess.Popen para abrir em nova janela
+            process = subprocess.Popen(
+                'vercel login',
+                shell=True,
+                creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+            )
+            return True, "Abrindo login da Vercel..."
+        except Exception as e:
+            return False, f"Erro ao fazer login: {e}"
+    
+    def vercel_deploy(self, production=False):
+        """Faz deploy para Vercel"""
+        if not self.check_vercel_cli():
+            return False, "Vercel CLI não está instalado"
+        
+        try:
+            os.chdir(self.project_path)
+            
+            if production:
+                command = 'vercel --prod'
+                deploy_type = "produção"
+            else:
+                command = 'vercel'
+                deploy_type = "preview"
+            
+            # Executar deploy em nova janela de console
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+            )
+            
+            return True, f"Deploy de {deploy_type} iniciado! Acompanhe no console..."
+            
+        except Exception as e:
+            return False, f"Erro no deploy: {e}"
+    
+    def get_vercel_projects(self):
+        """Obtém lista de projetos na Vercel"""
+        if not self.check_vercel_cli():
+            return False, "Vercel CLI não está instalado", []
+        
+        try:
+            os.chdir(self.project_path)
+            success, output, error = self.run_command('vercel ls --format json')
+            
+            if success:
+                try:
+                    projects = json.loads(output)
+                    return True, "Projetos obtidos", projects
+                except json.JSONDecodeError:
+                    return False, "Erro ao processar lista de projetos", []
+            else:
+                return False, f"Erro: {error}", []
+                
+        except Exception as e:
+            return False, f"Erro: {e}", []
+    
+    def open_vercel_dashboard(self):
+        """Abre dashboard da Vercel"""
+        try:
+            webbrowser.open("https://vercel.com/dashboard")
+            return True, "Abrindo dashboard da Vercel"
+        except Exception as e:
+            return False, f"Erro ao abrir dashboard: {e}"
+    
+    def check_vercel_config(self):
+        """Verifica se existe configuração da Vercel"""
+        vercel_json = os.path.join(self.project_path, 'vercel.json')
+        return os.path.exists(vercel_json)
+    
+    def create_vercel_config(self):
+        """Cria configuração básica da Vercel para Next.js"""
+        vercel_config = {
+            "buildCommand": "npm run build",
+            "outputDirectory": ".next",
+            "devCommand": "npm run dev",
+            "installCommand": "npm install",
+            "framework": "nextjs"
+        }
+        
+        try:
+            vercel_json_path = os.path.join(self.project_path, 'vercel.json')
+            with open(vercel_json_path, 'w', encoding='utf-8') as f:
+                json.dump(vercel_config, f, indent=2)
+            return True, "Arquivo vercel.json criado"
+        except Exception as e:
+            return False, f"Erro ao criar vercel.json: {e}"

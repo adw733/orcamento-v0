@@ -765,6 +765,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         // Converter para o formato da aplicação
         const clientesFormatados: Cliente[] = clientesData.map((cliente) => ({
           id: cliente.id,
+          codigo: cliente.codigo || "",
           nome: cliente.nome,
           cnpj: cliente.cnpj || "",
           endereco: cliente.endereco || "",

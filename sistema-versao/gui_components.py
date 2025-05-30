@@ -344,6 +344,71 @@ class ProjectControlPanel:
         self.frame.grid(**kwargs)
 
 
+class VercelControlPanel:
+    """Painel de controle da Vercel"""
+    
+    def __init__(self, parent):
+        self.frame = ttk.LabelFrame(parent, text="🚀 Deploy Vercel", padding="10")
+        
+        # Status da Vercel
+        self.status_frame = ttk.Frame(self.frame)
+        self.status_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        self.status_label = ttk.Label(self.status_frame, text="📡 Verificando Vercel CLI...")
+        self.status_label.pack(side=tk.LEFT)
+        
+        # Primeira linha - Setup
+        row1 = ttk.Frame(self.frame)
+        row1.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        
+        self.install_btn = ttk.Button(row1, text="📦 Instalar CLI", width=12)
+        self.login_btn = ttk.Button(row1, text="🔑 Login", width=12)
+        
+        self.install_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.login_btn.pack(side=tk.LEFT)
+        
+        # Segunda linha - Deploy
+        row2 = ttk.Frame(self.frame)
+        row2.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        
+        self.preview_btn = ttk.Button(row2, text="🔍 Preview", width=12)
+        self.production_btn = ttk.Button(row2, text="🌐 Produção", width=12)
+        
+        self.preview_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.production_btn.pack(side=tk.LEFT)
+        
+        # Terceira linha - Utilitários
+        row3 = ttk.Frame(self.frame)
+        row3.grid(row=3, column=0, sticky=(tk.W, tk.E))
+        
+        self.dashboard_btn = ttk.Button(row3, text="📊 Dashboard", width=12)
+        self.config_btn = ttk.Button(row3, text="⚙️ Config", width=12)
+        
+        self.dashboard_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.config_btn.pack(side=tk.LEFT)
+        
+        # Configure grid
+        self.frame.columnconfigure(0, weight=1)
+    
+    def update_status(self, vercel_cli_installed):
+        """Atualiza status da Vercel CLI"""
+        if vercel_cli_installed:
+            self.status_label.config(text="✅ Vercel CLI instalado", foreground='green')
+            self.install_btn.config(state='disabled')
+            self.login_btn.config(state='normal')
+            self.preview_btn.config(state='normal')
+            self.production_btn.config(state='normal')
+        else:
+            self.status_label.config(text="❌ Vercel CLI não instalado", foreground='red')
+            self.install_btn.config(state='normal')
+            self.login_btn.config(state='disabled')
+            self.preview_btn.config(state='disabled')
+            self.production_btn.config(state='disabled')
+    
+    def grid(self, **kwargs):
+        self.frame.grid(**kwargs)
+
+
 class ModalDialog:
     """Classe base para diálogos modais"""
     

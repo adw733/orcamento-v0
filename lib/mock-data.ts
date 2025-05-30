@@ -4,21 +4,21 @@ import type { Cliente, Produto, Tecido } from "@/types/types"
 export const mockClientes: Cliente[] = [
   {
     id: "123e4567-e89b-12d3-a456-426614174000",
-    nome: "Indústria Modelo Ltda",
+    codigo: "C0001",
+    nome: "INDÚSTRIA MODELO LTDA",
     cnpj: "12.345.678/0001-90",
-    endereco: "Av. Industrial, 1000 - São Paulo/SP",
+    endereco: "AV. INDUSTRIAL, 1000 - SÃO PAULO/SP",
     telefone: "(11) 3456-7890",
-    email: "contato@industriamodelo.com.br",
-    contato: "João Silva",
+    email: "CONTATO@INDUSTRIAMODELO.COM.BR",
   },
   {
     id: "223e4567-e89b-12d3-a456-426614174001",
-    nome: "Construtora Progresso S/A",
+    codigo: "C0002",
+    nome: "CONSTRUTORA PROGRESSO S/A",
     cnpj: "98.765.432/0001-21",
-    endereco: "Rua das Obras, 500 - Rio de Janeiro/RJ",
+    endereco: "RUA DAS OBRAS, 500 - RIO DE JANEIRO/RJ",
     telefone: "(21) 2345-6789",
-    email: "contato@construtoraprogresso.com.br",
-    contato: "Maria Oliveira",
+    email: "CONTATO@CONSTRUTORAPROGRESSO.COM.BR",
   },
 ]
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -1492,7 +1492,7 @@ export default function TabelaProdutos() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
+                  <TableRow key="loading-row">
                     <TableCell colSpan={8} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="flex justify-center items-center py-8">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1500,7 +1500,7 @@ export default function TabelaProdutos() {
                     </TableCell>
                   </TableRow>
                 ) : produtosFiltrados.length === 0 ? (
-                  <TableRow>
+                  <TableRow key="empty-row">
                     <TableCell colSpan={8} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="text-center py-8 bg-accent/30 rounded-lg">
                         <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
@@ -1515,10 +1515,10 @@ export default function TabelaProdutos() {
                   </TableRow>
                 ) : (
                   produtosFiltrados.map((produto, index) => (
-                    <>
+                    <React.Fragment key={`fragment-${produto.id}`}>
                       {/* Separador entre orçamentos diferentes ou produtos diferentes, dependendo do modo */}
                       {isNovoOrcamento(index) && index > 0 && (
-                        <TableRow>
+                        <TableRow key={`separator-orcamento-${produto.id}-${index}`}>
                           <TableCell colSpan={8} className="p-0 h-2 bg-gray-100">
                             <div className="border-t-2 border-gray-200"></div>
                           </TableCell>
@@ -1527,7 +1527,7 @@ export default function TabelaProdutos() {
 
                       {/* Separador entre produtos diferentes do mesmo orçamento ou orçamentos diferentes do mesmo produto */}
                       {isNovoProduto(index) && index > 0 && !isNovoOrcamento(index) && (
-                        <TableRow>
+                        <TableRow key={`separator-produto-${produto.id}-${index}`}>
                           <TableCell colSpan={8} className="p-0 h-0.5">
                             <div className="border-t-2 border-gray-300"></div>
                           </TableCell>
@@ -1588,7 +1588,7 @@ export default function TabelaProdutos() {
                           </>
                         )}
                       </TableRow>
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </TableBody>

@@ -195,7 +195,7 @@ export default function GerenciadorClientes({ clientes, adicionarCliente, setCli
     const carregarClientes = async () => {
       try {
         setIsLoading(true)
-        const { data, error } = await supabase.from("clientes").select("*").order("nome")
+        const { data, error } = await supabase.from("clientes").select("id, codigo, nome, cnpj, endereco, telefone, email").order("nome")
 
         if (error) {
           console.warn("Erro ao carregar clientes do Supabase, usando dados mock:", error)
@@ -213,7 +213,6 @@ export default function GerenciadorClientes({ clientes, adicionarCliente, setCli
             endereco: cliente.endereco || "",
             telefone: cliente.telefone || "",
             email: cliente.email || "",
-            contato: cliente.contato || "",
           }))
 
           setClientes(clientesFormatados)
@@ -690,7 +689,7 @@ export default function GerenciadorClientes({ clientes, adicionarCliente, setCli
                       </TableCell>
                     ) : (
                       <>
-                        <TableCell className="font-medium">{cliente.codigo || "-"}</TableCell>
+                        <TableCell className="font-medium">{clienteSeguro.codigo || "-"}</TableCell>
                         <TableCell>{clienteSeguro.nome}</TableCell>
                         <TableCell className="hidden md:table-cell">{clienteSeguro.cnpj}</TableCell>
                         <TableCell className="hidden md:table-cell">{clienteSeguro.telefone}</TableCell>
