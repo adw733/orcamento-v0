@@ -1,0 +1,12 @@
+{
+  "user_name": "Usuario",
+  "user_email": "usuario@local",
+  "auto_backup": true,
+  "commit_templates": [
+    "feat: nova funcionalidade",
+    "fix: correção de bug",
+    "refactor: melhoria de código",
+    "style: ajustes visuais",
+    "docs: atualização documentação"
+  ]
+}
