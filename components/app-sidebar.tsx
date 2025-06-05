@@ -80,10 +80,10 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
           {expandido ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
 
-        <div className="h-16 border-b border-gray-200 flex items-center px-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary p-2 rounded-md">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <div className="h-12 border-b border-gray-200 flex items-center px-3">
+          <div className="flex items-center gap-2">
+            <div className="bg-primary p-1.5 rounded-md">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z"
                   fill="white"
@@ -106,26 +106,26 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
             </div>
             {expandido && (
               <div>
-                <h1 className="text-lg font-bold text-primary tracking-tight">ONEBASE</h1>
+                <h1 className="text-base font-bold text-primary tracking-tight">ONEBASE</h1>
                 <p className="text-xs text-gray-500">Uniformes Industriais</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-6">
+        <div className="flex-1 overflow-y-auto p-2">
+          <div className="mb-4">
             {expandido ? (
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Orçamentos</h2>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Orçamentos</h2>
             ) : (
-              <div className="flex justify-center mb-3">
-                <FileText className="h-5 w-5 text-gray-500" />
+              <div className="flex justify-center mb-2">
+                <FileText className="h-4 w-4 text-gray-500" />
               </div>
             )}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Button
                 variant="ghost"
-                className={`w-full ${expandido ? "justify-start" : "justify-center"}`}
+                className={`w-full h-8 ${expandido ? "justify-start text-xs" : "justify-center"}`}
                 onClick={() => {
                   criarNovoOrcamento()
                   handleMenuItemClick("orcamento")
@@ -137,33 +137,33 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
 
               <button
                 onClick={() => handleMenuItemClick("orcamento")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "orcamento" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <FileText className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <FileText className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Edição Orçamento</span>}
               </button>
 
               <button
                 onClick={() => handleMenuItemClick("orcamentos")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "orcamentos" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <Save className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <Save className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Orçamentos Salvos</span>}
               </button>
 
               <button
                 onClick={() => handleMenuItemClick("produtos-tabela")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "produtos-tabela"
                     ? "bg-primary text-white font-medium"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <Table className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <Table className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Tabela de Produtos</span>}
               </button>
             </div>
@@ -171,50 +171,50 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
 
           <div>
             {expandido ? (
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Cadastros</h2>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Cadastros</h2>
             ) : (
-              <div className="flex justify-center mb-3">
-                <Users className="h-5 w-5 text-gray-500" />
+              <div className="flex justify-center mb-2">
+                <Users className="h-4 w-4 text-gray-500" />
               </div>
             )}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <button
                 onClick={() => handleMenuItemClick("clientes")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "clientes" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <Users className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <Users className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Clientes</span>}
               </button>
 
               <button
                 onClick={() => handleMenuItemClick("produtos")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "produtos" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <ShoppingBag className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <ShoppingBag className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Produtos</span>}
               </button>
 
               <button
                 onClick={() => handleMenuItemClick("materiais")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "materiais" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <Palette className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <Palette className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Materiais</span>}
               </button>
 
               <button
                 onClick={() => handleMenuItemClick("lixeira")}
-                className={`w-full flex items-center ${expandido ? "px-3" : "justify-center px-2"} py-2.5 text-sm rounded-md transition-colors ${
+                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
                   abaAtiva === "lixeira" ? "bg-red-500 text-white font-medium" : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                <Trash2 className={`h-5 w-5 ${expandido ? "mr-3" : ""}`} />
+                <Trash2 className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
                 {expandido && <span>Lixeira</span>}
               </button>
             </div>

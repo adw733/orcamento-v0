@@ -113,7 +113,27 @@ body {
 @media (max-width: 768px) {
   /* Adjust padding and margins for mobile */
   .p-6 {
-    padding: 1rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  .p-4 {
+    padding: 0.5rem !important;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 0.75rem !important;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.5rem !important;
+  }
+  
+  .gap-6 {
+    gap: 0.75rem !important;
+  }
+  
+  .gap-4 {
+    gap: 0.5rem !important;
   }
 
   /* Make sure text doesn't overflow on small screens */
@@ -138,11 +158,11 @@ body {
     font-size: 0.75rem !important;
   }
 
-  /* Ensure buttons have enough touch area */
+  /* Ensure buttons have enough touch area but more compact */
   button,
   .button,
   [role="button"] {
-    min-height: 2.5rem;
+    min-height: 2rem;
   }
 
   /* Fix for mobile dialogs */
@@ -156,11 +176,53 @@ body {
   textarea {
     font-size: 16px !important; /* Prevents iOS zoom on focus */
   }
+  
+  /* Make cards more compact */
+  .card {
+    padding: 0.5rem !important;
+  }
+  
+  /* Reduce header heights */
+  .h-16 {
+    height: 3rem !important;
+  }
+  
+  .h-12 {
+    height: 2.5rem !important;
+  }
 }
 
 /* Fix for mobile Safari bottom bar */
 @supports (-webkit-touch-callout: none) {
-  .h-screen, .h-\[calc$$100vh-4rem$$\] {
+  .h-screen, .h-\[calc$100vh-4rem$\], .h-\[calc$100vh-2rem$\] {
     height: -webkit-fill-available;
+  }
+}
+
+/* Global compact utilities */
+.compact {
+  @apply space-y-2;
+}
+
+.compact > * {
+  @apply py-1;
+}
+
+/* Responsive spacing utilities */
+@layer utilities {
+  .space-y-responsive > * + * {
+    @apply mt-2 md:mt-4;
+  }
+  
+  .gap-responsive {
+    @apply gap-2 md:gap-4;
+  }
+  
+  .p-responsive {
+    @apply p-2 md:p-4;
+  }
+  
+  .text-responsive {
+    @apply text-xs md:text-sm;
   }
 }

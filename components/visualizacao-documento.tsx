@@ -1158,9 +1158,9 @@ export default function VisualizacaoDocumento({
 
                 {item.observacaoTecnica && (
                   <div>
-                    <h4 className="font-bold mb-2 text-primary">Observações Técnicas</h4>
+                    <h4 className="font-bold mb-1 md:mb-2 text-primary text-sm md:text-base">Observações Técnicas</h4>
                     <p
-                      className="text-sm bg-accent p-3 rounded-md pdf-observacoes-tecnica"
+                      className="text-xs md:text-sm bg-accent p-2 md:p-3 rounded-md pdf-observacoes-tecnica"
                       style={{ whiteSpace: "pre-wrap" }}
                     >
                       {item.observacaoTecnica}

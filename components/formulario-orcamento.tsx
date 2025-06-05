@@ -789,13 +789,13 @@ export default function FormularioOrcamento({
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-full mx-auto space-y-2">
       {isLoading && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 backdrop-blur-sm">
-          <Card className="p-6 shadow-xl">
-            <div className="flex items-center gap-4">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="text-lg font-medium">Processando...</span>
+          <Card className="p-3 shadow-xl">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-sm font-medium">Processando...</span>
             </div>
           </Card>
         </div>
@@ -803,34 +803,34 @@ export default function FormularioOrcamento({
 
       {errorMessage && (
         <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-2">
+            <div className="flex items-center gap-2">
               <div className="h-2 w-2 bg-red-500 rounded-full"></div>
-              <p className="text-red-700 font-medium">{errorMessage}</p>
+              <p className="text-red-700 text-xs md:text-sm font-medium">{errorMessage}</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Header com informações básicas - layout horizontal */}
-      <Card className="border-primary/20 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
+      {/* Header com informações básicas - layout horizontal compacto */}
+      <Card className="border-primary/20 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="h-6 w-6 text-primary" />
-              <CardTitle className="text-xl text-primary">Informações do Orçamento</CardTitle>
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm md:text-base text-primary">Orçamento</CardTitle>
             </div>
-            <Badge className={`${getStatusColor(orcamento.status || "5")} font-medium px-3 py-1`}>
+            <Badge className={`${getStatusColor(orcamento.status || "5")} text-xs px-1.5 py-0.5`}>
               {getStatusText(orcamento.status || "5")}
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4 text-primary" />
-                <Label className="text-primary font-medium">Número</Label>
+        <CardContent className="p-2 md:p-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <Hash className="h-3 w-3 text-primary" />
+                <Label className="text-primary text-xs font-medium">Número</Label>
               </div>
               <Input
                 value={orcamento.numero.split(" - ")[0]}
@@ -843,34 +843,34 @@ export default function FormularioOrcamento({
                     atualizarOrcamento({ numero: numeroAtual })
                   }
                 }}
-                className="h-10 font-mono text-center font-bold text-primary"
+                className="h-7 font-mono text-center text-xs md:text-sm font-bold text-primary"
                 placeholder="0000"
               />
             </div>
             
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <Label className="text-primary font-medium">Data</Label>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-primary" />
+                <Label className="text-primary text-xs font-medium">Data</Label>
               </div>
               <Input
                 type="date"
                 value={orcamento.data}
                 onChange={(e) => atualizarOrcamento({ data: e.target.value })}
-                className="h-10"
+                className="h-7 text-xs md:text-sm"
               />
             </div>
             
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" />
-                <Label className="text-primary font-medium">Status</Label>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <Building2 className="h-3 w-3 text-primary" />
+                <Label className="text-primary text-xs font-medium">Status</Label>
               </div>
               <Select
                 value={orcamento.status || "5"}
                 onValueChange={(value) => atualizarOrcamento({ status: value })}
               >
-                <SelectTrigger className="h-10">
+                <SelectTrigger className="h-7 text-xs md:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -883,13 +883,29 @@ export default function FormularioOrcamento({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-primary" />
-                <Label className="text-primary font-medium">Total</Label>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-primary" />
+                <Label className="text-primary text-xs font-medium">Frete</Label>
               </div>
-              <div className="h-10 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-md flex items-center justify-center">
-                <span className="font-bold text-lg text-green-700">
+              <Input
+                type="number"
+                value={orcamento.valorFrete || ""}
+                onChange={(e) => atualizarOrcamento({ valorFrete: e.target.value ? Number(e.target.value) : undefined })}
+                className="h-7 text-xs md:text-sm text-center"
+                placeholder="0,00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-green-600" />
+                <Label className="text-green-600 text-xs font-medium">Total</Label>
+              </div>
+              <div className="h-7 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-md flex items-center justify-center">
+                <span className="font-bold text-xs md:text-sm text-green-700">
                   R$ {(calcularTotal() + (orcamento.valorFrete || 0)).toFixed(2)}
                 </span>
               </div>
@@ -899,24 +915,24 @@ export default function FormularioOrcamento({
       </Card>
 
       {/* Grid principal com três colunas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         
         {/* Coluna da esquerda - Informações do cliente e condições */}
-        <div className="space-y-6">
+        <div className="space-y-3">
           
           {/* Cliente */}
-          <Card className="border-blue-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b">
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-lg text-blue-800">Cliente</CardTitle>
+          <Card className="border-blue-200 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b py-2">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-blue-600" />
+                <CardTitle className="text-sm md:text-base text-blue-800">Cliente</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-3 space-y-3">
               <div>
-                <Label className="text-blue-700 font-medium mb-2 block">Selecione o Cliente</Label>
+                <Label className="text-blue-700 font-medium mb-1 block text-xs">Selecione o Cliente</Label>
                 <Select value={orcamento.cliente?.id || ""} onValueChange={handleClienteChange}>
-                  <SelectTrigger className="h-10">
+                  <SelectTrigger className="h-8 text-xs md:text-sm">
                     <SelectValue placeholder="Escolha um cliente..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -932,22 +948,22 @@ export default function FormularioOrcamento({
                 </Select>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-blue-700 font-medium mb-2 block">Nome do Contato</Label>
+                  <Label className="text-blue-700 font-medium mb-1 block text-xs">Nome do Contato</Label>
                   <Input
                     value={orcamento.nomeContato || ""}
                     onChange={(e) => atualizarOrcamento({ nomeContato: e.target.value })}
-                    className="h-9"
+                    className="h-7 text-xs md:text-sm"
                     placeholder="Nome da pessoa"
                   />
                 </div>
                 <div>
-                  <Label className="text-blue-700 font-medium mb-2 block">Telefone</Label>
+                  <Label className="text-blue-700 font-medium mb-1 block text-xs">Telefone</Label>
                   <Input
                     value={orcamento.telefoneContato || ""}
                     onChange={(e) => atualizarOrcamento({ telefoneContato: e.target.value })}
-                    className="h-9"
+                    className="h-7 text-xs md:text-sm"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
@@ -956,38 +972,38 @@ export default function FormularioOrcamento({
           </Card>
 
           {/* Condições Comerciais */}
-          <Card className="border-green-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b">
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-lg text-green-800">Condições Comerciais</CardTitle>
+          <Card className="border-green-200 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b py-2">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-green-600" />
+                <CardTitle className="text-sm md:text-base text-green-800">Condições Comerciais</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-3 space-y-3">
               <div>
-                <Label className="text-green-700 font-medium mb-2 block">Condições de Pagamento</Label>
+                <Label className="text-green-700 font-medium mb-1 block text-xs">Condições de Pagamento</Label>
                 <Input
                   value={orcamento.condicoesPagamento}
                   onChange={(e) => handleTextUppercase(e, "condicoesPagamento")}
-                  className="h-9 font-medium"
+                  className="h-7 font-medium text-xs md:text-sm"
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-green-700 font-medium mb-2 block">Prazo de Entrega</Label>
+                  <Label className="text-green-700 font-medium mb-1 block text-xs">Prazo de Entrega</Label>
                   <Input
                     value={orcamento.prazoEntrega}
                     onChange={(e) => handleTextUppercase(e, "prazoEntrega")}
-                    className="h-9"
+                    className="h-7 text-xs md:text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-green-700 font-medium mb-2 block">Validade</Label>
+                  <Label className="text-green-700 font-medium mb-1 block text-xs">Validade</Label>
                   <Input
                     value={orcamento.validadeOrcamento}
                     onChange={(e) => handleTextUppercase(e, "validadeOrcamento")}
-                    className="h-9"
+                    className="h-7 text-xs md:text-sm"
                   />
                 </div>
               </div>
@@ -995,21 +1011,21 @@ export default function FormularioOrcamento({
           </Card>
 
           {/* Observações */}
-          <Card className="border-gray-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-gray-600" />
-                <CardTitle className="text-lg text-gray-800">Observações</CardTitle>
+          <Card className="border-gray-200 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b py-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-gray-600" />
+                <CardTitle className="text-sm md:text-base text-gray-800">Observações</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-3">
               <div>
-                <Label className="text-gray-700 font-medium mb-2 block">Observações Gerais</Label>
+                <Label className="text-gray-700 font-medium mb-1 block text-xs">Observações Gerais</Label>
                 <Textarea
                   value={orcamento.observacoes}
                   onChange={(e) => atualizarOrcamento({ observacoes: e.target.value })}
-                  rows={4}
-                  className="resize-none"
+                  rows={3}
+                  className="resize-none text-xs md:text-sm"
                   placeholder="Adicione observações relevantes para o orçamento..."
                 />
               </div>
@@ -1019,16 +1035,16 @@ export default function FormularioOrcamento({
 
         {/* Coluna da direita - Itens do orçamento */}
         <div className="lg:col-span-2">
-          <Card className="border-purple-200 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b">
+          <Card className="border-purple-200 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b py-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Shirt className="h-5 w-5 text-purple-600" />
-                  <CardTitle className="text-lg text-purple-800">Itens do Orçamento</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Shirt className="h-4 w-4 text-purple-600" />
+                  <CardTitle className="text-sm md:text-base text-purple-800">Itens do Orçamento</CardTitle>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-purple-600">
+                <div className="flex items-center gap-1 text-xs text-purple-600">
                   <span className="animate-bounce">🔄</span>
-                  <span>Arraste para reordenar</span>
+                  <span className="hidden md:inline">Arraste para reordenar</span>
                 </div>
               </div>
             </CardHeader>
@@ -1038,14 +1054,14 @@ export default function FormularioOrcamento({
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px]">
                   <thead className="bg-primary text-white">
-                    <tr>
-                      <th className="p-2 md:p-3 w-[5%] rounded-tl-md"></th>
-                      <th className="text-left p-2 md:p-3 w-[40%]">Produto</th>
-                      <th className="text-center p-2 md:p-3 w-[15%]">Valor Unit.</th>
-                      <th className="text-center p-2 md:p-3 w-[10%]">Qtd.</th>
-                      <th className="text-right p-2 md:p-3 w-[15%]">Total</th>
-                      <th className="p-2 md:p-3 w-[15%] rounded-tr-md text-center">Ações</th>
-                    </tr>
+                  <tr>
+                  <th className="p-1 md:p-2 w-[5%] rounded-tl-md"></th>
+                  <th className="text-left p-1 md:p-2 w-[40%] text-xs md:text-sm">Produto</th>
+                  <th className="text-center p-1 md:p-2 w-[15%] text-xs md:text-sm">Valor Unit.</th>
+                  <th className="text-center p-1 md:p-2 w-[10%] text-xs md:text-sm">Qtd.</th>
+                  <th className="text-right p-1 md:p-2 w-[15%] text-xs md:text-sm">Total</th>
+                  <th className="p-1 md:p-2 w-[15%] rounded-tr-md text-center text-xs md:text-sm">Ações</th>
+                  </tr>
                   </thead>
                   <tbody>
                     {orcamento.itens.map((item, index) => (
@@ -1106,9 +1122,9 @@ export default function FormularioOrcamento({
                             }
                           }}
                         >
-                          <td className="p-3 text-center">
+                          <td className="p-1 md:p-2 text-center">
                             <div
-                              className="flex flex-col items-center gap-1 cursor-grab"
+                              className="flex flex-col items-center gap-0.5 cursor-grab"
                               title="Arraste para reordenar"
                             >
                               <Button
@@ -1116,30 +1132,30 @@ export default function FormularioOrcamento({
                                 size="icon"
                                 onClick={() => moverItemParaCima(index)}
                                 disabled={index === 0 || isLoading}
-                                className="h-6 w-6 rounded-full hover:bg-primary/10"
+                                className="h-5 w-5 rounded-full hover:bg-primary/10"
                                 title="Mover para cima"
                               >
-                                <ChevronUp className="h-4 w-4" />
+                                <ChevronUp className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => moverItemParaBaixo(index)}
                                 disabled={index === orcamento.itens.length - 1 || isLoading}
-                                className="h-6 w-6 rounded-full hover:bg-primary/10"
+                                className="h-5 w-5 rounded-full hover:bg-primary/10"
                                 title="Mover para baixo"
                               >
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-3 w-3" />
                               </Button>
                             </div>
                           </td>
-                          <td className="p-3">
-                            <div className="font-medium">{item.produto?.nome}</div>
+                          <td className="p-1 md:p-2">
+                            <div className="text-xs md:text-sm font-medium">{item.produto?.nome}</div>
                             {item.observacaoComercial && (
-                              <div className="text-xs mt-1 text-gray-600 italic">{item.observacaoComercial}</div>
+                              <div className="text-xs mt-0.5 text-gray-600 italic">{item.observacaoComercial}</div>
                             )}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-1 md:p-2 text-center">
                             {editandoItem === item.id ? (
                               <Input
                                 type="number"
@@ -1150,47 +1166,47 @@ export default function FormularioOrcamento({
                                     valorUnitario: Number.parseFloat(e.target.value) || 0,
                                   })
                                 }
-                                className="h-9 text-center w-28 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                                className="h-7 text-center w-20 md:w-24 text-xs border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                               />
                             ) : (
-                              <span className="flex items-center justify-center gap-1">
+                              <span className="flex items-center justify-center gap-1 text-xs md:text-sm">
                                 <DollarSign className="h-3 w-3 text-gray-500" />
                                 {item.valorUnitario.toFixed(2)}
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-center font-medium">{item.quantidade}</td>
-                          <td className="p-3 text-right font-medium">
-                            <span className="flex items-center justify-end gap-1">
+                          <td className="p-1 md:p-2 text-center font-medium text-xs md:text-sm">{item.quantidade}</td>
+                          <td className="p-1 md:p-2 text-right font-medium">
+                            <span className="flex items-center justify-end gap-1 text-xs md:text-sm">
                               <DollarSign className="h-3 w-3 text-gray-500" />
                               {(item.quantidade * item.valorUnitario).toFixed(2)}
                             </span>
                           </td>
-                          <td className="p-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
+                          <td className="p-1 md:p-2 text-center">
+                            <div className="flex items-center justify-center gap-0.5">
                               {editandoItem === item.id ? (
                                 <>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                                    className="h-6 w-6 text-success hover:text-success hover:bg-success/10"
                                     onClick={salvarEdicaoItem}
                                     disabled={isLoading}
                                   >
                                     {isLoading ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
-                                      <Check className="h-4 w-4" />
+                                      <Check className="h-3 w-3" />
                                     )}
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                                    className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                                     onClick={cancelarEdicaoItem}
                                     disabled={isLoading}
                                   >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-3 w-3" />
                                   </Button>
                                 </>
                               ) : (
@@ -1198,20 +1214,20 @@ export default function FormularioOrcamento({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
+                                    className="h-6 w-6 text-primary hover:text-primary-dark hover:bg-primary/10"
                                     onClick={() => iniciarEdicaoItem(item)}
                                     disabled={isLoading}
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-3 w-3" />
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => removerItem(item.id)}
-                                    className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
+                                    className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-red-50"
                                     disabled={isLoading}
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3 w-3" />
                                   </Button>
                                 </>
                               )}

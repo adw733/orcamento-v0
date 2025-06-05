@@ -2104,18 +2104,18 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   // Substituir o return do componente por:
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-2rem)]">
       <AppSidebar
         abaAtiva={abaAtiva}
         setAbaAtiva={setAbaAtiva}
         criandoNovoOrcamento={criandoNovoOrcamento}
         criarNovoOrcamento={criarNovoOrcamento}
       />
-      <SidebarInset className="bg-gray-100 overflow-auto flex-1 w-full">
-        <div className="p-3 md:p-6 space-y-4 md:space-y-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-3 md:p-6 rounded-lg shadow-sm gap-3">
+      <SidebarInset className="bg-gray-50 overflow-auto flex-1 w-full">
+        <div className="p-2 md:p-4 space-y-2 md:space-y-3">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-primary">
+              <h1 className="text-lg md:text-xl font-bold text-primary">
                 {abaAtiva === "orcamento"
                   ? "Gerador de Orçamento"
                   : abaAtiva === "orcamentos"
@@ -2136,7 +2136,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                                   ? "Tabela de Produtos"
                                   : "Gerador de Orçamento"}
               </h1>
-              <p className="text-gray-500 mt-1 text-sm md:text-base">
+              <p className="text-gray-500 mt-0.5 text-xs md:text-sm">
                 {abaAtiva === "orcamento"
                   ? "Crie orçamentos profissionais para uniformes industriais"
                   : abaAtiva === "orcamentos"
@@ -2158,13 +2158,13 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                                   : "Crie orçamentos profissionais para uniformes industriais"}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 justify-start md:justify-end">
+            <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
               {abaAtiva === "orcamento" && (
                 <>
                   <Button
                     onClick={orcamentoSalvo ? copiarOrcamento : salvarNovoOrcamento}
                     disabled={isLoading || !orcamento.cliente}
-                    className="flex items-center gap-2 bg-secondary hover:bg-secondary-dark text-white transition-all shadow-sm text-xs md:text-sm"
+                    className="flex items-center gap-1.5 bg-secondary hover:bg-secondary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {orcamentoSalvo ? "Copiar" : "Salvar"}
@@ -2174,7 +2174,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     <Button
                       onClick={atualizarOrcamentoExistente}
                       disabled={isLoading || !orcamento.cliente}
-                      className="flex items-center gap-2 bg-success hover:bg-success/80 text-white transition-all shadow-sm text-xs md:text-sm"
+                      className="flex items-center gap-1.5 bg-success hover:bg-success/80 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                     >
                       <Save className="h-4 w-4" />
                       {isLoading ? "Atualizando..." : "Atualizar"}
@@ -2188,7 +2188,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       }
                     }}
                     disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs md:text-sm"
+                    className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                   >
                     <FileDown className="h-4 w-4" />
                     {isLoading ? "Gerando..." : "PDF Orçamento"}
@@ -2201,7 +2201,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       }
                     }}
                     disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs md:text-sm"
+                    className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                   >
                     <FileDown className="h-4 w-4" />
                     {isLoading ? "Gerando..." : "PDF Ficha"}
@@ -2214,9 +2214,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           {/* Feedback de salvamento */}
           {feedbackSalvamento.visivel && (
             <div
-              className={`p-4 rounded-md ${
+              className={`p-2 md:p-3 rounded-md ${
                 feedbackSalvamento.sucesso ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-              } flex items-center gap-2 animate-in fade-in slide-in-from-top-5 duration-300`}
+              } flex items-center gap-2 animate-in fade-in slide-in-from-top-5 duration-300 text-xs md:text-sm`}
             >
               {feedbackSalvamento.sucesso ? <Check className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
               <p>{feedbackSalvamento.mensagem}</p>
@@ -2228,17 +2228,17 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             switch (abaAtiva) {
               case "orcamento":
                 return (
-                  <div className="space-y-6">
+                  <div className="space-y-3">
                     {/* Formulário ocupando toda a largura */}
-                    <Card className="shadow-sm border-0">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-xl font-semibold text-primary">Dados do Orçamento</h2>
+                    <Card className="shadow-sm border border-gray-200">
+                      <CardContent className="p-3 md:p-4">
+                        <div className="flex justify-between items-center mb-3">
+                          <h2 className="text-lg md:text-xl font-semibold text-primary">Dados do Orçamento</h2>
                           <Dialog open={modalVisualizacaoAberto} onOpenChange={setModalVisualizacaoAberto}>
                             <DialogTrigger asChild>
                               <Button
                                 variant="outline"
-                                className="flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-white text-xs md:text-sm"
+                                className="flex items-center gap-1.5 border-primary text-primary hover:bg-primary hover:text-white text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                               >
                                 <Eye className="h-4 w-4" />
                                 Visualizar
@@ -2281,8 +2281,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 )
               case "orcamentos":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <ListaOrcamentos
                         onSelectOrcamento={carregarOrcamento}
                         onNovoOrcamento={() => {
@@ -2299,16 +2299,16 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 )
               case "produtos-tabela":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <TabelaProdutos />
                     </CardContent>
                   </Card>
                 )
               case "clientes":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <GerenciadorClientes
                         clientes={clientes}
                         adicionarCliente={adicionarCliente}
@@ -2319,8 +2319,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 )
               case "produtos":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <GerenciadorProdutos
                         produtos={produtos}
                         adicionarProduto={adicionarProduto}
@@ -2331,32 +2331,32 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 )
               case "categorias":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <GerenciadorCategorias />
                     </CardContent>
                   </Card>
                 )
               case "materiais":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <GerenciadorMateriais />
                     </CardContent>
                   </Card>
                 )
               case "empresa":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <GerenciadorEmpresa />
                     </CardContent>
                   </Card>
                 )
               case "lixeira":
                 return (
-                  <Card className="shadow-sm border-0">
-                    <CardContent className="p-6">
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
                       <LixeiraOrcamentos
                         onRestaurarOrcamento={restaurarOrcamento}
                         onExcluirPermanentemente={excluirOrcamentoPermanentemente}
@@ -2367,9 +2367,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 )
               default:
                 return (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card className="shadow-sm border-0">
-                      <CardContent className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <Card className="shadow-sm border border-gray-200">
+                      <CardContent className="p-3 md:p-4">
                         <FormularioOrcamento
                           orcamento={orcamento}
                           clientes={clientes}
@@ -2383,8 +2383,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                         />
                       </CardContent>
                     </Card>
-                    <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
-                      <div className="p-4 h-[calc(100vh-250px)] overflow-auto">
+                    <div className="border rounded-lg overflow-hidden bg-white shadow-sm border-gray-200">
+                      <div className="p-2 md:p-3 h-[calc(100vh-200px)] overflow-auto">
                         <div ref={documentoRef}>
                           <VisualizacaoDocumento
                             orcamento={orcamento}
