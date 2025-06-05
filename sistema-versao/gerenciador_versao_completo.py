@@ -119,11 +119,13 @@ class VersionControlGUI:
         forks_frame.pack(fill=tk.BOTH, expand=True)
         
         # Lista de forks
-        self.forks_tree = ttk.Treeview(forks_frame, columns=('status', 'name'), show='headings', height=8)
+        self.forks_tree = ttk.Treeview(forks_frame, columns=('status', 'name', 'date'), show='headings', height=8)
         self.forks_tree.heading('#1', text='Status')
         self.forks_tree.heading('#2', text='Nome do Fork')
+        self.forks_tree.heading('#3', text='Criado em')
         self.forks_tree.column('#1', width=80)
-        self.forks_tree.column('#2', width=200)
+        self.forks_tree.column('#2', width=150)
+        self.forks_tree.column('#3', width=120)
         self.forks_tree.pack(fill=tk.X, pady=(0, 10))
         
         # Botões para forks
@@ -370,38 +372,59 @@ class VersionControlGUI:
             for item in self.forks_tree.get_children():
                 self.forks_tree.delete(item)
             
-            # Carregar branches
-            success, output, _ = self.run_command('git branch')
-            is_detached = False
+            # Buscar branch atual
+            current_success, current_output, _ = self.run_command('git branch --show-current')
+            current_branch = current_output.strip() if current_success else None
+            
+            # Verificar se está em HEAD detached
+            is_detached = not current_branch
+            
+            # Carregar branches com informações detalhadas
+            success, output, _ = self.run_command('git for-each-ref --format="%(refname:short)|%(committerdate:format:%d/%m/%Y %H:%M)|%(committerdate:unix)" refs/heads/')
             
             if success and output:
-                current_branch = None
+                branch_list = []
                 for line in output.strip().split('\n'):
-                    line = line.strip()
-                    if line:
-                        if line.startswith('*'):
-                            branch_name = line[2:]
-                            # Verificar se é HEAD detached
-                            if 'HEAD detached at' in branch_name:
-                                status = "🔴 Detached"
-                                is_detached = True
-                                # Extrair hash do commit
-                                import re
-                                match = re.search(r'HEAD detached at ([a-f0-9]+)', branch_name)
-                                if match:
-                                    hash_part = match.group(1)
-                                    branch_name = f"(HEAD detached at {hash_part})"
-                                current_branch = branch_name
-                            else:
+                    if line and '|' in line:
+                        parts = line.split('|')
+                        if len(parts) >= 3:
+                            branch_name = parts[0]
+                            date_formatted = parts[1]
+                            date_unix = int(parts[2]) if parts[2].isdigit() else 0
+                            
+                            # Determinar status
+                            if current_branch == branch_name:
                                 status = "🌟 Atual"
-                                current_branch = branch_name
-                        else:
-                            branch_name = line
-                            status = "🔀 Fork"
-                        self.forks_tree.insert('', tk.END, values=(status, branch_name), tags=(branch_name,))
-            else:
-                # Se não há branches, criar branch principal
-                self.forks_tree.insert('', tk.END, values=("🌟 Atual", "main"), tags=("main",))
+                            else:
+                                status = "🔀 Fork"
+                            
+                            branch_list.append((date_unix, status, branch_name, date_formatted))
+                
+                # Ordenar por data de criação (mais recente primeiro)
+                branch_list.sort(key=lambda x: x[0], reverse=True)
+                
+                # Adicionar à lista
+                for _, status, branch_name, date_formatted in branch_list:
+                    self.forks_tree.insert('', tk.END, values=(status, branch_name, date_formatted), tags=(branch_name,))
+            
+            # Se está em HEAD detached, adicionar entrada especial
+            if is_detached:
+                # Buscar informações do commit atual
+                commit_success, commit_output, _ = self.run_command('git log -1 --format="%h|%ad" --date=format:"%d/%m/%Y %H:%M"')
+                if commit_success and commit_output.strip():
+                    parts = commit_output.strip().split('|')
+                    if len(parts) >= 2:
+                        hash_short = parts[0]
+                        commit_date = parts[1]
+                        detached_name = f"(HEAD detached at {hash_short})"
+                        # Inserir no topo da lista
+                        self.forks_tree.insert('', 0, values=("🔴 Detached", detached_name, commit_date), tags=(detached_name,))
+            
+            # Se não há branches, criar entrada padrão
+            if not success or not output:
+                import datetime
+                now = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+                self.forks_tree.insert('', tk.END, values=("🌟 Atual", "main", now), tags=("main",))
             
             # Mostrar/ocultar botão de sair do detached
             if hasattr(self, 'detached_button'):
@@ -412,6 +435,10 @@ class VersionControlGUI:
                     
         except Exception as e:
             print(f"Erro ao carregar forks: {e}")
+            # Fallback em caso de erro
+            import datetime
+            now = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+            self.forks_tree.insert('', tk.END, values=("❌ Erro", "Erro ao carregar", now), tags=("",))
     
     def save_version(self):
         """Salva uma nova versão"""
@@ -757,19 +784,115 @@ class VersionControlGUI:
             messagebox.showwarning("Aviso", "Não é possível renomear a branch principal!")
             return
         
-        new_name = simpledialog.askstring(
-            "Renomear Fork",
-            f"Novo nome para o fork '{old_name}':",
-            initialvalue=old_name
-        )
+        # Criar janela de diálogo personalizada
+        rename_window = tk.Toplevel(self.root)
+        rename_window.title("✏️ Renomear Fork")
+        rename_window.geometry("450x200")
+        rename_window.transient(self.root)
+        rename_window.grab_set()
         
-        if new_name and new_name != old_name:
+        # Frame principal
+        main_frame = ttk.Frame(rename_window, padding="15")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Título
+        ttk.Label(main_frame, text=f"Renomear fork: {old_name}", 
+                 font=('Arial', 12, 'bold')).pack(pady=(0, 15))
+        
+        # Campo de entrada
+        ttk.Label(main_frame, text="Novo nome:").pack(anchor=tk.W)
+        entry_var = tk.StringVar(value=old_name)
+        name_entry = ttk.Entry(main_frame, textvariable=entry_var, width=40)
+        name_entry.pack(fill=tk.X, pady=(5, 15))
+        name_entry.focus()
+        name_entry.select_range(0, tk.END)
+        
+        # Frame para botões
+        buttons_frame = ttk.Frame(main_frame)
+        buttons_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # Variável para controlar o resultado
+        result = {'confirmed': False, 'new_name': None}
+        
+        def apply_default_name():
+            """Aplica nome padrão com data e hora"""
+            default_name = f"fork_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}"
+            entry_var.set(default_name)
+            name_entry.focus()
+            name_entry.select_range(0, tk.END)
+        
+        def confirm_rename():
+            """Confirma a renomeação"""
+            new_name = entry_var.get().strip()
+            if not new_name:
+                messagebox.showwarning("Aviso", "Digite um nome para o fork!")
+                return
+            
+            if new_name == old_name:
+                rename_window.destroy()
+                return
+            
+            # Validar nome (básico)
+            import re
+            if not re.match(r'^[a-zA-Z0-9._-]+$', new_name):
+                messagebox.showwarning(
+                    "Nome Inválido", 
+                    "O nome do fork deve conter apenas letras, números, pontos, hífens e underscores."
+                )
+                return
+            
+            result['confirmed'] = True
+            result['new_name'] = new_name
+            rename_window.destroy()
+        
+        def cancel_rename():
+            """Cancela a renomeação"""
+            rename_window.destroy()
+        
+        # Botões
+        ttk.Button(buttons_frame, text="📅 Nome Padrão (Data/Hora)", 
+                  command=apply_default_name).pack(side=tk.LEFT, padx=(0, 10))
+        
+        ttk.Button(buttons_frame, text="✅ Confirmar", 
+                  command=confirm_rename).pack(side=tk.RIGHT, padx=(5, 0))
+        
+        ttk.Button(buttons_frame, text="❌ Cancelar", 
+                  command=cancel_rename).pack(side=tk.RIGHT)
+        
+        # Bind Enter para confirmar
+        def on_enter(event):
+            confirm_rename()
+        
+        name_entry.bind('<Return>', on_enter)
+        rename_window.bind('<Return>', on_enter)
+        
+        # Bind Escape para cancelar
+        def on_escape(event):
+            cancel_rename()
+        
+        rename_window.bind('<Escape>', on_escape)
+        
+        # Centralizar janela
+        rename_window.update_idletasks()
+        x = (rename_window.winfo_screenwidth() // 2) - (rename_window.winfo_width() // 2)
+        y = (rename_window.winfo_screenheight() // 2) - (rename_window.winfo_height() // 2)
+        rename_window.geometry(f"+{x}+{y}")
+        
+        # Aguardar fechamento da janela
+        rename_window.wait_window()
+        
+        # Processar resultado
+        if result['confirmed'] and result['new_name']:
+            new_name = result['new_name']
             success, _, error = self.run_command(f'git branch -m {old_name} {new_name}')
             if success:
                 messagebox.showinfo("Sucesso", f"Fork renomeado para '{new_name}'!")
                 self.refresh_all()
             else:
-                messagebox.showerror("Erro", f"Erro ao renomear fork: {error}")
+                if "already exists" in error:
+                    messagebox.showerror("Erro", f"Já existe um fork com o nome '{new_name}'!")
+                else:
+                    messagebox.showerror("Erro", f"Erro ao renomear fork: {error}")
     
     def delete_fork(self):
         """Exclui o fork selecionado"""

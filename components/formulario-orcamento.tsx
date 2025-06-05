@@ -901,11 +901,11 @@ export default function FormularioOrcamento({
 
             <div className="space-y-1">
               <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3 text-green-600" />
-                <Label className="text-green-600 text-xs font-medium">Total</Label>
+                <DollarSign className="h-3 w-3 text-primary" />
+                <Label className="text-primary text-xs font-medium">Total</Label>
               </div>
-              <div className="h-7 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-md flex items-center justify-center">
-                <span className="font-bold text-xs md:text-sm text-green-700">
+              <div className="h-7 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-md flex items-center justify-center">
+                <span className="font-bold text-xs md:text-sm text-primary">
                   R$ {(calcularTotal() + (orcamento.valorFrete || 0)).toFixed(2)}
                 </span>
               </div>
@@ -921,16 +921,16 @@ export default function FormularioOrcamento({
         <div className="space-y-3">
           
           {/* Cliente */}
-          <Card className="border-blue-200 shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b py-2">
+          <Card className="border-primary/20 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-blue-600" />
-                <CardTitle className="text-sm md:text-base text-blue-800">Cliente</CardTitle>
+                <User className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm md:text-base text-primary">Cliente</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-3 space-y-3">
               <div>
-                <Label className="text-blue-700 font-medium mb-1 block text-xs">Selecione o Cliente</Label>
+                <Label className="text-primary font-medium mb-1 block text-xs">Selecione o Cliente</Label>
                 <Select value={orcamento.cliente?.id || ""} onValueChange={handleClienteChange}>
                   <SelectTrigger className="h-8 text-xs md:text-sm">
                     <SelectValue placeholder="Escolha um cliente..." />
@@ -950,7 +950,7 @@ export default function FormularioOrcamento({
               
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-blue-700 font-medium mb-1 block text-xs">Nome do Contato</Label>
+                  <Label className="text-primary font-medium mb-1 block text-xs">Nome do Contato</Label>
                   <Input
                     value={orcamento.nomeContato || ""}
                     onChange={(e) => atualizarOrcamento({ nomeContato: e.target.value })}
@@ -959,7 +959,7 @@ export default function FormularioOrcamento({
                   />
                 </div>
                 <div>
-                  <Label className="text-blue-700 font-medium mb-1 block text-xs">Telefone</Label>
+                  <Label className="text-primary font-medium mb-1 block text-xs">Telefone</Label>
                   <Input
                     value={orcamento.telefoneContato || ""}
                     onChange={(e) => atualizarOrcamento({ telefoneContato: e.target.value })}
@@ -972,16 +972,16 @@ export default function FormularioOrcamento({
           </Card>
 
           {/* Condições Comerciais */}
-          <Card className="border-green-200 shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b py-2">
+          <Card className="border-primary/20 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-green-600" />
-                <CardTitle className="text-sm md:text-base text-green-800">Condições Comerciais</CardTitle>
+                <CreditCard className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm md:text-base text-primary">Condições Comerciais</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-3 space-y-3">
               <div>
-                <Label className="text-green-700 font-medium mb-1 block text-xs">Condições de Pagamento</Label>
+                <Label className="text-primary font-medium mb-1 block text-xs">Condições de Pagamento</Label>
                 <Input
                   value={orcamento.condicoesPagamento}
                   onChange={(e) => handleTextUppercase(e, "condicoesPagamento")}
@@ -991,7 +991,7 @@ export default function FormularioOrcamento({
               
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-green-700 font-medium mb-1 block text-xs">Prazo de Entrega</Label>
+                  <Label className="text-primary font-medium mb-1 block text-xs">Prazo de Entrega</Label>
                   <Input
                     value={orcamento.prazoEntrega}
                     onChange={(e) => handleTextUppercase(e, "prazoEntrega")}
@@ -999,7 +999,7 @@ export default function FormularioOrcamento({
                   />
                 </div>
                 <div>
-                  <Label className="text-green-700 font-medium mb-1 block text-xs">Validade</Label>
+                  <Label className="text-primary font-medium mb-1 block text-xs">Validade</Label>
                   <Input
                     value={orcamento.validadeOrcamento}
                     onChange={(e) => handleTextUppercase(e, "validadeOrcamento")}
@@ -1011,16 +1011,16 @@ export default function FormularioOrcamento({
           </Card>
 
           {/* Observações */}
-          <Card className="border-gray-200 shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b py-2">
+          <Card className="border-primary/20 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-gray-600" />
-                <CardTitle className="text-sm md:text-base text-gray-800">Observações</CardTitle>
+                <FileText className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm md:text-base text-primary">Observações</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-3">
               <div>
-                <Label className="text-gray-700 font-medium mb-1 block text-xs">Observações Gerais</Label>
+                <Label className="text-primary font-medium mb-1 block text-xs">Observações Gerais</Label>
                 <Textarea
                   value={orcamento.observacoes}
                   onChange={(e) => atualizarOrcamento({ observacoes: e.target.value })}
@@ -1035,14 +1035,14 @@ export default function FormularioOrcamento({
 
         {/* Coluna da direita - Itens do orçamento */}
         <div className="lg:col-span-2">
-          <Card className="border-purple-200 shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b py-2">
+          <Card className="border-primary/20 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Shirt className="h-4 w-4 text-purple-600" />
-                  <CardTitle className="text-sm md:text-base text-purple-800">Itens do Orçamento</CardTitle>
+                  <Shirt className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm md:text-base text-primary">Itens do Orçamento</CardTitle>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-purple-600">
+                <div className="flex items-center gap-1 text-xs text-primary">
                   <span className="animate-bounce">🔄</span>
                   <span className="hidden md:inline">Arraste para reordenar</span>
                 </div>
