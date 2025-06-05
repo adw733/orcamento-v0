@@ -48,7 +48,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     cliente: null,
     itens: [],
     observacoes: "",
-    condicoesPagamento: "45 DIAS FORA QUINZENA",
+    condicoesPagamento: "45 DIAS",
     prazoEntrega: "45 DIAS",
     validadeOrcamento: "15 DIAS",
     status: "5", // Atualizar para o novo formato de status
@@ -173,7 +173,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         cliente: null,
         itens: [],
         observacoes: "",
-        condicoesPagamento: "45 DIAS FORA QUINZENA",
+        condicoesPagamento: "45 DIAS",
         prazoEntrega: "45 DIAS",
         validadeOrcamento: "15 DIAS",
         status: "5", // Status padrão: Proposta
