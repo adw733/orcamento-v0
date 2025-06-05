@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown } from "lucide-react"
+import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler } from "lucide-react"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -137,26 +140,32 @@ const EstampaInput = ({
   const tipos = ["Bordado", "Silk", "DTF", "Sublimação"]
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {estampas.map((estampa, index) => (
-        <div key={estampa.id} className="border rounded p-2 bg-white relative text-xs">
-          <button
+        <div key={estampa.id} className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 relative shadow-sm">
+          <Button
             type="button"
             onClick={() => removerEstampa(estampa.id!)}
-            className="absolute top-1 right-1 text-gray-500 hover:text-red-500 bg-white rounded-full p-0.5 shadow-sm"
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full"
           >
             <X className="h-3 w-3" />
-          </button>
+          </Button>
 
-          <h5 className="font-medium mb-2 text-primary text-xs">Arte {index + 1}</h5>
+          <div className="flex items-center gap-2 mb-3">
+            <Palette className="h-4 w-4 text-primary" />
+            <h5 className="font-medium text-primary">Arte {index + 1}</h5>
+          </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             <div>
+              <Label className="text-xs text-gray-600 mb-1 block">Posição</Label>
               <Select
                 value={estampa.posicao || ""}
                 onValueChange={(value) => atualizarEstampa(estampa.id!, "posicao", value)}
               >
-                <SelectTrigger className="h-6 text-xs border-gray-300 focus:border-primary">
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Posição" />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,11 +179,12 @@ const EstampaInput = ({
             </div>
 
             <div>
+              <Label className="text-xs text-gray-600 mb-1 block">Tipo</Label>
               <Select
                 value={estampa.tipo || ""}
                 onValueChange={(value) => atualizarEstampa(estampa.id!, "tipo", value)}
               >
-                <SelectTrigger className="h-6 text-xs border-gray-300 focus:border-primary">
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -188,12 +198,13 @@ const EstampaInput = ({
             </div>
 
             <div>
+              <Label className="text-xs text-gray-600 mb-1 block">Largura (cm)</Label>
               <Input
                 type="number"
                 value={estampa.largura || ""}
                 onChange={(e) => atualizarEstampa(estampa.id!, "largura", Number(e.target.value))}
-                className="h-6 text-xs border-gray-300 focus:border-primary"
-                placeholder="Largura (cm)"
+                className="h-8 text-xs"
+                placeholder="0"
                 min="0"
                 step="0.5"
               />
@@ -207,9 +218,11 @@ const EstampaInput = ({
         onClick={adicionarEstampa}
         variant="outline"
         size="sm"
-        className="w-full h-6 text-xs border-dashed border-2 hover:bg-accent/20"
+        className="w-full h-10 border-dashed border-2 hover:bg-primary/5 hover:border-primary transition-all duration-200"
       >
-        <Plus className="h-3 w-3 mr-1" /> Adicionar Arte
+        <Plus className="h-4 w-4 mr-2" />
+        <Palette className="h-4 w-4 mr-2" />
+        Adicionar Arte
       </Button>
     </div>
   )
@@ -236,41 +249,44 @@ const renderTabelaTamanhos = (
   })
 
   return (
-    <div className="space-y-2">
-      <h4 className="font-medium text-primary">Tamanhos</h4>
-      <div className="border border-gray-200 rounded-md overflow-x-auto">
-        <table className="w-full border-collapse min-w-[500px]">
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Ruler className="h-4 w-4 text-primary" />
+        <h4 className="font-medium text-primary">Tamanhos</h4>
+      </div>
+      <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-accent">
-              <th className="border-b p-1 text-center font-medium text-xs text-primary w-[5%]">TAM.</th>
+            <tr className="bg-gradient-to-r from-primary/10 to-primary/5">
+              <th className="border-b p-2 text-center font-medium text-sm text-primary w-[60px]">TAM.</th>
               {Object.keys(tamanhosFiltrados).map((tamanho) => (
                 <th
                   key={`header-${tamanho}`}
-                  className="border-b p-1 text-center font-medium text-xs text-primary w-[7%]"
+                  className="border-b p-2 text-center font-medium text-sm text-primary min-w-[50px]"
                 >
                   {tamanho}
                 </th>
               ))}
-              <th className="border-b p-1 text-center font-medium text-xs text-primary w-[5%]">TOT.</th>
+              <th className="border-b p-2 text-center font-medium text-sm text-primary w-[60px] bg-primary/20">TOTAL</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="border-b p-1 text-center font-medium text-xs bg-accent">QTD.</td>
+              <td className="border-b p-2 text-center font-medium text-sm bg-gradient-to-r from-primary/10 to-primary/5">QTD.</td>
               {Object.entries(tamanhosFiltrados).map(([tamanho, valor]) => (
-                <td key={`cell-${tamanho}`} className="border-b p-1 text-center">
+                <td key={`cell-${tamanho}`} className="border-b p-2 text-center">
                   <div className="flex justify-center">
                     <input
                       type="number"
                       min="0"
                       value={valor}
                       onChange={(e) => onChange(tamanho, Number.parseInt(e.target.value) || 0)}
-                      className="w-8 h-7 text-center text-xs border border-gray-300 rounded-md focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-12 h-8 text-center text-sm border border-gray-300 rounded-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                     />
                   </div>
                 </td>
               ))}
-              <th className="border-b p-1 text-center font-medium text-sm bg-accent">{quantidade}</th>
+              <th className="border-b p-2 text-center font-bold text-lg bg-primary/20 text-primary">{quantidade}</th>
             </tr>
           </tbody>
         </table>
@@ -348,18 +364,28 @@ const GerenciadorImagem = ({
   if (!isEditing) return null
 
   return (
-    <div className="mt-4" ref={containerRef} tabIndex={0} onClick={() => containerRef.current?.focus()}>
-      <Label className="text-primary">Imagem para Ficha Técnica</Label>
-      <div className="flex items-center gap-4 mt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-2 border-dashed border-2 hover:bg-accent transition-colors"
-        >
-          <ImageIcon className="h-4 w-4" />
-          {imagem ? "Trocar Imagem" : "Adicionar Imagem"}
-        </Button>
+    <div className="space-y-3" ref={containerRef} tabIndex={0} onClick={() => containerRef.current?.focus()}>
+      <div className="flex items-center gap-2">
+        <ImageIcon className="h-4 w-4 text-primary" />
+        <Label className="text-primary font-medium">Imagem para Ficha Técnica</Label>
+      </div>
+      
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            className="w-full h-12 border-dashed border-2 hover:bg-primary/5 hover:border-primary transition-all duration-200"
+          >
+            <ImageIcon className="h-5 w-5 mr-2" />
+            {imagem ? "Trocar Imagem" : "Adicionar Imagem"}
+          </Button>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Clique para selecionar ou use Ctrl+V para colar
+          </p>
+        </div>
+        
         <input
           ref={inputRef}
           type="file"
@@ -374,21 +400,19 @@ const GerenciadorImagem = ({
           }}
           className="hidden"
         />
-        <div className="text-sm text-gray-500 italic">
-          Você também pode colar uma imagem diretamente da área de transferência (Ctrl+V)
-        </div>
+        
         {imagem && (
-          <div className="relative">
+          <div className="relative group">
             <img
               src={imagem || "/placeholder.svg"}
               alt="Prévia da imagem"
-              className="h-20 w-20 object-cover rounded-md border shadow-sm"
+              className="h-24 w-24 object-cover rounded-lg border-2 border-gray-200 shadow-md transition-all duration-200 group-hover:shadow-lg"
             />
             <Button
               type="button"
-              variant="ghost"
+              variant="destructive"
               size="icon"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+              className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md"
               onClick={() => onChange("")}
             >
               <X className="h-3 w-3" />
@@ -741,35 +765,274 @@ export default function FormularioOrcamento({
     atualizarOrcamento({ itens: novosItens })
   }
 
+  // Função para obter a cor do badge baseado no status
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "5": return "bg-blue-100 text-blue-800 border-blue-200"
+      case "4": return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "3": return "bg-orange-100 text-orange-800 border-orange-200"
+      case "2": return "bg-green-100 text-green-800 border-green-200"
+      case "1": return "bg-gray-100 text-gray-800 border-gray-200"
+      default: return "bg-blue-100 text-blue-800 border-blue-200"
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "5": return "Proposta"
+      case "4": return "Execução"
+      case "3": return "Emitir Cobrança"
+      case "2": return "Entregue"
+      case "1": return "Finalizada"
+      default: return "Proposta"
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-8">
       {isLoading && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-md shadow-lg flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span>Processando...</span>
-          </div>
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 backdrop-blur-sm">
+          <Card className="p-6 shadow-xl">
+            <div className="flex items-center gap-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-lg font-medium">Processando...</span>
+            </div>
+          </Card>
         </div>
       )}
 
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4">
-          <p className="text-sm">{errorMessage}</p>
-        </div>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-2 bg-red-500 rounded-full"></div>
+              <p className="text-red-700 font-medium">{errorMessage}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Layout responsive - single column on mobile, two columns on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Coluna da direita - Tabela de produtos */}
-        <div>
-          <div className="bg-white p-6 rounded-lg border shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium text-lg text-primary">Itens do Orçamento</h3>
-              <p className="text-sm text-gray-500">
-                <span className="inline-block mr-1">💡</span>
-                Arraste os itens para reordená-los
-              </p>
+      {/* Header com informações básicas - layout horizontal */}
+      <Card className="border-primary/20 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-primary" />
+              <CardTitle className="text-xl text-primary">Informações do Orçamento</CardTitle>
             </div>
+            <Badge className={`${getStatusColor(orcamento.status || "5")} font-medium px-3 py-1`}>
+              {getStatusText(orcamento.status || "5")}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Hash className="h-4 w-4 text-primary" />
+                <Label className="text-primary font-medium">Número</Label>
+              </div>
+              <Input
+                value={orcamento.numero.split(" - ")[0]}
+                onChange={(e) => {
+                  const numeroAtual = e.target.value
+                  const partes = orcamento.numero.split(" - ")
+                  if (partes.length > 1) {
+                    atualizarOrcamento({ numero: `${numeroAtual} - ${partes.slice(1).join(" - ")}` })
+                  } else {
+                    atualizarOrcamento({ numero: numeroAtual })
+                  }
+                }}
+                className="h-10 font-mono text-center font-bold text-primary"
+                placeholder="0000"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <Label className="text-primary font-medium">Data</Label>
+              </div>
+              <Input
+                type="date"
+                value={orcamento.data}
+                onChange={(e) => atualizarOrcamento({ data: e.target.value })}
+                className="h-10"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
+                <Label className="text-primary font-medium">Status</Label>
+              </div>
+              <Select
+                value={orcamento.status || "5"}
+                onValueChange={(value) => atualizarOrcamento({ status: value })}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 - Proposta</SelectItem>
+                  <SelectItem value="4">4 - Execução</SelectItem>
+                  <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
+                  <SelectItem value="2">2 - Entregue</SelectItem>
+                  <SelectItem value="1">1 - Finalizada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" />
+                <Label className="text-primary font-medium">Total</Label>
+              </div>
+              <div className="h-10 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-md flex items-center justify-center">
+                <span className="font-bold text-lg text-green-700">
+                  R$ {(calcularTotal() + (orcamento.valorFrete || 0)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grid principal com três colunas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Coluna da esquerda - Informações do cliente e condições */}
+        <div className="space-y-6">
+          
+          {/* Cliente */}
+          <Card className="border-blue-200 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b">
+              <div className="flex items-center gap-3">
+                <User className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-lg text-blue-800">Cliente</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <Label className="text-blue-700 font-medium mb-2 block">Selecione o Cliente</Label>
+                <Select value={orcamento.cliente?.id || ""} onValueChange={handleClienteChange}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Escolha um cliente..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{cliente.nome}</span>
+                          <span className="text-sm text-gray-500">{cliente.cnpj}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-blue-700 font-medium mb-2 block">Nome do Contato</Label>
+                  <Input
+                    value={orcamento.nomeContato || ""}
+                    onChange={(e) => atualizarOrcamento({ nomeContato: e.target.value })}
+                    className="h-9"
+                    placeholder="Nome da pessoa"
+                  />
+                </div>
+                <div>
+                  <Label className="text-blue-700 font-medium mb-2 block">Telefone</Label>
+                  <Input
+                    value={orcamento.telefoneContato || ""}
+                    onChange={(e) => atualizarOrcamento({ telefoneContato: e.target.value })}
+                    className="h-9"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Condições Comerciais */}
+          <Card className="border-green-200 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b">
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-green-600" />
+                <CardTitle className="text-lg text-green-800">Condições Comerciais</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <Label className="text-green-700 font-medium mb-2 block">Condições de Pagamento</Label>
+                <Input
+                  value={orcamento.condicoesPagamento}
+                  onChange={(e) => handleTextUppercase(e, "condicoesPagamento")}
+                  className="h-9 font-medium"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-green-700 font-medium mb-2 block">Prazo de Entrega</Label>
+                  <Input
+                    value={orcamento.prazoEntrega}
+                    onChange={(e) => handleTextUppercase(e, "prazoEntrega")}
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-green-700 font-medium mb-2 block">Validade</Label>
+                  <Input
+                    value={orcamento.validadeOrcamento}
+                    onChange={(e) => handleTextUppercase(e, "validadeOrcamento")}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Observações */}
+          <Card className="border-gray-200 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-gray-600" />
+                <CardTitle className="text-lg text-gray-800">Observações</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div>
+                <Label className="text-gray-700 font-medium mb-2 block">Observações Gerais</Label>
+                <Textarea
+                  value={orcamento.observacoes}
+                  onChange={(e) => atualizarOrcamento({ observacoes: e.target.value })}
+                  rows={4}
+                  className="resize-none"
+                  placeholder="Adicione observações relevantes para o orçamento..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Coluna da direita - Itens do orçamento */}
+        <div className="lg:col-span-2">
+          <Card className="border-purple-200 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shirt className="h-5 w-5 text-purple-600" />
+                  <CardTitle className="text-lg text-purple-800">Itens do Orçamento</CardTitle>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-purple-600">
+                  <span className="animate-bounce">🔄</span>
+                  <span>Arraste para reordenar</span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
 
             <div className="border rounded-md overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
@@ -1437,183 +1700,8 @@ export default function FormularioOrcamento({
                 </table>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Coluna da esquerda - Dados do cabeçalho */}
-        <div className="space-y-6">
-          <div className="bg-white p-3 rounded-md border shadow-sm">
-            <h3 className="font-medium text-lg text-primary mb-2">Informações Básicas</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <Label htmlFor="numero" className="text-primary mb-1 text-sm">
-                  Número do Orçamento
-                </Label>
-                <Input
-                  id="numero"
-                  value={orcamento.numero.split(" - ")[0]} // Extrair apenas o número
-                  onChange={(e) => {
-                    // Preservar o restante do formato ao atualizar apenas o número
-                    const numeroAtual = e.target.value
-                    const partes = orcamento.numero.split(" - ")
-
-                    // Se tiver o formato padrão, manter a parte após o número
-                    if (partes.length > 1) {
-                      atualizarOrcamento({ numero: `${numeroAtual} - ${partes.slice(1).join(" - ")}` })
-                    } else {
-                      // Caso não tenha o formato padrão, usar apenas o número
-                      atualizarOrcamento({ numero: numeroAtual })
-                    }
-                  }}
-                  className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                  placeholder="Apenas o número"
-                />
-                {orcamento.numero.includes(" - ") && (
-                  <p className="text-xs text-gray-500 mt-0.5 truncate">Formato: {orcamento.numero}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="data" className="text-primary mb-1 text-sm">
-                  Data
-                </Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={orcamento.data}
-                  onChange={(e) => {
-                    // Garantir que a data seja armazenada no formato YYYY-MM-DD
-                    const dataFormatada = e.target.value
-                    atualizarOrcamento({ data: dataFormatada })
-                  }}
-                  className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="status" className="text-primary mb-1 text-sm">
-                  Status
-                </Label>
-                <Select
-                  value={orcamento.status || "5"}
-                  onValueChange={(value) => atualizarOrcamento({ status: value })}
-                >
-                  <SelectTrigger className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 - Proposta</SelectItem>
-                    <SelectItem value="4">4 - Execução</SelectItem>
-                    <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
-                    <SelectItem value="2">2 - Entregue</SelectItem>
-                    <SelectItem value="1">1 - Finalizada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-md border shadow-sm">
-            <h3 className="font-medium text-lg text-primary mb-2">Cliente</h3>
-            <div className="space-y-2">
-              <div>
-                <Label htmlFor="cliente" className="text-primary mb-1 text-sm">
-                  Selecione o Cliente
-                </Label>
-                <Select value={orcamento.cliente?.id || ""} onValueChange={handleClienteChange}>
-                  <SelectTrigger className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientes.map((cliente) => (
-                      <SelectItem key={cliente.id} value={cliente.id}>
-                        {cliente.cnpj} - {cliente.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="nomeContato" className="text-primary mb-1 text-sm">
-                    Nome do Contato
-                  </Label>
-                  <Input
-                    id="nomeContato"
-                    value={orcamento.nomeContato || ""}
-                    onChange={(e) => atualizarOrcamento({ nomeContato: e.target.value })}
-                    className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    placeholder="Nome da pessoa de contato"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="telefoneContato" className="text-primary mb-1 text-sm">
-                    Telefone do Contato
-                  </Label>
-                  <Input
-                    id="telefoneContato"
-                    value={orcamento.telefoneContato || ""}
-                    onChange={(e) => atualizarOrcamento({ telefoneContato: e.target.value })}
-                    className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-md border shadow-sm">
-            <h3 className="font-medium text-lg text-primary mb-2">Condições Comerciais</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <Label htmlFor="condicoesPagamento" className="text-primary mb-1 text-sm">
-                  Condições de Pagamento
-                </Label>
-                <Input
-                  id="condicoesPagamento"
-                  value={orcamento.condicoesPagamento}
-                  onChange={(e) => handleTextUppercase(e, "condicoesPagamento")}
-                  className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="prazoEntrega" className="text-primary mb-1 text-sm">
-                  Prazo de Entrega
-                </Label>
-                <Input
-                  id="prazoEntrega"
-                  value={orcamento.prazoEntrega}
-                  onChange={(e) => handleTextUppercase(e, "prazoEntrega")}
-                  className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="validadeOrcamento" className="text-primary mb-1 text-sm">
-                  Validade do Orçamento
-                </Label>
-                <Input
-                  id="validadeOrcamento"
-                  value={orcamento.validadeOrcamento}
-                  onChange={(e) => handleTextUppercase(e, "validadeOrcamento")}
-                  className="h-8 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-md border shadow-sm">
-            <h3 className="font-medium text-lg text-primary mb-2">Observações</h3>
-            <div>
-              <Label htmlFor="observacoes" className="text-primary mb-1 text-sm">
-                Observações Gerais
-              </Label>
-              <Textarea
-                id="observacoes"
-                value={orcamento.observacoes}
-                onChange={(e) => atualizarOrcamento({ observacoes: e.target.value })}
-                rows={3}
-                className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
