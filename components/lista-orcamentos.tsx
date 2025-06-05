@@ -597,7 +597,7 @@ export default function ListaOrcamentos({
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -609,19 +609,21 @@ export default function ListaOrcamentos({
         </div>
         <Button
           onClick={onNovoOrcamento}
-          className="bg-primary hover:bg-primary-dark text-white transition-colors w-full md:w-auto"
+          className="bg-primary hover:bg-primary-dark text-white transition-colors w-full lg:w-auto whitespace-nowrap"
         >
-          <PlusCircle className="h-4 w-4 mr-2" /> Novo Orçamento
+          <PlusCircle className="h-4 w-4 mr-2" /> 
+          <span className="hidden sm:inline">Novo Orçamento</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
       {/* Modificar os botões de filtro de status */}
-      <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-2">
+      <div className="flex flex-wrap gap-1 sm:gap-2 mb-4 overflow-x-auto pb-2">
         <Button
           variant={statusFilter === "todos" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("todos")}
-          className={`text-xs ${statusFilter === "todos" ? "bg-primary text-white" : ""}`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "todos" ? "bg-primary text-white" : ""}`}
         >
           Todos
         </Button>
@@ -629,76 +631,82 @@ export default function ListaOrcamentos({
           variant={statusFilter === "5" || statusFilter === "proposta" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("5")}
-          className={`text-xs ${
+          className={`text-xs whitespace-nowrap ${
             statusFilter === "5" || statusFilter === "proposta"
               ? "bg-blue-500 text-white"
               : "text-blue-500 border-blue-500 hover:bg-blue-50"
           }`}
         >
-          5 - Proposta
+          <span className="hidden sm:inline">5 - Proposta</span>
+          <span className="sm:hidden">5</span>
         </Button>
         <Button
           variant={statusFilter === "4" || statusFilter === "execucao" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("4")}
-          className={`text-xs ${
+          className={`text-xs whitespace-nowrap ${
             statusFilter === "4" || statusFilter === "execucao"
               ? "bg-amber-500 text-white"
               : "text-amber-500 border-amber-500 hover:bg-amber-50"
           }`}
         >
-          4 - Execução
+          <span className="hidden sm:inline">4 - Execução</span>
+          <span className="sm:hidden">4</span>
         </Button>
         <Button
           variant={statusFilter === "3" || statusFilter === "cobranca" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("3")}
-          className={`text-xs ${
+          className={`text-xs whitespace-nowrap ${
             statusFilter === "3" || statusFilter === "cobranca"
               ? "bg-red-500 text-white"
               : "text-red-500 border-red-500 hover:bg-red-50"
           }`}
         >
-          3 - Cobrança
+          <span className="hidden sm:inline">3 - Cobrança</span>
+          <span className="sm:hidden">3</span>
         </Button>
         <Button
           variant={statusFilter === "2" || statusFilter === "entregue" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("2")}
-          className={`text-xs ${
+          className={`text-xs whitespace-nowrap ${
             statusFilter === "2" || statusFilter === "entregue"
               ? "bg-purple-500 text-white"
               : "text-purple-500 border-purple-500 hover:bg-purple-50"
           }`}
         >
-          2 - Entregue
+          <span className="hidden sm:inline">2 - Entregue</span>
+          <span className="sm:hidden">2</span>
         </Button>
         <Button
           variant={statusFilter === "1" || statusFilter === "finalizado" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("1")}
-          className={`text-xs ${
+          className={`text-xs whitespace-nowrap ${
             statusFilter === "1" || statusFilter === "finalizado"
               ? "bg-green-500 text-white"
               : "text-green-500 border-green-500 hover:bg-green-50"
           }`}
         >
-          1 - Finalizada
+          <span className="hidden sm:inline">1 - Finalizada</span>
+          <span className="sm:hidden">1</span>
         </Button>
       </div>
 
       <div className="rounded-md border overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="min-w-[900px]">
+          <div className="min-w-[700px] lg:min-w-[800px]">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-2 sm:px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                     onClick={() => alternarOrdenacao("numero")}
                   >
                     <div className="flex items-center">
-                      Número
+                      <span className="hidden sm:inline">Número</span>
+                      <span className="sm:hidden">Nº</span>
                       {ordenacao.campo === "numero" &&
                         (ordenacao.direcao === "asc" ? (
                           <ChevronUp className="ml-1 h-4 w-4" />
@@ -708,7 +716,7 @@ export default function ListaOrcamentos({
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-2 sm:px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted hidden sm:table-cell"
                     onClick={() => alternarOrdenacao("data")}
                   >
                     <div className="flex items-center">
@@ -722,7 +730,7 @@ export default function ListaOrcamentos({
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-2 sm:px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted hidden lg:table-cell"
                     onClick={() => alternarOrdenacao("dataEntrega")}
                   >
                     <div className="flex items-center">
@@ -736,7 +744,7 @@ export default function ListaOrcamentos({
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-2 sm:px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted hidden xl:table-cell"
                     onClick={() => alternarOrdenacao("prazoDias")}
                   >
                     <div className="flex items-center">
@@ -749,29 +757,15 @@ export default function ListaOrcamentos({
                         ))}
                     </div>
                   </TableHead>
+
+
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                    onClick={() => alternarOrdenacao("cliente")}
-                  >
-                    <div className="flex items-center">
-                      Cliente
-                      {ordenacao.campo === "cliente" &&
-                        (ordenacao.direcao === "asc" ? (
-                          <ChevronUp className="ml-1 h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        ))}
-                    </div>
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                    CNPJ
-                  </TableHead>
-                  <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-2 sm:px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted hidden md:table-cell"
                     onClick={() => alternarOrdenacao("valor")}
                   >
                     <div className="flex items-center">
-                      Valor Total
+                      <span className="hidden lg:inline">Valor Total</span>
+                      <span className="lg:hidden">Valor</span>
                       {ordenacao.campo === "valor" &&
                         (ordenacao.direcao === "asc" ? (
                           <ChevronUp className="ml-1 h-4 w-4" />
@@ -781,7 +775,7 @@ export default function ListaOrcamentos({
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-2 sm:px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted min-w-[140px]"
                     onClick={() => alternarOrdenacao("status")}
                   >
                     <div className="flex items-center">
@@ -794,13 +788,13 @@ export default function ListaOrcamentos({
                         ))}
                     </div>
                   </TableHead>
-                  <TableHead className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</TableHead>
+                  <TableHead className="px-2 sm:px-4 py-3 text-center font-medium text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="px-4 py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="flex justify-center items-center py-8">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       </div>
@@ -808,7 +802,7 @@ export default function ListaOrcamentos({
                   </TableRow>
                 ) : filtrarOrcamentos().length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="px-4 py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="text-center py-8 bg-accent/30 rounded-lg">
                         <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                         <h4 className="text-lg font-medium text-gray-600">Nenhum orçamento encontrado</h4>
@@ -829,89 +823,119 @@ export default function ListaOrcamentos({
                 ) : (
                   filtrarOrcamentos().map((orcamento) => (
                     <TableRow key={orcamento.id} className="border-t hover:bg-muted/50">
-                      <TableCell className="px-4 py-3 align-middle">
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-primary">
-                            {extrairNumeroOrcamento(orcamento.numero)} -{" "}
-                            {orcamento.cliente?.nome?.toUpperCase() || "SEM EMPRESA"}
-                            {orcamento.nomeContato ? ` - ${orcamento.nomeContato.toUpperCase()}` : ""}
-                          </span>
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-primary text-sm">
+                              {extrairNumeroOrcamento(orcamento.numero)} -{" "}
+                              <span className="hidden sm:inline">
+                                {orcamento.cliente?.nome?.toUpperCase() || "SEM EMPRESA"}
+                              </span>
+                              <span className="sm:hidden">
+                                {(orcamento.cliente?.nome?.toUpperCase() || "SEM EMPRESA").substring(0, 20)}...
+                              </span>
+                              {orcamento.nomeContato && (
+                                <>
+                                  <span className="hidden lg:inline"> - {orcamento.nomeContato.toUpperCase()}</span>
+                                  <span className="lg:hidden"> - {orcamento.nomeContato.toUpperCase().substring(0, 10)}</span>
+                                </>
+                              )}
+                            </span>
 
-                          {verificarImagensFaltantes(orcamento) && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <AlertCircle className="h-4 w-4 text-amber-500 ml-1 flex-shrink-0" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Há itens sem imagens na ficha técnica</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
+                            {verificarImagensFaltantes(orcamento) && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertCircle className="h-4 w-4 text-amber-500 ml-1 flex-shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Há itens sem imagens na ficha técnica</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {resumirProdutosDoOrcamento(orcamento)}
+                          </div>
+                          {/* Informações adicionais em mobile */}
+                          <div className="sm:hidden text-xs text-gray-500 space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>{formatarData(orcamento.data)}</span>
+                              {(() => {
+                                const { data, className } = calcularDataEntrega(orcamento.data, orcamento.prazoEntrega)
+                                return (
+                                  <span className="ml-2">
+                                    Entrega: <span className={className}>{data}</span>
+                                  </span>
+                                )
+                              })()}
+                            </div>
+                            <div className="md:hidden">
+                              R$ {calcularTotal(orcamento).toFixed(2)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5">{resumirProdutosDoOrcamento(orcamento)}</div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle hidden sm:table-cell">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-gray-500" />
-                          <span>{formatarData(orcamento.data)}</span>
+                          <span className="text-sm">{formatarData(orcamento.data)}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle hidden lg:table-cell">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-gray-500" />
                           {(() => {
                             const { data, className } = calcularDataEntrega(orcamento.data, orcamento.prazoEntrega)
-                            return <span className={className}>{data}</span>
+                            return <span className={`text-sm ${className}`}>{data}</span>
                           })()}
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        <span className="font-medium">{extrairNumeroDiasPrazo(orcamento.prazoEntrega)}</span>
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle hidden xl:table-cell">
+                        <span className="font-medium text-sm">{extrairNumeroDiasPrazo(orcamento.prazoEntrega)}</span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">{orcamento.cliente?.nome || "-"}</TableCell>
-                      <TableCell className="px-4 py-3 align-middle hidden md:table-cell">
-                        {orcamento.cliente?.cnpj || "-"}
+
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle hidden md:table-cell">
+                        <span className="font-medium text-sm">R$ {calcularTotal(orcamento).toFixed(2)}</span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        <span className="font-medium">R$ {calcularTotal(orcamento).toFixed(2)}</span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle">
                         <select
                           value={orcamento.status || "5"}
                           onChange={(e) => atualizarStatusOrcamento(orcamento.id!, e.target.value)}
-                          className={`text-xs font-medium px-2 py-1 rounded-full border ${getStatusClassName(orcamento.status || "5")}`}
+                          className={`text-xs font-medium px-1 sm:px-2 py-1 rounded-full border min-w-0 w-full ${getStatusClassName(orcamento.status || "5")}`}
+                          style={{ minWidth: '120px' }}
                         >
                           <option value="5">5 - Proposta</option>
                           <option value="4">4 - Execução</option>
-                          <option value="3">3 - Emitir Cobrança</option>
+                          <option value="3">3 - Cobrança</option>
                           <option value="2">2 - Entregue</option>
                           <option value="1">1 - Finalizada</option>
                         </select>
                       </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        <div className="flex justify-center gap-2">
+                      <TableCell className="px-2 sm:px-4 py-3 align-middle">
+                        <div className="flex justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => orcamento.id && onSelectOrcamento(orcamento.id)}
-                            className="h-8 w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
                             title="Visualizar orçamento"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
 
                           {onExportOrcamento && (
-                            <div className="relative">
+                            <div className="relative hidden sm:block">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                                 title="Exportar orçamento"
                                 onClick={() => setOpenDropdownId(openDropdownId === orcamento.id ? null : orcamento.id)}
                               >
-                                <FileDown className="h-4 w-4" />
+                                <FileDown className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                               {openDropdownId === orcamento.id && (
                                 <div
@@ -951,10 +975,10 @@ export default function ListaOrcamentos({
                                 }
                               }
                             }}
-                            className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
                             title="Excluir orçamento"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </TableCell>
