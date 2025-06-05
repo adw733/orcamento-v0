@@ -932,15 +932,15 @@ export default function FormularioOrcamento({
               <div>
                 <Label className="text-primary font-medium mb-1 block text-xs">Selecione o Cliente</Label>
                 <Select value={orcamento.cliente?.id || ""} onValueChange={handleClienteChange}>
-                  <SelectTrigger className="h-8 text-xs md:text-sm">
+                  <SelectTrigger className="h-9 text-xs md:text-sm w-full min-w-0">
                     <SelectValue placeholder="Escolha um cliente..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-full min-w-[300px]">
                     {clientes.map((cliente) => (
-                      <SelectItem key={cliente.id} value={cliente.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{cliente.nome}</span>
-                          <span className="text-sm text-gray-500">{cliente.cnpj}</span>
+                      <SelectItem key={cliente.id} value={cliente.id} className="w-full">
+                        <div className="flex flex-col w-full">
+                          <span className="font-medium truncate">{cliente.nome}</span>
+                          <span className="text-sm text-gray-500 truncate">{cliente.cnpj}</span>
                         </div>
                       </SelectItem>
                     ))}
