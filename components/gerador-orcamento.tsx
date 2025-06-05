@@ -62,6 +62,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [orcamentoSalvo, setOrcamentoSalvo] = useState<string | null>(null)
   // Adicionar um novo estado para controlar se estamos criando um novo orçamento
   const [criandoNovoOrcamento, setCriandoNovoOrcamento] = useState(false)
+  const [orcamentoJaCarregado, setOrcamentoJaCarregado] = useState(false)
   // Adicionar estado para feedback de salvamento
   const [feedbackSalvamento, setFeedbackSalvamento] = useState({
     visivel: false,
@@ -94,54 +95,60 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Função para obter o próximo número de orçamento
   const obterProximoNumeroOrcamento = async (): Promise<string> => {
     try {
-      // Buscar o último orçamento para obter o número mais recente
-      const { data, error } = await supabase
+      // Buscar todos os números de orçamentos, excluindo os que estão na lixeira
+      const { data: todosOrcamentos, error: erroTodos } = await supabase
         .from("orcamentos")
         .select("numero")
+        .is("deleted_at", null) // Excluir orçamentos na lixeira
         .order("created_at", { ascending: false })
-        .limit(1)
-
-      if (error) {
-        console.error("Erro ao buscar último número de orçamento:", error)
-        // Se houver erro, começar do 0140
-        return "0140"
-      }
-
-      // Buscar todos os números de orçamentos para encontrar o maior
-      const { data: todosOrcamentos, error: erroTodos } = await supabase.from("orcamentos").select("numero")
 
       if (erroTodos) {
         console.error("Erro ao buscar todos os orçamentos:", erroTodos)
-        // Se houver erro, usar o último orçamento ou começar do 0140
-        if (data && data.length > 0) {
-          const ultimoNumero = data[0].numero.split(" - ")[0]
-          const numeroAtual = Number.parseInt(ultimoNumero, 10)
-          if (!isNaN(numeroAtual)) {
-            return (numeroAtual + 1).toString().padStart(4, "0")
-          }
-        }
         return "0140"
       }
 
-      // Encontrar o maior número entre todos os orçamentos
+      // Encontrar o maior número entre todos os orçamentos válidos
       let maiorNumero = 139 // Valor padrão antes do 0140
 
       if (todosOrcamentos && todosOrcamentos.length > 0) {
+        console.log("Orçamentos encontrados:", todosOrcamentos.length)
+        
         todosOrcamentos.forEach((orc) => {
           if (orc.numero) {
-            // Extrair o número do formato "XXXX - ..."
-            const numeroStr = orc.numero.split(" - ")[0]
+            // Extrair apenas os dígitos do início do número (formato "XXXX - ..." ou apenas "XXXX")
+            const numeroStr = orc.numero.split(" - ")[0].replace(/\D/g, "")
             const numero = Number.parseInt(numeroStr, 10)
+
+            console.log(`Analisando número: ${orc.numero} -> ${numeroStr} -> ${numero}`)
 
             if (!isNaN(numero) && numero > maiorNumero) {
               maiorNumero = numero
+              console.log(`Novo maior número encontrado: ${maiorNumero}`)
             }
           }
         })
       }
 
       // Incrementar e formatar com zeros à esquerda
-      const proximoNumero = (maiorNumero + 1).toString().padStart(4, "0")
+      let proximoNumero = (maiorNumero + 1).toString().padStart(4, "0")
+      
+      // Verificar se o número já existe (segurança adicional)
+      const numeroExiste = todosOrcamentos.some(orc => 
+        orc.numero && orc.numero.startsWith(proximoNumero)
+      )
+      
+      // Se o número já existir, incrementar até encontrar um livre
+      while (numeroExiste) {
+        maiorNumero++
+        proximoNumero = maiorNumero.toString().padStart(4, "0")
+        const novoNumeroExiste = todosOrcamentos.some(orc => 
+          orc.numero && orc.numero.startsWith(proximoNumero)
+        )
+        if (!novoNumeroExiste) break
+      }
+      
+      console.log(`Próximo número a ser usado: ${proximoNumero}`)
+      
       return proximoNumero
     } catch (error) {
       console.error("Erro ao obter próximo número de orçamento:", error)
@@ -168,7 +175,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         String(hoje.getDate()).padStart(2, "0")
 
       setOrcamento({
-        numero: proximoNumero,
+        numero: proximoNumero, // Usar apenas o número base (ex: "0154")
         data: dataLocal,
         cliente: null,
         itens: [],
@@ -185,6 +192,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       // Limpar o ID do orçamento salvo para indicar que é um novo
       setOrcamentoSalvo(null)
       setCriandoNovoOrcamento(true)
+      setOrcamentoJaCarregado(false) // Resetar flag de orçamento carregado
 
       // Mudar para a aba de orçamento
       setAbaAtiva("orcamento")
@@ -215,9 +223,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       // Obter o próximo número de orçamento
       const proximoNumero = await obterProximoNumeroOrcamento()
 
-      // Formatar o número do orçamento com os dados do cliente e do primeiro item
-      const itemDescricao = orcamento.itens.length > 0 ? orcamento.itens[0].produto?.nome || "Item" : "Item"
-      const novoNumero = `${proximoNumero} - ${itemDescricao} ${orcamento.cliente?.nome || ""} ${orcamento.cliente?.contato || ""}`
+      // Usar apenas o número base na cópia - a formatação completa será feita quando adicionar cliente/itens
+      const novoNumero = proximoNumero
 
       // Criar uma cópia do orçamento atual com um novo número e sem ID
       // Obter a data atual no fuso horário local
@@ -240,6 +247,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       setOrcamento(orcamentoCopia)
       setOrcamentoSalvo(null) // Definir como null para indicar que é um novo orçamento não salvo
       setCriandoNovoOrcamento(true)
+      setOrcamentoJaCarregado(false) // Resetar flag para permitir nova numeração
 
       // Mostrar feedback de sucesso
       setFeedbackSalvamento({
@@ -700,26 +708,32 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   useEffect(() => {
     console.log("Inicializando com aba ativa:", abaAtivaInicial)
 
-    // Carregar dados iniciais e inicializar número do orçamento
+    // Carregar dados iniciais
     const carregarDadosIniciais = async () => {
       try {
         await carregarDadosEmpresa()
         await carregarClientes()
         await carregarProdutos()
         
-        // Inicializar com o próximo número de orçamento disponível
-        const proximoNumero = await obterProximoNumeroOrcamento()
-        setOrcamento(prev => ({
-          ...prev,
-          numero: proximoNumero
-        }))
+        // SOMENTE inicializar com o próximo número se estiver criando um orçamento NOVO
+        // Não sobrescrever o número de orçamentos já carregados
+        if (!orcamentoSalvo && !orcamentoJaCarregado && orcamento.numero === "Carregando...") {
+          const proximoNumero = await obterProximoNumeroOrcamento()
+          console.log('Inicializando NOVO orçamento com número:', proximoNumero)
+          setOrcamento(prev => ({
+            ...prev,
+            numero: proximoNumero // Usar apenas o número base
+          }))
+        }
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error)
-        // Em caso de erro, usar um número padrão
-        setOrcamento(prev => ({
-          ...prev,
-          numero: "0140"
-        }))
+        // Em caso de erro, usar um número padrão APENAS se for novo orçamento
+        if (!orcamentoSalvo && !orcamentoJaCarregado && orcamento.numero === "Carregando...") {
+          setOrcamento(prev => ({
+            ...prev,
+            numero: "0140"
+          }))
+        }
       }
     }
 
@@ -739,7 +753,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         }
       }
     }
-  }, [abaAtivaInicial])
+  }, [abaAtivaInicial, orcamentoJaCarregado])
 
   // Adicionar a função para carregar os dados da empresa
   const carregarDadosEmpresa = async () => {
@@ -1174,12 +1188,10 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         }
       }
 
-      // Obter o próximo número de orçamento
-      const proximoNumero = await obterProximoNumeroOrcamento()
-
       // Formatar o número do orçamento com os dados do cliente e do primeiro item
+      const numeroBase = orcamento.numero.split(" - ")[0] // Usar o número já carregado
       const itemDescricao = orcamento.itens.length > 0 ? orcamento.itens[0].produto?.nome || "Item" : "Item"
-      const novoNumero = `${proximoNumero} - ${itemDescricao} ${orcamento.cliente.nome} ${orcamento.cliente.contato}`
+      const novoNumero = `${numeroBase} - ${itemDescricao} ${orcamento.cliente.nome} ${orcamento.cliente.contato}`
 
       // Criar um objeto com metadados adicionais para incluir no JSON
       const metadados = {
@@ -1471,7 +1483,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     if (itensAtualizados.length === 1 && orcamento.cliente) {
       const numeroBase = orcamento.numero.split(" - ")[0]
       const itemDescricao = item.produto?.nome || "Item"
-      novoNumero = `${numeroBase} - ${itemDescricao} ${orcamento.cliente.nome} ${orcamento.cliente.contato}`
+      novoNumero = `${numeroBase} - ${itemDescricao} ${orcamento.cliente.nome} ${orcamento.cliente.contato || ""}`
     }
 
     setOrcamento({
@@ -1636,6 +1648,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const carregarOrcamento = async (orcamentoId: string) => {
     try {
       setIsLoading(true)
+      console.log('Iniciando carregamento do orçamento ID:', orcamentoId)
 
       const { data, error } = await supabase
         .from("orcamentos")
@@ -1644,6 +1657,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         .single()
 
       if (error) throw error
+      
+      console.log('Dados do orçamento obtidos do banco:', {
+        id: data.id,
+        numero: data.numero,
+        cliente: data.cliente?.nome
+      })
 
       // Verificar se o cliente existe
       if (!data.cliente) {
@@ -1870,10 +1889,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         console.error("Erro ao extrair metadados do JSON:", e)
       }
 
-      // Atualizar o estado do orçamento
+      // Atualizar o estado do orçamento - PRESERVAR O NÚMERO ORIGINAL
+      console.log('Carregando orçamento com número:', data.numero)
+      
       setOrcamento({
         id: data.id,
-        numero: data.numero,
+        numero: data.numero, // PRESERVAR o número original do banco de dados
         data: data.data,
         cliente: clienteFormatado,
         itens: itensFormatados,
@@ -1889,6 +1910,10 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       setOrcamentoSalvo(data.id)
       setCriandoNovoOrcamento(false)
+      setOrcamentoJaCarregado(true) // Marcar que um orçamento foi carregado
+      
+      console.log('Orçamento carregado com sucesso. Número final:', data.numero)
+      console.log('Estado orcamentoJaCarregado definido como true')
 
       // Mudar para a aba de orçamento
       setAbaAtiva("orcamento")
@@ -2286,6 +2311,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       <ListaOrcamentos
                         onSelectOrcamento={carregarOrcamento}
                         onNovoOrcamento={() => {
+                          setOrcamentoJaCarregado(false) // Resetar flag antes de criar novo
                           criarNovoOrcamento()
                           setAbaAtiva("orcamento")
                         }}
