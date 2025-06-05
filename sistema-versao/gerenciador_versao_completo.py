@@ -71,7 +71,7 @@ class VersionControlGUI:
         self.versions_tree = ttk.Treeview(versions_frame, columns=('date', 'message'), show='headings', height=15)
         self.versions_tree.heading('#1', text='Data/Hora')
         self.versions_tree.heading('#2', text='Descrição')
-        self.versions_tree.column('#1', width=150)
+        self.versions_tree.column('#1', width=120)
         self.versions_tree.column('#2', width=300)
         self.versions_tree.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
@@ -83,6 +83,8 @@ class VersionControlGUI:
                   command=self.restore_version).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(version_buttons, text="🔀 Criar Fork desta versão", 
                   command=self.create_fork_from_version).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(version_buttons, text="✏️ Renomear Versão", 
+                  command=self.rename_version).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(version_buttons, text="📦 Gerenciar Stash", 
                   command=self.manage_stash).pack(side=tk.LEFT)
         
@@ -315,8 +317,8 @@ class VersionControlGUI:
             for item in self.versions_tree.get_children():
                 self.versions_tree.delete(item)
             
-            # Buscar commits
-            success, output, _ = self.run_command('git log --oneline --date=short --pretty=format:"%h|%ad %H:%M|%s" -20')
+            # Buscar commits com formato de data/hora mais limpo
+            success, output, _ = self.run_command('git log --oneline --date=format:"%d/%m/%Y %H:%M" --pretty=format:"%h|%ad|%s" -20')
             if success and output:
                 for line in output.strip().split('\n'):
                     if '|' in line:
@@ -325,7 +327,17 @@ class VersionControlGUI:
                             hash_short = parts[0]
                             date_time = parts[1]
                             message = parts[2]
-                            self.versions_tree.insert('', tk.END, values=(date_time, message), tags=(hash_short,))
+                            
+                            # Verificar se há tag (nome personalizado) para este commit
+                            tag_success, tag_output, _ = self.run_command(f'git tag --points-at {hash_short}')
+                            if tag_success and tag_output.strip():
+                                # Usar o nome da tag se existir
+                                tag_name = tag_output.strip().split('\n')[0]
+                                display_message = f"🏷️ {tag_name}"
+                            else:
+                                display_message = message
+                            
+                            self.versions_tree.insert('', tk.END, values=(date_time, display_message), tags=(hash_short,))
             else:
                 # Se não há commits, adicionar uma mensagem informativa
                 self.versions_tree.insert('', tk.END, values=("", "Nenhuma versão salva ainda"), tags=("",))
@@ -528,6 +540,88 @@ class VersionControlGUI:
                 self.refresh_all()
             else:
                 messagebox.showerror("Erro", f"Erro ao restaurar versão: {error}")
+    
+    def rename_version(self):
+        """Renomeia uma versão selecionada usando tags"""
+        selection = self.versions_tree.selection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Selecione uma versão para renomear!")
+            return
+        
+        item = self.versions_tree.item(selection[0])
+        commit_hash = item['tags'][0] if item['tags'] else None
+        current_message = item['values'][1] if len(item['values']) > 1 else ""
+        
+        if not commit_hash:
+            messagebox.showerror("Erro", "Erro ao obter hash do commit")
+            return
+        
+        # Verificar se já tem tag
+        tag_success, tag_output, _ = self.run_command(f'git tag --points-at {commit_hash}')
+        current_tag = None
+        if tag_success and tag_output.strip():
+            current_tag = tag_output.strip().split('\n')[0]
+            current_display = current_tag
+        else:
+            current_display = current_message.replace('🏷️ ', '')
+        
+        # Pedir novo nome
+        new_name = simpledialog.askstring(
+            "Renomear Versão",
+            f"Novo nome para a versão:\n\nNome atual: {current_display}",
+            initialvalue=current_display
+        )
+        
+        if not new_name or new_name.strip() == current_display:
+            return
+        
+        new_name = new_name.strip()
+        
+        # Validar nome da tag (sem espaços e caracteres especiais)
+        import re
+        if not re.match(r'^[a-zA-Z0-9._-]+$', new_name):
+            if messagebox.askyesno(
+                "Nome Inválido", 
+                f"O nome '{new_name}' contém caracteres especiais.\n\n"
+                "Deseja usar uma versão limpa? (espaços viram underscores)"
+            ):
+                # Limpar nome
+                clean_name = re.sub(r'[^a-zA-Z0-9._-]', '_', new_name)
+                clean_name = re.sub(r'_+', '_', clean_name)  # Remove underscores duplos
+                new_name = clean_name
+            else:
+                return
+        
+        try:
+            # Remover tag antiga se existir
+            if current_tag:
+                self.run_command(f'git tag -d {current_tag}')
+            
+            # Criar nova tag
+            success, output, error = self.run_command(f'git tag {new_name} {commit_hash}')
+            
+            if success:
+                messagebox.showinfo("Sucesso", f"Versão renomeada para '{new_name}' com sucesso!")
+                self.refresh_all()
+            else:
+                if "already exists" in error:
+                    if messagebox.askyesno(
+                        "Tag Existe", 
+                        f"Já existe uma tag com o nome '{new_name}'.\n\nDeseja substituí-la?"
+                    ):
+                        # Forçar substituição
+                        self.run_command(f'git tag -d {new_name}')  # Remove a existente
+                        success2, _, error2 = self.run_command(f'git tag {new_name} {commit_hash}')
+                        if success2:
+                            messagebox.showinfo("Sucesso", f"Versão renomeada para '{new_name}' com sucesso!")
+                            self.refresh_all()
+                        else:
+                            messagebox.showerror("Erro", f"Erro ao renomear: {error2}")
+                else:
+                    messagebox.showerror("Erro", f"Erro ao criar tag: {error}")
+        
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao renomear versão: {e}")
     
     def create_fork_from_version(self):
         """Cria fork a partir da versão selecionada"""
@@ -1073,14 +1167,6 @@ class VersionControlGUI:
         if not self.check_vercel_cli_installed():
             if not self.install_vercel_cli():
                 return
-        
-        # Opções de login
-        login_options = [
-            ("GitHub", "--github"),
-            ("GitLab", "--gitlab"),
-            ("Bitbucket", "--bitbucket"),
-            ("Email", "")
-        ]
         
         # Dialog para escolher método de login
         choice = messagebox.askyesno(
