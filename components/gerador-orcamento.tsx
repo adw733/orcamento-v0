@@ -43,7 +43,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [orcamento, setOrcamento] = useState<Orcamento>({
-    numero: "ORC-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random() * 1000)).padStart(3, "0"),
+    numero: "Carregando...",
     data: new Date().toISOString().split("T")[0],
     cliente: null,
     itens: [],
@@ -168,7 +168,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         String(hoje.getDate()).padStart(2, "0")
 
       setOrcamento({
-        numero: `${proximoNumero} - Novo Orçamento`,
+        numero: proximoNumero,
         data: dataLocal,
         cliente: null,
         itens: [],
@@ -700,14 +700,26 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   useEffect(() => {
     console.log("Inicializando com aba ativa:", abaAtivaInicial)
 
-    // Carregar dados iniciais sem criar um novo orçamento
+    // Carregar dados iniciais e inicializar número do orçamento
     const carregarDadosIniciais = async () => {
       try {
         await carregarDadosEmpresa()
         await carregarClientes()
         await carregarProdutos()
+        
+        // Inicializar com o próximo número de orçamento disponível
+        const proximoNumero = await obterProximoNumeroOrcamento()
+        setOrcamento(prev => ({
+          ...prev,
+          numero: proximoNumero
+        }))
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error)
+        // Em caso de erro, usar um número padrão
+        setOrcamento(prev => ({
+          ...prev,
+          numero: "0140"
+        }))
       }
     }
 
