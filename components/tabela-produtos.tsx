@@ -33,6 +33,7 @@ interface ProdutoOrcamento {
   cor: string
   quantidade: number
   observacao: string
+  observacaoComercial: string
   status: string
   ordemItem: number
 }
@@ -149,9 +150,29 @@ export default function TabelaProdutos() {
           }
         }
 
+        // Buscar itens do banco de dados para obter observações comerciais
+        const { data: itensDataBanco, error: itensError } = await supabase
+          .from("itens_orcamento")
+          .select("id, produto_id, observacao_comercial")
+          .eq("orcamento_id", orcamento.id)
+
+        if (itensError) {
+          console.error(`Erro ao buscar itens do orçamento ${orcamento.id}:`, itensError)
+          continue
+        }
+
+        // Criar um mapa de observações comerciais por produto_id
+        const observacoesMap = new Map()
+        if (itensDataBanco) {
+          itensDataBanco.forEach(item => {
+            observacoesMap.set(item.produto_id, item.observacao_comercial || "")
+          })
+        }
+
         // Para cada item do orçamento, processar os tamanhos
         for (let itemIndex = 0; itemIndex < itens.length; itemIndex++) {
           const item = itens[itemIndex]
+          
           // Buscar o produto para obter o nome
           const { data: produtoData, error: produtoError } = await supabase
             .from("produtos")
@@ -166,6 +187,9 @@ export default function TabelaProdutos() {
 
           const produtoNome = produtoData?.nome || "Produto não encontrado"
           const cor = item.corSelecionada || "Não especificada"
+          
+          // Obter a observação comercial do item (priorizar do JSON, senão buscar no banco)
+          const observacaoComercial = item.observacaoComercial || observacoesMap.get(item.produtoId) || ""
 
           // Para cada tamanho no item, criar uma entrada na tabela
           if (item.tamanhos && Object.keys(item.tamanhos).length > 0) {
@@ -188,6 +212,7 @@ export default function TabelaProdutos() {
                 cor: cor,
                 quantidade: Number(quantidade),
                 observacao: "",
+                observacaoComercial: observacaoComercial,
                 status: orcamento.status || "proposta",
                 ordemItem: itemIndex,
               })
@@ -207,6 +232,7 @@ export default function TabelaProdutos() {
               cor: cor,
               quantidade: item.quantidade || 0,
               observacao: "",
+              observacaoComercial: observacaoComercial,
               status: orcamento.status || "proposta",
               ordemItem: itemIndex,
             })
@@ -238,7 +264,8 @@ export default function TabelaProdutos() {
           produto.produtoNome.toLowerCase().includes(termLower) ||
           produto.cor.toLowerCase().includes(termLower) ||
           produto.tamanho.toLowerCase().includes(termLower) ||
-          produto.observacao.toLowerCase().includes(termLower),
+          produto.observacao.toLowerCase().includes(termLower) ||
+          produto.observacaoComercial.toLowerCase().includes(termLower),
       )
     }
 
@@ -626,6 +653,14 @@ export default function TabelaProdutos() {
         .linha-alternada {
           background-color: #f9f9f9;
         }
+        .observacao-comercial {
+          font-style: italic;
+          color: #666;
+          font-size: 7pt;
+          margin-top: 1mm;
+          white-space: normal;
+          overflow: visible;
+        }
         @media print {
           body * {
             visibility: hidden;
@@ -766,41 +801,69 @@ export default function TabelaProdutos() {
 
           if (modoVisualizacao === "orcamento") {
             // Células para modo orçamento
-            const cells = [
-              { text: produto.produtoNome, class: "coluna-produto" },
-              { text: produto.cor, class: "coluna-cor" },
-              { text: produto.tamanho, class: "coluna-tamanho" },
-              { text: produto.quantidade.toString(), class: "coluna-qtd" },
-              { text: "", class: "coluna-obs" },
-            ]
+            const produtoCell = document.createElement("td")
+            produtoCell.className = "coluna-produto"
+            produtoCell.innerHTML = `
+              <div>${produto.produtoNome}</div>
+              ${produto.observacaoComercial ? `<div class="observacao-comercial">${produto.observacaoComercial}</div>` : ''}
+            `
+            row.appendChild(produtoCell)
 
-            cells.forEach((cellInfo) => {
-              const td = document.createElement("td")
-              td.textContent = cellInfo.text
-              td.className = cellInfo.class
-              row.appendChild(td)
-            })
+            const corCell = document.createElement("td")
+            corCell.textContent = produto.cor
+            corCell.className = "coluna-cor"
+            row.appendChild(corCell)
+
+            const tamanhoCell = document.createElement("td")
+            tamanhoCell.textContent = produto.tamanho
+            tamanhoCell.className = "coluna-tamanho"
+            row.appendChild(tamanhoCell)
+
+            const qtdCell = document.createElement("td")
+            qtdCell.textContent = produto.quantidade.toString()
+            qtdCell.className = "coluna-qtd"
+            row.appendChild(qtdCell)
+
+            const obsCell = document.createElement("td")
+            obsCell.className = "coluna-obs"
+            row.appendChild(obsCell)
           } else {
             // Células para modo produto
+            const produtoCell = document.createElement("td")
+            produtoCell.className = "coluna-produto"
+            produtoCell.innerHTML = `
+              <div>${produto.produtoNome}</div>
+              ${produto.observacaoComercial ? `<div class="observacao-comercial">${produto.observacaoComercial}</div>` : ''}
+            `
+            row.appendChild(produtoCell)
+
             const numeroEContato = produto.nomeContato
               ? `${produto.orcamentoNumero.split(" - ")[0]} - ${produto.nomeContato}`
               : produto.orcamentoNumero.split(" - ")[0]
 
-            const cells = [
-              { text: produto.produtoNome, class: "coluna-produto" },
-              { text: numeroEContato, class: "coluna-numero" },
-              { text: produto.tamanho, class: "coluna-tamanho" },
-              { text: produto.cor, class: "coluna-cor" },
-              { text: produto.quantidade.toString(), class: "coluna-qtd" },
-              { text: "", class: "coluna-obs" },
-            ]
+            const numeroCell = document.createElement("td")
+            numeroCell.textContent = numeroEContato
+            numeroCell.className = "coluna-numero"
+            row.appendChild(numeroCell)
 
-            cells.forEach((cellInfo) => {
-              const td = document.createElement("td")
-              td.textContent = cellInfo.text
-              td.className = cellInfo.class
-              row.appendChild(td)
-            })
+            const tamanhoCell = document.createElement("td")
+            tamanhoCell.textContent = produto.tamanho
+            tamanhoCell.className = "coluna-tamanho"
+            row.appendChild(tamanhoCell)
+
+            const corCell = document.createElement("td")
+            corCell.textContent = produto.cor
+            corCell.className = "coluna-cor"
+            row.appendChild(corCell)
+
+            const qtdCell = document.createElement("td")
+            qtdCell.textContent = produto.quantidade.toString()
+            qtdCell.className = "coluna-qtd"
+            row.appendChild(qtdCell)
+
+            const obsCell = document.createElement("td")
+            obsCell.className = "coluna-obs"
+            row.appendChild(obsCell)
           }
 
           tbody.appendChild(row)
@@ -875,341 +938,6 @@ export default function TabelaProdutos() {
     }
   }
 
-  // Modificar a função exportarParaPDF para suportar ambos os modos de visualização
-  // Adicionar o parâmetro modo à função
-  const exportarParaPDF = async (modo: "orcamento" | "produto" = modoVisualizacao) => {
-    try {
-      setExportandoPDF(true)
-
-      // Importar dinamicamente as bibliotecas necessárias
-      const [jspdfModule, html2canvasModule] = await Promise.all([import("jspdf"), import("html2canvas")])
-
-      const jsPDF = jspdfModule.default
-      const html2canvas = html2canvasModule.default
-
-      // Criar uma nova instância do jsPDF
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      })
-
-      // Configurações da página A4 com margens reduzidas
-      const pageWidth = 210
-      const pageHeight = 297
-      const margin = 5 // Reduzido de 10 para 5
-      const contentWidth = pageWidth - margin * 2
-      const contentHeight = pageHeight - margin * 2
-
-      // Agrupar produtos com base no modo de visualização
-      const agrupamentos: { [key: string]: ProdutoOrcamento[] } = {}
-
-      if (modo === "orcamento") {
-        // Agrupar por orçamento
-        produtosFiltrados.forEach((produto) => {
-          if (!agrupamentos[produto.orcamentoId]) {
-            agrupamentos[produto.orcamentoId] = []
-          }
-          agrupamentos[produto.orcamentoId].push(produto)
-        })
-      } else {
-        // Agrupar por tipo de produto
-        produtosFiltrados.forEach((produto) => {
-          if (!agrupamentos[produto.produtoNome]) {
-            agrupamentos[produto.produtoNome] = []
-          }
-          agrupamentos[produto.produtoNome].push(produto)
-        })
-      }
-
-      // Criar uma cópia da tabela para manipulação
-      const container = document.createElement("div")
-      container.style.position = "absolute"
-      container.style.left = "-9999px"
-      container.style.width = `${contentWidth}mm`
-      container.style.backgroundColor = "#ffffff"
-      container.style.padding = "0"
-      container.style.margin = "0"
-      container.style.boxSizing = "border-box"
-      document.body.appendChild(container)
-
-      // Adicionar título ao PDF
-      pdf.setFontSize(16)
-      pdf.setFont("helvetica", "bold")
-
-      // Título baseado no modo de visualização
-      const titulo = modo === "orcamento" ? "Tabela de Produtos por Orçamento" : "Tabela de Produtos Agrupados por Tipo"
-      pdf.text(titulo, margin, margin + 10)
-
-      // Adicionar data de geração
-      pdf.setFontSize(10)
-      pdf.setFont("helvetica", "normal")
-      const dataAtual = new Date().toLocaleDateString("pt-BR")
-      pdf.text(`Gerado em: ${dataAtual}`, margin, margin + 16)
-
-      let yPosition = margin + 25 // Posição inicial após o título
-      let pageCount = 1
-
-      // Função para verificar se um grupo cabe na página atual
-      const verificarEspacoParaGrupo = (numProdutos: number) => {
-        // Altura estimada para cada linha de produto (7mm)
-        const alturaEstimadaPorProduto = 7
-        // Altura estimada para o cabeçalho do grupo (10mm)
-        const alturaEstimadaCabecalho = 10
-        // Altura total estimada para o grupo
-        const alturaEstimadaTotal = alturaEstimadaCabecalho + numProdutos * alturaEstimadaPorProduto
-
-        // Verificar se cabe na página atual
-        return yPosition + alturaEstimadaTotal <= pageHeight - margin
-      }
-
-      // Função para desenhar o cabeçalho da tabela
-      const desenharCabecalhoTabela = () => {
-        // Adicionar linha grossa no topo do cabeçalho
-        desenharLinhaGrossa(pdf, yPosition, margin, contentWidth)
-
-        pdf.setFillColor(240, 240, 240)
-        pdf.rect(margin, yPosition, contentWidth, 8, "F")
-
-        pdf.setFont("helvetica", "bold")
-        pdf.setFontSize(9)
-        pdf.setTextColor(80, 80, 80)
-
-        if (modo === "orcamento") {
-          // Cabeçalho para modo orçamento
-          pdf.text("Produto", margin + 5, yPosition + 5)
-          pdf.text("Cor", margin + 95, yPosition + 5)
-          pdf.text("Tamanho", margin + 120, yPosition + 5)
-          pdf.text("Qtd", margin + 145, yPosition + 5)
-          pdf.text("Obs", margin + 160, yPosition + 5)
-        } else {
-          // Cabeçalho para modo produto
-          pdf.text("Produto", margin + 5, yPosition + 5)
-          pdf.text("Número e Contato", margin + 70, yPosition + 5)
-          pdf.text("Tamanho", margin + 130, yPosition + 5)
-          pdf.text("Cor", margin + 155, yPosition + 5)
-          pdf.text("Qtd", margin + 180, yPosition + 5)
-        }
-
-        yPosition += 8
-
-        // Adicionar linha grossa abaixo do cabeçalho
-        desenharLinhaGrossa(pdf, yPosition, margin, contentWidth)
-      }
-
-      // Processar cada grupo
-      for (const chaveGrupo of Object.keys(agrupamentos)) {
-        const produtosDoGrupo = agrupamentos[chaveGrupo]
-
-        // Verificar se o grupo cabe na página atual, senão adicionar nova página
-        if (!verificarEspacoParaGrupo(produtosDoGrupo.length)) {
-          pdf.addPage()
-          pageCount++
-          yPosition = margin + 10
-        }
-
-        // Adicionar informações do grupo
-        const primeiroItem = produtosDoGrupo[0]
-        pdf.setFont("helvetica", "bold")
-        pdf.setFontSize(11)
-        pdf.setTextColor(0, 0, 0)
-
-        if (modo === "orcamento") {
-          // Título para modo orçamento
-          pdf.text(
-            `Orçamento: ${formatarDescricaoPedido(primeiroItem.orcamentoNumero, primeiroItem.clienteNome, primeiroItem.nomeContato)}`,
-            margin,
-            yPosition + 5,
-          )
-
-          pdf.setFont("helvetica", "normal")
-          pdf.setFontSize(9)
-          pdf.text(
-            `Data: ${formatarData(primeiroItem.orcamentoData)} | Cliente: ${primeiroItem.clienteNome} | Contato: ${primeiroItem.nomeContato || "Não especificado"}`,
-            margin,
-            yPosition + 10,
-          )
-        } else {
-          // Título para modo produto
-          pdf.text(`Produto: ${chaveGrupo}`, margin, yPosition + 5)
-        }
-
-        yPosition += 15
-
-        // Desenhar cabeçalho da tabela
-        desenharCabecalhoTabela()
-
-        // Adicionar produtos do grupo
-        pdf.setFont("helvetica", "normal")
-        pdf.setFontSize(8)
-        pdf.setTextColor(0, 0, 0)
-
-        // Ordenar os produtos com base no modo
-        const produtosOrdenados = [...produtosDoGrupo]
-
-        if (modo === "orcamento") {
-          // Ordenar por nome do produto e depois por tamanho
-          produtosOrdenados.sort((a, b) => {
-            const comparacaoProduto = a.produtoNome.localeCompare(b.produtoNome)
-            if (comparacaoProduto !== 0) return comparacaoProduto
-            return ordenarTamanhos(a.tamanho, b.tamanho)
-          })
-        } else {
-          // Ordenar por número de orçamento e depois por tamanho
-          produtosOrdenados.sort((a, b) => {
-            const comparacaoOrcamento = a.orcamentoNumero.localeCompare(b.orcamentoNumero)
-            if (comparacaoOrcamento !== 0) return comparacaoOrcamento
-            return ordenarTamanhos(a.tamanho, b.tamanho)
-          })
-        }
-
-        // Garantir que os produtos estejam ordenados corretamente para detectar mudanças de orçamento
-        if (modo === "produto") {
-          // Ordenar primeiro por nome do produto e depois por número de orçamento
-          produtosOrdenados.sort((a, b) => {
-            const comparacaoProduto = a.produtoNome.localeCompare(b.produtoNome)
-            if (comparacaoProduto !== 0) return comparacaoProduto
-            return a.orcamentoNumero.localeCompare(b.orcamentoNumero)
-          })
-        }
-
-        let orcamentoAnterior = ""
-        let totalQuantidade = 0
-
-        for (let i = 0; i < produtosOrdenados.length; i++) {
-          const produto = produtosOrdenados[i]
-          const isUltimaLinha = i === produtosOrdenados.length - 1
-
-          // Verificar se é um novo orçamento no modo produto
-          if (modo === "produto" && orcamentoAnterior !== "" && orcamentoAnterior !== produto.orcamentoId) {
-            // Adicionar uma linha mais grossa para separar os orçamentos
-            // Primeiro uma linha de fundo cinza
-            pdf.setFillColor(240, 240, 240)
-            pdf.rect(margin, yPosition, contentWidth, 3, "F")
-
-            // Depois uma linha mais grossa e escura
-            pdf.setDrawColor(50, 50, 50) // Cor cinza mais escura para maior contraste
-            pdf.setLineWidth(1.5) // Linha muito mais grossa para garantir visibilidade
-            pdf.line(margin, yPosition, margin + contentWidth, yPosition)
-
-            // Adicionar uma segunda linha para reforçar
-            pdf.setLineWidth(0.8)
-            pdf.setDrawColor(100, 100, 100)
-            pdf.line(margin, yPosition + 2, margin + contentWidth, yPosition + 2)
-
-            // Restaurar configurações padrão
-            pdf.setLineWidth(0.1)
-            pdf.setDrawColor(0, 0, 0)
-
-            yPosition += 4 // Aumentar o espaço após a linha para melhor visualização
-          }
-
-          // Desenhar linha alternada para melhor legibilidade
-          if (i % 2 === 1) {
-            pdf.setFillColor(248, 248, 248)
-            pdf.rect(margin, yPosition, contentWidth, 6, "F")
-          }
-
-          if (modo === "orcamento") {
-            // Renderizar linha no modo orçamento
-            const produtoNomeLimitado =
-              produto.produtoNome.length > 40 ? produto.produtoNome.substring(0, 40) + "..." : produto.produtoNome
-            pdf.text(produtoNomeLimitado, margin + 5, yPosition + 4)
-
-            const corLimitada = produto.cor.length > 12 ? produto.cor.substring(0, 12) + "..." : produto.cor
-            pdf.text(corLimitada, margin + 95, yPosition + 4)
-
-            pdf.text(produto.tamanho, margin + 120, yPosition + 4)
-            pdf.text(produto.quantidade.toString(), margin + 145, yPosition + 4)
-          } else {
-            // Renderizar linha no modo produto
-            // Mostrar o nome do produto em todas as linhas
-            const produtoNomeLimitado =
-              produto.produtoNome.length > 30 ? produto.produtoNome.substring(0, 30) + "..." : produto.produtoNome
-            pdf.text(produtoNomeLimitado, margin + 5, yPosition + 4)
-
-            // Extrair apenas o número do orçamento e adicionar o contato
-            const numeroOrcamento = produto.orcamentoNumero.split(" - ")[0] || produto.orcamentoNumero
-            const textoOrcamento = produto.nomeContato
-              ? `${numeroOrcamento} - ${produto.nomeContato.substring(0, 15)}`
-              : numeroOrcamento
-            pdf.text(textoOrcamento, margin + 70, yPosition + 4)
-
-            pdf.text(produto.tamanho, margin + 130, yPosition + 4)
-
-            const corLimitada = produto.cor.length > 12 ? produto.cor.substring(0, 12) + "..." : produto.cor
-            pdf.text(corLimitada, margin + 155, yPosition + 4)
-
-            pdf.text(produto.quantidade.toString(), margin + 180, yPosition + 4)
-          }
-
-          // Somar a quantidade para o total
-          totalQuantidade += produto.quantidade
-
-          // Avançar para a próxima linha
-          yPosition += 6
-
-          // Se for a última linha, adicionar uma linha grossa no final
-          if (isUltimaLinha) {
-            desenharLinhaGrossa(pdf, yPosition, margin, contentWidth)
-
-            // Adicionar linha de total
-            yPosition += 6
-
-            pdf.setFont("helvetica", "bold")
-            pdf.setFontSize(9)
-
-            if (modo === "orcamento") {
-              pdf.text("Total:", margin + 120, yPosition + 4)
-              pdf.text(totalQuantidade.toString(), margin + 145, yPosition + 4)
-            } else {
-              pdf.text("Total:", margin + 155, yPosition + 4)
-              pdf.text(totalQuantidade.toString(), margin + 180, yPosition + 4)
-            }
-
-            yPosition += 6
-            desenharLinhaGrossa(pdf, yPosition, margin, contentWidth)
-          }
-
-          // Verificar se precisa adicionar nova página
-          if (yPosition > pageHeight - margin) {
-            pdf.addPage()
-            pageCount++
-            yPosition = margin + 10
-            desenharCabecalhoTabela()
-          }
-
-          // Atualizar o orçamento anterior para a próxima iteração
-          orcamentoAnterior = produto.orcamentoId
-        }
-
-        // Adicionar espaço entre grupos
-        yPosition += 10
-      }
-
-      // Adicionar numeração de páginas
-      const totalPages = pageCount
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i)
-        pdf.setFont("helvetica", "normal")
-        pdf.setFontSize(8)
-        pdf.text(`Página ${i} de ${totalPages}`, pageWidth - margin - 25, pageHeight - margin)
-      }
-
-      // Remover o elemento temporário
-      document.body.removeChild(container)
-
-      // Salvar o PDF com nome baseado no modo
-      const nomeArquivo = modo === "orcamento" ? "tabela-produtos-por-orcamento.pdf" : "tabela-produtos-por-tipo.pdf"
-      pdf.save(nomeArquivo)
-    } catch (error) {
-      console.error("Erro ao exportar para PDF:", error)
-      alert("Erro ao exportar para PDF. Tente novamente.")
-    } finally {
-      setExportandoPDF(false)
-    }
-  }
-
   const isNovoOrcamento = (index: number): boolean => {
     if (index === 0) return true
     return produtosFiltrados[index].orcamentoId !== produtosFiltrados[index - 1].orcamentoId
@@ -1281,7 +1009,7 @@ export default function TabelaProdutos() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Buscar por número, cliente, produto, cor..."
+            placeholder="Buscar por número, cliente, produto, cor, observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 w-full"
@@ -1561,7 +1289,14 @@ export default function TabelaProdutos() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="px-4 py-0.5 align-middle">{produto.produtoNome}</TableCell>
+                            <TableCell className="px-4 py-0.5 align-middle">
+                              <div>
+                                <div className="font-medium">{produto.produtoNome}</div>
+                                {produto.observacaoComercial && (
+                                  <div className="text-xs mt-0.5 text-gray-600 italic">{produto.observacaoComercial}</div>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="px-4 py-0.5 align-middle">{produto.cor}</TableCell>
                             <TableCell className="px-4 py-0.5 align-middle">{produto.tamanho}</TableCell>
                             <TableCell className="px-4 py-0.5 align-middle font-medium">{produto.quantidade}</TableCell>
@@ -1574,7 +1309,12 @@ export default function TabelaProdutos() {
                           // Células para modo produto
                           <>
                             <TableCell className="px-4 py-0.5 align-middle">
-                              <span className="font-medium">{produto.produtoNome}</span>
+                              <div>
+                                <div className="font-medium">{produto.produtoNome}</div>
+                                {produto.observacaoComercial && (
+                                  <div className="text-xs mt-0.5 text-gray-600 italic">{produto.observacaoComercial}</div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="px-4 py-0.5 align-middle">
                               {produto.orcamentoNumero.split(" - ")[0] || produto.orcamentoNumero}
