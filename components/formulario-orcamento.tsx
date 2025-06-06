@@ -808,6 +808,7 @@ export default function FormularioOrcamento({
   // Função para obter a cor do badge baseado no status
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "6": return "bg-red-100 text-red-800 border-red-200"
       case "5": return "bg-blue-100 text-blue-800 border-blue-200"
       case "4": return "bg-yellow-100 text-yellow-800 border-yellow-200"
       case "3": return "bg-orange-100 text-orange-800 border-orange-200"
@@ -819,6 +820,7 @@ export default function FormularioOrcamento({
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case "6": return "Recusada"
       case "5": return "Proposta"
       case "4": return "Execução"
       case "3": return "Emitir Cobrança"
@@ -922,11 +924,12 @@ export default function FormularioOrcamento({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="5">5 - Proposta</SelectItem>
-                      <SelectItem value="4">4 - Execução</SelectItem>
-                      <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
-                      <SelectItem value="2">2 - Entregue</SelectItem>
                       <SelectItem value="1">1 - Finalizada</SelectItem>
+                      <SelectItem value="2">2 - Entregue</SelectItem>
+                      <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
+                      <SelectItem value="4">4 - Execução</SelectItem>
+                      <SelectItem value="5">5 - Proposta</SelectItem>
+                      <SelectItem value="6">6 - Recusada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -404,6 +404,8 @@ export default function ListaOrcamentos({
   // Modificar a função getStatusClassName para incluir os novos status
   const getStatusClassName = (status: string) => {
     switch (status) {
+      case "6":
+        return "bg-red-100 text-red-700 border-red-300"
       case "5":
       case "proposta":
         return "bg-blue-100 text-blue-700 border-blue-300"
@@ -628,43 +630,17 @@ export default function ListaOrcamentos({
           Todos
         </Button>
         <Button
-          variant={statusFilter === "5" || statusFilter === "proposta" ? "default" : "outline"}
+          variant={statusFilter === "1" || statusFilter === "finalizado" ? "default" : "outline"}
           size="sm"
-          onClick={() => setStatusFilter("5")}
+          onClick={() => setStatusFilter("1")}
           className={`text-xs whitespace-nowrap ${
-            statusFilter === "5" || statusFilter === "proposta"
-              ? "bg-blue-500 text-white"
-              : "text-blue-500 border-blue-500 hover:bg-blue-50"
+            statusFilter === "1" || statusFilter === "finalizado"
+              ? "bg-green-500 text-white"
+              : "text-green-500 border-green-500 hover:bg-green-50"
           }`}
         >
-          <span className="hidden sm:inline">5 - Proposta</span>
-          <span className="sm:hidden">5</span>
-        </Button>
-        <Button
-          variant={statusFilter === "4" || statusFilter === "execucao" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("4")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "4" || statusFilter === "execucao"
-              ? "bg-amber-500 text-white"
-              : "text-amber-500 border-amber-500 hover:bg-amber-50"
-          }`}
-        >
-          <span className="hidden sm:inline">4 - Execução</span>
-          <span className="sm:hidden">4</span>
-        </Button>
-        <Button
-          variant={statusFilter === "3" || statusFilter === "cobranca" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("3")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "3" || statusFilter === "cobranca"
-              ? "bg-red-500 text-white"
-              : "text-red-500 border-red-500 hover:bg-red-50"
-          }`}
-        >
-          <span className="hidden sm:inline">3 - Cobrança</span>
-          <span className="sm:hidden">3</span>
+          <span className="hidden sm:inline">1 - Finalizada</span>
+          <span className="sm:hidden">1</span>
         </Button>
         <Button
           variant={statusFilter === "2" || statusFilter === "entregue" ? "default" : "outline"}
@@ -680,17 +656,56 @@ export default function ListaOrcamentos({
           <span className="sm:hidden">2</span>
         </Button>
         <Button
-          variant={statusFilter === "1" || statusFilter === "finalizado" ? "default" : "outline"}
+          variant={statusFilter === "3" || statusFilter === "cobranca" ? "default" : "outline"}
           size="sm"
-          onClick={() => setStatusFilter("1")}
+          onClick={() => setStatusFilter("3")}
           className={`text-xs whitespace-nowrap ${
-            statusFilter === "1" || statusFilter === "finalizado"
-              ? "bg-green-500 text-white"
-              : "text-green-500 border-green-500 hover:bg-green-50"
+            statusFilter === "3" || statusFilter === "cobranca"
+              ? "bg-red-500 text-white"
+              : "text-red-500 border-red-500 hover:bg-red-50"
           }`}
         >
-          <span className="hidden sm:inline">1 - Finalizada</span>
-          <span className="sm:hidden">1</span>
+          <span className="hidden sm:inline">3 - Cobrança</span>
+          <span className="sm:hidden">3</span>
+        </Button>
+        <Button
+          variant={statusFilter === "4" || statusFilter === "execucao" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("4")}
+          className={`text-xs whitespace-nowrap ${
+            statusFilter === "4" || statusFilter === "execucao"
+              ? "bg-amber-500 text-white"
+              : "text-amber-500 border-amber-500 hover:bg-amber-50"
+          }`}
+        >
+          <span className="hidden sm:inline">4 - Execução</span>
+          <span className="sm:hidden">4</span>
+        </Button>
+        <Button
+          variant={statusFilter === "5" || statusFilter === "proposta" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("5")}
+          className={`text-xs whitespace-nowrap ${
+            statusFilter === "5" || statusFilter === "proposta"
+              ? "bg-blue-500 text-white"
+              : "text-blue-500 border-blue-500 hover:bg-blue-50"
+          }`}
+        >
+          <span className="hidden sm:inline">5 - Proposta</span>
+          <span className="sm:hidden">5</span>
+        </Button>
+        <Button
+          variant={statusFilter === "6" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("6")}
+          className={`text-xs whitespace-nowrap ${
+            statusFilter === "6"
+              ? "bg-red-500 text-white"
+              : "text-red-500 border-red-500 hover:bg-red-50"
+          }`}
+        >
+          <span className="hidden sm:inline">6 - Recusada</span>
+          <span className="sm:hidden">6</span>
         </Button>
       </div>
 
@@ -907,11 +922,12 @@ export default function ListaOrcamentos({
                           className={`text-xs font-medium px-1 sm:px-2 py-1 rounded-full border min-w-0 w-full ${getStatusClassName(orcamento.status || "5")}`}
                           style={{ minWidth: '120px' }}
                         >
-                          <option value="5">5 - Proposta</option>
-                          <option value="4">4 - Execução</option>
-                          <option value="3">3 - Cobrança</option>
-                          <option value="2">2 - Entregue</option>
                           <option value="1">1 - Finalizada</option>
+                          <option value="2">2 - Entregue</option>
+                          <option value="3">3 - Cobrança</option>
+                          <option value="4">4 - Execução</option>
+                          <option value="5">5 - Proposta</option>
+                          <option value="6">6 - Recusada</option>
                         </select>
                       </TableCell>
                       <TableCell className="px-2 sm:px-4 py-3 align-middle">

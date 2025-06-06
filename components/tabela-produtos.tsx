@@ -371,6 +371,8 @@ export default function TabelaProdutos() {
 
   const getStatusClassName = (status: string) => {
     switch (status) {
+      case "6":
+        return "bg-red-100 text-red-700 border-red-300"
       case "5":
       case "proposta":
         return "bg-blue-100 text-blue-700 border-blue-300"
@@ -1293,11 +1295,12 @@ export default function TabelaProdutos() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os status</SelectItem>
-              <SelectItem value="5">5 - Proposta</SelectItem>
-              <SelectItem value="4">4 - Execução</SelectItem>
-              <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
-              <SelectItem value="2">2 - Entregue</SelectItem>
               <SelectItem value="1">1 - Finalizada</SelectItem>
+              <SelectItem value="2">2 - Entregue</SelectItem>
+              <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
+              <SelectItem value="4">4 - Execução</SelectItem>
+              <SelectItem value="5">5 - Proposta</SelectItem>
+              <SelectItem value="6">6 - Recusada</SelectItem>
             </SelectContent>
           </Select>
         </div>
