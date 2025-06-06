@@ -662,7 +662,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       // Gerar o nome do arquivo
       const filename = formatPDFFilename(
         orcamentoExportacao.numero,
-        tipoExportacao === "ficha" ? "ficha-tecnica" : tipoExportacao === "orcamento" ? "orcamento" : "completo",
+        tipoExportacao === "ficha" ? "ficha-tecnica" : "orcamento",
         orcamentoExportacao.cliente?.nome,
         orcamentoExportacao.nomeContato,
       )
@@ -2206,7 +2206,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   <Button
                     onClick={async () => {
                       if (orcamento.id) {
-                        await exportarOrcamento(orcamento.id, "orcamento")
+                        await exportarOrcamento(orcamento.id, "completo")
                       }
                     }}
                     disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
