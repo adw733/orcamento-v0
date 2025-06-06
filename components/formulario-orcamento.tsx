@@ -914,8 +914,8 @@ export default function FormularioOrcamento({
         </CardContent>
       </Card>
 
-      {/* Grid principal com três colunas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {/* Grid principal com duas colunas - esquerda para dados do orçamento e cliente, direita para itens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         
         {/* Coluna da esquerda - Informações do cliente e condições */}
         <div className="space-y-3">
@@ -1034,7 +1034,7 @@ export default function FormularioOrcamento({
         </div>
 
         {/* Coluna da direita - Itens do orçamento */}
-        <div className="lg:col-span-2">
+        <div>
           <Card className="border-primary/20 shadow-sm">
             <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center justify-between">
