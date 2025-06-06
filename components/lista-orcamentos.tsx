@@ -630,56 +630,17 @@ export default function ListaOrcamentos({
           Todos
         </Button>
         <Button
-          variant={statusFilter === "1" || statusFilter === "finalizado" ? "default" : "outline"}
+          variant={statusFilter === "6" ? "default" : "outline"}
           size="sm"
-          onClick={() => setStatusFilter("1")}
+          onClick={() => setStatusFilter("6")}
           className={`text-xs whitespace-nowrap ${
-            statusFilter === "1" || statusFilter === "finalizado"
-              ? "bg-green-500 text-white"
-              : "text-green-500 border-green-500 hover:bg-green-50"
-          }`}
-        >
-          <span className="hidden sm:inline">1 - Finalizada</span>
-          <span className="sm:hidden">1</span>
-        </Button>
-        <Button
-          variant={statusFilter === "2" || statusFilter === "entregue" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("2")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "2" || statusFilter === "entregue"
-              ? "bg-purple-500 text-white"
-              : "text-purple-500 border-purple-500 hover:bg-purple-50"
-          }`}
-        >
-          <span className="hidden sm:inline">2 - Entregue</span>
-          <span className="sm:hidden">2</span>
-        </Button>
-        <Button
-          variant={statusFilter === "3" || statusFilter === "cobranca" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("3")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "3" || statusFilter === "cobranca"
+            statusFilter === "6"
               ? "bg-red-500 text-white"
               : "text-red-500 border-red-500 hover:bg-red-50"
           }`}
         >
-          <span className="hidden sm:inline">3 - Cobrança</span>
-          <span className="sm:hidden">3</span>
-        </Button>
-        <Button
-          variant={statusFilter === "4" || statusFilter === "execucao" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setStatusFilter("4")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "4" || statusFilter === "execucao"
-              ? "bg-amber-500 text-white"
-              : "text-amber-500 border-amber-500 hover:bg-amber-50"
-          }`}
-        >
-          <span className="hidden sm:inline">4 - Execução</span>
-          <span className="sm:hidden">4</span>
+          <span className="hidden sm:inline">6 - Recusada</span>
+          <span className="sm:hidden">6</span>
         </Button>
         <Button
           variant={statusFilter === "5" || statusFilter === "proposta" ? "default" : "outline"}
@@ -695,17 +656,56 @@ export default function ListaOrcamentos({
           <span className="sm:hidden">5</span>
         </Button>
         <Button
-          variant={statusFilter === "6" ? "default" : "outline"}
+          variant={statusFilter === "4" || statusFilter === "execucao" ? "default" : "outline"}
           size="sm"
-          onClick={() => setStatusFilter("6")}
+          onClick={() => setStatusFilter("4")}
           className={`text-xs whitespace-nowrap ${
-            statusFilter === "6"
+            statusFilter === "4" || statusFilter === "execucao"
+              ? "bg-amber-500 text-white"
+              : "text-amber-500 border-amber-500 hover:bg-amber-50"
+          }`}
+        >
+          <span className="hidden sm:inline">4 - Execução</span>
+          <span className="sm:hidden">4</span>
+        </Button>
+        <Button
+          variant={statusFilter === "3" || statusFilter === "cobranca" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("3")}
+          className={`text-xs whitespace-nowrap ${
+            statusFilter === "3" || statusFilter === "cobranca"
               ? "bg-red-500 text-white"
               : "text-red-500 border-red-500 hover:bg-red-50"
           }`}
         >
-          <span className="hidden sm:inline">6 - Recusada</span>
-          <span className="sm:hidden">6</span>
+          <span className="hidden sm:inline">3 - Cobrança</span>
+          <span className="sm:hidden">3</span>
+        </Button>
+        <Button
+          variant={statusFilter === "2" || statusFilter === "entregue" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("2")}
+          className={`text-xs whitespace-nowrap ${
+            statusFilter === "2" || statusFilter === "entregue"
+              ? "bg-purple-500 text-white"
+              : "text-purple-500 border-purple-500 hover:bg-purple-50"
+          }`}
+        >
+          <span className="hidden sm:inline">2 - Entregue</span>
+          <span className="sm:hidden">2</span>
+        </Button>
+        <Button
+          variant={statusFilter === "1" || statusFilter === "finalizado" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setStatusFilter("1")}
+          className={`text-xs whitespace-nowrap ${
+            statusFilter === "1" || statusFilter === "finalizado"
+              ? "bg-green-500 text-white"
+              : "text-green-500 border-green-500 hover:bg-green-50"
+          }`}
+        >
+          <span className="hidden sm:inline">1 - Finalizada</span>
+          <span className="sm:hidden">1</span>
         </Button>
       </div>
 
