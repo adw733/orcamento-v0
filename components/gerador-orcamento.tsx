@@ -621,8 +621,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 itens: orcamentoExportacao.itens, // Manter todos os itens para o cabeçalho
               }}
               calcularTotal={() =>
-                orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0) +
-                (orcamentoExportacao.valorFrete || 0)
+                orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
               }
               dadosEmpresa={dadosEmpresa || undefined}
               modoExportacao="orcamento" // Adicionar prop para indicar que é apenas o orçamento
@@ -636,8 +635,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             <VisualizacaoDocumento
               orcamento={orcamentoExportacao}
               calcularTotal={() =>
-                orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0) +
-                (orcamentoExportacao.valorFrete || 0)
+                orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
               }
               dadosEmpresa={dadosEmpresa || undefined}
               modoExportacao="ficha" // Adicionar prop para indicar que são apenas as fichas
@@ -650,8 +648,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           <VisualizacaoDocumento
             orcamento={orcamentoExportacao}
             calcularTotal={() =>
-              orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0) +
-              (orcamentoExportacao.valorFrete || 0)
+              orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
             }
             dadosEmpresa={dadosEmpresa || undefined}
             modoExportacao="completo" // Adicionar prop para indicar que é o documento completo
