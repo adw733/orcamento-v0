@@ -130,16 +130,103 @@ export default function VisualizacaoDocumento({
   // Adicione estas propriedades CSS para garantir que as cores sejam preservadas na impressão
   const pdfStyles = `
   @media print {
-    /* Configurações gerais de impressão */
+    /* Configurações de impressão otimizadas */
     @page {
       size: A4;
-      margin: 10mm; /* Adicionar margem de 10mm em todos os lados */
+      margin: 8mm;
     }
     
     body {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
+    }
+    
+    /* Tabela balanceada para impressão */
+    .pdf-table {
+      font-size: 0.7rem !important;
+      line-height: 1.2 !important;
+    }
+    
+    .pdf-table th, .pdf-table td {
+      padding: 0.2rem 0.25rem !important;
+      line-height: 1.2 !important;
+      vertical-align: top !important;
+      border: 1px solid #e5e7eb !important;
+      overflow: visible !important;
+      word-wrap: break-word !important;
+    }
+    
+    .pdf-table th {
+      height: 32px !important;
+      font-size: 0.7rem !important;
+      padding: 0.25rem !important;
+    }
+    
+    .pdf-table tbody tr {
+      height: auto !important;
+      min-height: 45px !important; /* Altura adequada para observações na impressão */
+      max-height: none !important;
+      page-break-inside: avoid !important;
+    }
+    
+    /* Observações comerciais completamente visíveis na impressão */
+    .pdf-table .text-gray-600 {
+      font-size: 0.6rem !important;
+      line-height: 1.2 !important;
+      max-height: none !important; /* Sem limitação */
+      overflow: visible !important; /* Mostrar tudo */
+      word-wrap: break-word !important;
+      white-space: normal !important;
+    }
+    
+    /* Nome do produto legível */
+    .pdf-table .font-medium {
+      font-size: 0.7rem !important;
+      line-height: 1.2 !important;
+      margin-bottom: 3px !important;
+    }
+    
+    /* Tamanhos organizados */
+    .pdf-table div[style*="flex"] {
+      max-height: none !important;
+      min-height: 18px !important;
+      overflow: visible !important;
+    }
+    
+    .pdf-table span {
+      font-size: 0.6rem !important;
+      margin-right: 2px !important;
+      margin-bottom: 1px !important;
+    }
+    
+    /* Seção final compacta */
+    .space-y-2 > * + * {
+      margin-top: 0.3rem !important;
+    }
+    
+    /* Cards das condições compactos */
+    .grid.grid-cols-3 > div {
+      min-height: 35px !important;
+      padding: 0.4rem !important;
+    }
+    
+    /* Observações gerais compactas */
+    .space-y-2 p {
+      min-height: 20px !important;
+      max-height: 35px !important;
+      overflow: hidden !important;
+      font-size: 0.7rem !important;
+    }
+    
+    /* Garantir quebra de página inteligente */
+    .tabela-itens-container {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    
+    .pdf-table tbody {
+      page-break-inside: auto !important;
     }
     
     /* Garantir que os gradientes e cores de fundo sejam impressos */
@@ -347,16 +434,61 @@ export default function VisualizacaoDocumento({
     color: white;
   }
   
+  /* Estilos para tabela com observações completas */
   .pdf-table {
     width: 100%;
     table-layout: fixed;
-    font-size: 0.85em;
+    font-size: 0.75rem;
+    border-collapse: collapse;
+    margin: 0;
+    line-height: 1.2;
   }
   
   .pdf-table th, .pdf-table td {
-    padding: 0.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 0.25rem;
+    overflow: visible; /* Permitir expansão do conteúdo */
+    text-overflow: clip;
+    vertical-align: top;
+    line-height: 1.2;
+    border: 1px solid #e5e7eb;
+    word-wrap: break-word;
+  }
+
+  .pdf-table th {
+    padding: 0.3rem;
+    font-size: 0.75rem;
+    height: 36px;
+  }
+
+  .pdf-table tbody tr {
+    height: auto !important;
+    min-height: 50px !important; /* Aumentado para 50px para acomodar observações longas */
+    max-height: none !important;
+  }
+
+  /* Observações comerciais sem limitação */
+  .pdf-table .item-observacao {
+    max-height: none !important; /* Sem limitação */
+    overflow: visible !important; /* Mostrar tudo */
+    font-size: 0.65rem !important;
+    line-height: 1.3 !important;
+    margin-top: 3px !important;
+    color: #6b7280 !important;
+    font-style: italic !important;
+    word-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  /* Tamanhos com expansão automática */
+  .pdf-table .item-tamanhos {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 3px !important;
+    font-size: 0.65rem !important;
+    line-height: 1.2 !important;
+    max-height: none !important;
+    min-height: 20px !important;
+    overflow: visible !important;
   }
   
   .pdf-image {
@@ -579,7 +711,7 @@ export default function VisualizacaoDocumento({
 
   // Adicionar estilos específicos para controlar o tamanho das imagens
   const imageStyles = `
-/* Estilos para imagens no PDF */
+/* Estilos específicos para uma melhor exibição na tabela */
 .pdf-image-container {
   width: 100%;
   text-align: center;
@@ -743,11 +875,11 @@ export default function VisualizacaoDocumento({
             </div>
           </div>
 
-          <div className="p-6 space-y-6 pdf-content">
-            <div className="border-b pb-4 page-break-inside-avoid">
-              <h3 className="font-bold mb-2 text-primary text-lg">DADOS DO CLIENTE</h3>
+          <div className="p-4 space-y-3 pdf-content">
+            <div className="border-b pb-3 page-break-inside-avoid">
+              <h3 className="font-bold mb-2 text-primary text-base">DADOS DO CLIENTE</h3>
               {orcamento.cliente ? (
-                <div className="pdf-cliente-info bg-accent p-3 rounded-md">
+                <div className="pdf-cliente-info bg-accent p-2 rounded-md text-xs">{/* Reduzido de p-3 */}
                   <p>
                     <span className="font-medium">Nome:</span> {orcamento.cliente.nome}
                   </p>
@@ -772,53 +904,83 @@ export default function VisualizacaoDocumento({
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 italic">Nenhum cliente selecionado</p>
+                <p className="text-xs text-gray-500 italic">Nenhum cliente selecionado</p>
               )}
             </div>
 
-            <div className="page-break-inside-avoid">
-              <div className="flex justify-between mb-3">
-                <h3 className="font-bold text-lg text-primary">ITENS DO ORÇAMENTO</h3>
-                <p className="text-sm bg-accent px-3 py-1 rounded-full font-medium">Data: {dataFormatada}</p>
+            <div className="tabela-itens-container" style={{ marginBottom: "8px" }}>
+              <div className="flex justify-between mb-2">
+                <h3 className="font-bold text-base text-primary">ITENS DO ORÇAMENTO</h3>
+                <p className="text-xs bg-accent px-2 py-1 rounded-full font-medium">Data: {dataFormatada}</p>
               </div>
 
-              <table className="w-full text-sm pdf-table">
+              <table className="w-full pdf-table" style={{ tableLayout: "fixed", fontSize: "0.75rem" }}>
                 <colgroup>
-                  <col style={{ width: "30%" }} />
-                  <col style={{ width: "35%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "32%" }} />
+                  <col style={{ width: "28%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
                 </colgroup>
                 <thead className="bg-primary text-white">
-                  <tr>
-                    <th className="p-3 text-left rounded-tl-md">Item</th>
-                    <th className="p-3 text-left">Tamanhos</th>
-                    <th className="p-3 text-center">Qtd.</th>
-                    <th className="p-3 text-right">Valor Unit.</th>
-                    <th className="p-3 text-right rounded-tr-md">Total</th>
+                  <tr style={{ height: "36px" }}>
+                    <th className="p-2 text-left rounded-tl-md text-xs">Item</th>
+                    <th className="p-2 text-left text-xs">Tamanhos</th>
+                    <th className="p-2 text-center text-xs">Qtd.</th>
+                    <th className="p-2 text-right text-xs">Valor Unit.</th>
+                    <th className="p-2 text-right rounded-tr-md text-xs">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orcamento.itens.length > 0 ? (
                     orcamento.itens.map((item, index) => (
-                      <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="p-3">
+                      <tr key={item.id} className="border-b" style={{ height: "auto", minHeight: "50px" }}>
+                        <td className="p-2" style={{ verticalAlign: "top", width: "32%", lineHeight: "1.2" }}>
                           <div>
-                            <p className="font-medium">{item.produto?.nome}</p>
+                            <p className="font-medium text-xs leading-tight mb-1" style={{ fontSize: "0.75rem", lineHeight: "1.2", marginBottom: "3px" }}>
+                              {item.produto?.nome}
+                            </p>
                             {item.observacaoComercial && (
-                              <div className="text-xs mt-1 text-gray-600 italic pdf-observacoes-comercial">
+                              <div 
+                                className="text-gray-600 italic" 
+                                style={{ 
+                                  fontSize: "0.65rem",
+                                  lineHeight: "1.3",
+                                  maxHeight: "none", /* Remover limitação completamente */
+                                  overflow: "visible", /* Permitir expansão total */
+                                  marginTop: "2px",
+                                  wordWrap: "break-word",
+                                  whiteSpace: "normal"
+                                }}
+                              >
                                 {item.observacaoComercial}
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="p-1">
-                          <div className="tamanhos-container">
+                        <td className="p-2" style={{ verticalAlign: "top", width: "28%" }}>
+                          <div style={{ 
+                            display: "flex", 
+                            flexWrap: "wrap", 
+                            gap: "3px",
+                            fontSize: "0.65rem",
+                            lineHeight: "1.2",
+                            maxHeight: "none",
+                            minHeight: "20px",
+                            overflow: "visible",
+                            wordWrap: "break-word"
+                          }}>
                             {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, quantidade]) => (
                               <span
                                 key={tamanho}
-                                className="tamanho-texto"
+                                style={{
+                                  color: "#0369a1",
+                                  whiteSpace: "nowrap",
+                                  fontSize: "0.65rem",
+                                  fontWeight: "500",
+                                  marginRight: "2px",
+                                  marginBottom: "1px"
+                                }}
                                 title={`${tamanho}: ${quantidade} unidades`}
                               >
                                 {tamanho}-{quantidade}
@@ -826,9 +988,13 @@ export default function VisualizacaoDocumento({
                             ))}
                           </div>
                         </td>
-                        <td className="p-3 text-center">{item.quantidade}</td>
-                        <td className="p-3 text-right">R$ {item.valorUnitario.toFixed(2)}</td>
-                        <td className="p-3 text-right font-medium">
+                        <td className="p-2 text-center" style={{ verticalAlign: "middle", width: "8%", fontSize: "0.75rem" }}>
+                          {item.quantidade}
+                        </td>
+                        <td className="p-2 text-right" style={{ verticalAlign: "middle", width: "16%", fontSize: "0.75rem" }}>
+                          R$ {item.valorUnitario.toFixed(2)}
+                        </td>
+                        <td className="p-2 text-right font-medium" style={{ verticalAlign: "middle", width: "16%", fontSize: "0.75rem" }}>
                           R$ {(item.quantidade * item.valorUnitario).toFixed(2)}
                         </td>
                       </tr>
@@ -841,26 +1007,26 @@ export default function VisualizacaoDocumento({
                     </tr>
                   )}
                 </tbody>
-                <tfoot className="bg-accent font-medium">
-                  <tr>
-                    <td colSpan={4} className="p-3 text-right border-t-2 border-primary">
+                <tfoot className="bg-accent font-medium text-xs">
+                  <tr style={{ height: "32px" }}>
+                    <td colSpan={4} className="p-2 text-right border-t-2 border-primary text-xs">
                       Valor dos Produtos:
                     </td>
-                    <td className="p-3 text-right border-t-2 border-primary">R$ {calcularTotal().toFixed(2)}</td>
+                    <td className="p-2 text-right border-t-2 border-primary text-xs">R$ {calcularTotal().toFixed(2)}</td>
                   </tr>
                   {orcamento.valorFrete !== undefined && orcamento.valorFrete > 0 && (
-                    <tr>
-                      <td colSpan={4} className="p-3 text-right">
+                    <tr style={{ height: "32px" }}>
+                      <td colSpan={4} className="p-2 text-right text-xs">
                         Valor do Frete:
                       </td>
-                      <td className="p-3 text-right">R$ {orcamento.valorFrete.toFixed(2)}</td>
+                      <td className="p-2 text-right text-xs">R$ {orcamento.valorFrete.toFixed(2)}</td>
                     </tr>
                   )}
-                  <tr>
-                    <td colSpan={4} className="p-3 text-right border-t-2 border-primary">
+                  <tr style={{ height: "32px" }}>
+                    <td colSpan={4} className="p-2 text-right border-t-2 border-primary text-xs">
                       TOTAL:
                     </td>
-                    <td className="p-3 text-right border-t-2 border-primary whitespace-nowrap">
+                    <td className="p-2 text-right border-t-2 border-primary whitespace-nowrap text-xs">
                       R$ {(calcularTotal() + (orcamento.valorFrete || 0)).toFixed(2)}
                     </td>
                   </tr>
@@ -868,26 +1034,33 @@ export default function VisualizacaoDocumento({
               </table>
             </div>
 
-            <div className="space-y-4 page-break-inside-avoid">
+            <div className="space-y-2 page-break-inside-avoid" style={{ marginTop: "6px" }}>
+              {/* Observações em linha única */}
               <div>
-                <h3 className="font-bold mb-2 text-primary">OBSERVAÇÕES</h3>
-                <p className="text-sm bg-accent p-3 rounded-md pdf-observacoes">
+                <h3 className="font-bold mb-1 text-primary text-sm">OBSERVAÇÕES</h3>
+                <p className="text-xs bg-accent p-2 rounded-md" style={{ 
+                  minHeight: "24px", 
+                  maxHeight: "40px", 
+                  overflow: "hidden",
+                  lineHeight: "1.3"
+                }}>
                   {orcamento.observacoes || "Nenhuma observação."}
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 text-sm mt-3 pdf-grid">
-                <div className="bg-accent p-2 rounded-md">
-                  <h4 className="font-bold text-primary mb-1 text-sm">Condições de Pagamento</h4>
-                  <p className="text-sm">{orcamento.condicoesPagamento}</p>
+              {/* Condições, Prazo e Validade em linha horizontal */}
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="bg-accent p-2 rounded-md" style={{ minHeight: "45px" }}>
+                  <h4 className="font-bold text-primary mb-1 text-xs">Condições de Pagamento</h4>
+                  <p className="text-xs leading-tight">{orcamento.condicoesPagamento}</p>
                 </div>
-                <div className="bg-accent p-2 rounded-md">
-                  <h4 className="font-bold text-primary mb-1 text-sm">Prazo de Entrega</h4>
-                  <p className="text-sm">{orcamento.prazoEntrega}</p>
+                <div className="bg-accent p-2 rounded-md" style={{ minHeight: "45px" }}>
+                  <h4 className="font-bold text-primary mb-1 text-xs">Prazo de Entrega</h4>
+                  <p className="text-xs leading-tight">{orcamento.prazoEntrega}</p>
                 </div>
-                <div className="bg-accent p-2 rounded-md">
-                  <h4 className="font-bold text-primary mb-1 text-sm">Validade do Orçamento</h4>
-                  <p className="text-sm">{orcamento.validadeOrcamento}</p>
+                <div className="bg-accent p-2 rounded-md" style={{ minHeight: "45px" }}>
+                  <h4 className="font-bold text-primary mb-1 text-xs">Validade do Orçamento</h4>
+                  <p className="text-xs leading-tight">{orcamento.validadeOrcamento}</p>
                 </div>
               </div>
             </div>
