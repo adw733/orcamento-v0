@@ -927,8 +927,32 @@ class VersionControlGUI:
         if not os.path.exists(package_json):
             messagebox.showerror("Erro", "Arquivo package.json não encontrado!")
             return
-        
+
+        def kill_node_processes():
+            """Termina todos os processos Node.js em execução"""
+            try:
+                # Comando para terminar todos os processos node.exe
+                result = subprocess.run(
+                    ['taskkill', '/F', '/IM', 'node.exe'],
+                    capture_output=True,
+                    text=True
+                )
+                return True, f"Processos Node.js terminados: {result.stdout}"
+            except Exception as e:
+                return False, f"Erro ao terminar processos Node.js: {str(e)}"
+
         def start_in_background():
+            # Primeiro, terminar todos os processos Node.js
+            kill_success, kill_message = kill_node_processes()
+            if kill_success:
+                print(f"✅ {kill_message}")
+            else:
+                print(f"⚠️ {kill_message}")
+            
+            # Aguardar um momento para garantir que os processos foram terminados
+            import time
+            time.sleep(2)
+            
             # Tentar diferentes comandos
             commands = ['npm run dev', 'yarn dev', 'pnpm dev']
             for cmd in commands:
@@ -948,17 +972,17 @@ class VersionControlGUI:
                 except:
                     continue
             return False, "Nenhum gerenciador de pacotes encontrado"
-        
+
         # Executar em thread separada
         def run_start():
             success, result = start_in_background()
             if success:
-                self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Projeto iniciado com: {result}"))
+                self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Sistemas Node.js anteriores terminados.\nProjeto iniciado com: {result}"))
                 # Abrir navegador após 3 segundos
                 self.root.after(3000, self.open_browser)
             else:
                 self.root.after(0, lambda: messagebox.showerror("Erro", result))
-        
+
         threading.Thread(target=run_start, daemon=True).start()
     
     def sync_repository(self):
