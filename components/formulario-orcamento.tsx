@@ -460,6 +460,46 @@ export default function FormularioOrcamento({
   const novoImagemInputRef = useRef<HTMLInputElement>(null)
   const editImagemInputRef = useRef<HTMLInputElement>(null)
 
+  // Função para ordenar os tamanhos
+  const ordenarTamanhos = (tamanhos: Record<string, number>) => {
+    // Separar os tamanhos por categoria
+    const tamanhosLetras: [string, number][] = []
+    const tamanhosNumericos: [string, number][] = []
+    const tamanhosInfantis: [string, number][] = []
+
+    // Ordem específica para tamanhos de letras
+    const ordemLetras = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+    Object.entries(tamanhos)
+      .filter(([_, quantidade]) => quantidade > 0)
+      .forEach(([tamanho, quantidade]) => {
+        // Verificar se é um tamanho de letra (PP, P, M, G, GG, G1-G7)
+        if (ordemLetras.includes(tamanho)) {
+          tamanhosLetras.push([tamanho, quantidade])
+        }
+        // Verificar se é um tamanho numérico adulto (36-62)
+        else if (/^(3[6-9]|[4-5][0-9]|6[0-2])$/.test(tamanho)) {
+          tamanhosNumericos.push([tamanho, quantidade])
+        }
+        // Verificar se é um tamanho infantil (0-13)
+        else if (/^([0-9]|1[0-3])$/.test(tamanho)) {
+          tamanhosInfantis.push([tamanho, quantidade])
+        }
+        // Outros tamanhos não categorizados
+        else {
+          tamanhosLetras.push([tamanho, quantidade])
+        }
+      })
+
+    // Ordenar cada categoria
+    tamanhosLetras.sort((a, b) => ordemLetras.indexOf(a[0]) - ordemLetras.indexOf(b[0]))
+    tamanhosNumericos.sort((a, b) => Number.parseInt(a[0]) - Number.parseInt(b[0]))
+    tamanhosInfantis.sort((a, b) => Number.parseInt(a[0]) - Number.parseInt(b[0]))
+
+    // Retornar todos os tamanhos ordenados
+    return [...tamanhosLetras, ...tamanhosNumericos, ...tamanhosInfantis]
+  }
+
   // Mostrar tabela de tamanhos automaticamente quando um produto for selecionado
   useEffect(() => {
     if (novoItem.produtoId) {
@@ -1058,9 +1098,10 @@ export default function FormularioOrcamento({
                   <thead className="bg-primary text-white">
                   <tr>
                   <th className="p-1 md:p-2 w-[5%] rounded-tl-md"></th>
-                  <th className="text-left p-1 md:p-2 w-[40%] text-xs md:text-sm">Produto</th>
-                  <th className="text-center p-1 md:p-2 w-[15%] text-xs md:text-sm">Valor Unit.</th>
-                  <th className="text-center p-1 md:p-2 w-[10%] text-xs md:text-sm">Qtd.</th>
+                  <th className="text-left p-1 md:p-2 w-[30%] text-xs md:text-sm">Produto</th>
+                  <th className="text-center p-1 md:p-2 w-[15%] text-xs md:text-sm">Tamanhos</th>
+                  <th className="text-center p-1 md:p-2 w-[12%] text-xs md:text-sm">Valor Unit.</th>
+                  <th className="text-center p-1 md:p-2 w-[8%] text-xs md:text-sm">Qtd.</th>
                   <th className="text-right p-1 md:p-2 w-[15%] text-xs md:text-sm">Total</th>
                   <th className="p-1 md:p-2 w-[15%] rounded-tr-md text-center text-xs md:text-sm">Ações</th>
                   </tr>
@@ -1070,7 +1111,7 @@ export default function FormularioOrcamento({
                       <React.Fragment key={item.id}>
                         {dragOverItemId === item.id && (
                           <tr className="border-t">
-                            <td colSpan={6} className="p-0">
+                            <td colSpan={7} className="p-0">
                               <div className="h-1 bg-primary animate-pulse rounded-full mx-2"></div>
                             </td>
                           </tr>
@@ -1157,6 +1198,19 @@ export default function FormularioOrcamento({
                               <div className="text-xs mt-0.5 text-gray-600 italic">{item.observacaoComercial}</div>
                             )}
                           </td>
+                          <td className="p-1 md:p-2">
+                            <div className="flex flex-wrap gap-1">
+                              {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, quantidade]) => (
+                                <span
+                                  key={tamanho}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                                  title={`${tamanho}: ${quantidade} unidades`}
+                                >
+                                  {tamanho}-{quantidade}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
                           <td className="p-1 md:p-2 text-center">
                             {editandoItem === item.id ? (
                               <Input
@@ -1238,7 +1292,7 @@ export default function FormularioOrcamento({
                         </tr>
                         {editandoItem === item.id && itemEmEdicao && (
                           <tr>
-                            <td colSpan={6} className="p-3 bg-accent/50 border-t border-b">
+                            <td colSpan={7} className="p-3 bg-accent/50 border-t border-b">
                               <div className="space-y-3">
                                 {/* Linha 1: Tecido e Cor */}
                                 <div className="grid grid-cols-2 gap-3">
@@ -1414,7 +1468,7 @@ export default function FormularioOrcamento({
                     {/* Adicionar linha de destaque no final da lista */}
                     {dragOverItemId === "end-of-list" && (
                       <tr className="border-t">
-                        <td colSpan={6} className="p-0">
+                        <td colSpan={7} className="p-0">
                           <div className="h-1 bg-primary animate-pulse rounded-full mx-2"></div>
                         </td>
                       </tr>
@@ -1531,7 +1585,7 @@ export default function FormularioOrcamento({
                     {/* Formulário expandido para novo item */}
                     {linhaAtiva === "novo" && novoItem.produtoId && (
                       <tr>
-                        <td colSpan={6} className="p-3 bg-accent/20 border-t">
+                        <td colSpan={7} className="p-3 bg-accent/20 border-t">
                           <div className="space-y-3">
                             {/* Linha 1: Tecido e Cor */}
                             <div className="grid grid-cols-2 gap-3">
@@ -1677,14 +1731,14 @@ export default function FormularioOrcamento({
                   </tbody>
                   <tfoot className="bg-primary text-white">
                     <tr>
-                      <td colSpan={4} className="p-3 text-right font-medium">
+                      <td colSpan={5} className="p-3 text-right font-medium">
                         Valor dos Produtos:
                       </td>
                       <td className="p-3 text-right font-medium">R$ {calcularTotal().toFixed(2)}</td>
                       <td></td>
                     </tr>
                     <tr>
-                      <td colSpan={4} className="p-3 text-right font-medium">
+                      <td colSpan={5} className="p-3 text-right font-medium">
                         Valor do Frete:
                       </td>
                       <td className="p-3 text-right font-medium">
@@ -1706,7 +1760,7 @@ export default function FormularioOrcamento({
                       <td></td>
                     </tr>
                     <tr>
-                      <td colSpan={4} className="p-3 text-right font-bold">
+                      <td colSpan={5} className="p-3 text-right font-bold">
                         Total do Orçamento:
                       </td>
                       <td className="p-3 text-right font-bold">
