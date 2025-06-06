@@ -812,113 +812,115 @@ export default function FormularioOrcamento({
         </Card>
       )}
 
-      {/* Header com informações básicas - layout horizontal compacto */}
-      <Card className="border-primary/20 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm md:text-base text-primary">Orçamento</CardTitle>
-            </div>
-            <Badge className={`${getStatusColor(orcamento.status || "5")} text-xs px-1.5 py-0.5`}>
-              {getStatusText(orcamento.status || "5")}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="p-2 md:p-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <Hash className="h-3 w-3 text-primary" />
-                <Label className="text-primary text-xs font-medium">Número</Label>
-              </div>
-              <Input
-                value={orcamento.numero.split(" - ")[0]}
-                onChange={(e) => {
-                  const numeroAtual = e.target.value
-                  const partes = orcamento.numero.split(" - ")
-                  if (partes.length > 1) {
-                    atualizarOrcamento({ numero: `${numeroAtual} - ${partes.slice(1).join(" - ")}` })
-                  } else {
-                    atualizarOrcamento({ numero: numeroAtual })
-                  }
-                }}
-                className="h-7 font-mono text-center text-xs md:text-sm font-bold text-primary"
-                placeholder="0000"
-              />
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3 text-primary" />
-                <Label className="text-primary text-xs font-medium">Data</Label>
-              </div>
-              <Input
-                type="date"
-                value={orcamento.data}
-                onChange={(e) => atualizarOrcamento({ data: e.target.value })}
-                className="h-7 text-xs md:text-sm"
-              />
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <Building2 className="h-3 w-3 text-primary" />
-                <Label className="text-primary text-xs font-medium">Status</Label>
-              </div>
-              <Select
-                value={orcamento.status || "5"}
-                onValueChange={(value) => atualizarOrcamento({ status: value })}
-              >
-                <SelectTrigger className="h-7 text-xs md:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 - Proposta</SelectItem>
-                  <SelectItem value="4">4 - Execução</SelectItem>
-                  <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
-                  <SelectItem value="2">2 - Entregue</SelectItem>
-                  <SelectItem value="1">1 - Finalizada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3 text-primary" />
-                <Label className="text-primary text-xs font-medium">Frete</Label>
-              </div>
-              <Input
-                type="number"
-                value={orcamento.valorFrete || ""}
-                onChange={(e) => atualizarOrcamento({ valorFrete: e.target.value ? Number(e.target.value) : undefined })}
-                className="h-7 text-xs md:text-sm text-center"
-                placeholder="0,00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3 text-primary" />
-                <Label className="text-primary text-xs font-medium">Total</Label>
-              </div>
-              <div className="h-7 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-md flex items-center justify-center">
-                <span className="font-bold text-xs md:text-sm text-primary">
-                  R$ {(calcularTotal() + (orcamento.valorFrete || 0)).toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Grid principal com duas colunas - esquerda para dados do orçamento e cliente, direita para itens */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      {/* Grid principal com duas colunas - esquerda para dados do orçamento e cliente (1/3), direita para itens (2/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         
-        {/* Coluna da esquerda - Informações do cliente e condições */}
-        <div className="space-y-3">
+        {/* Coluna da esquerda - Dados do orçamento, cliente e condições */}
+        <div className="lg:col-span-1 space-y-3">
+          
+          {/* Informações básicas do orçamento */}
+          <Card className="border-primary/20 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm md:text-base text-primary">Dados do Orçamento</CardTitle>
+                </div>
+                <Badge className={`${getStatusColor(orcamento.status || "5")} text-xs px-1.5 py-0.5`}>
+                  {getStatusText(orcamento.status || "5")}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3 text-primary" />
+                    <Label className="text-primary text-xs font-medium">Número</Label>
+                  </div>
+                  <Input
+                    value={orcamento.numero.split(" - ")[0]}
+                    onChange={(e) => {
+                      const numeroAtual = e.target.value
+                      const partes = orcamento.numero.split(" - ")
+                      if (partes.length > 1) {
+                        atualizarOrcamento({ numero: `${numeroAtual} - ${partes.slice(1).join(" - ")}` })
+                      } else {
+                        atualizarOrcamento({ numero: numeroAtual })
+                      }
+                    }}
+                    className="h-7 font-mono text-center text-xs md:text-sm font-bold text-primary"
+                    placeholder="0000"
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-primary" />
+                    <Label className="text-primary text-xs font-medium">Data</Label>
+                  </div>
+                  <Input
+                    type="date"
+                    value={orcamento.data}
+                    onChange={(e) => atualizarOrcamento({ data: e.target.value })}
+                    className="h-7 text-xs md:text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    <Building2 className="h-3 w-3 text-primary" />
+                    <Label className="text-primary text-xs font-medium">Status</Label>
+                  </div>
+                  <Select
+                    value={orcamento.status || "5"}
+                    onValueChange={(value) => atualizarOrcamento({ status: value })}
+                  >
+                    <SelectTrigger className="h-7 text-xs md:text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 - Proposta</SelectItem>
+                      <SelectItem value="4">4 - Execução</SelectItem>
+                      <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
+                      <SelectItem value="2">2 - Entregue</SelectItem>
+                      <SelectItem value="1">1 - Finalizada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3 text-primary" />
+                    <Label className="text-primary text-xs font-medium">Frete</Label>
+                  </div>
+                  <Input
+                    type="number"
+                    value={orcamento.valorFrete || ""}
+                    onChange={(e) => atualizarOrcamento({ valorFrete: e.target.value ? Number(e.target.value) : undefined })}
+                    className="h-7 text-xs md:text-sm text-center"
+                    placeholder="0,00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3 text-primary" />
+                  <Label className="text-primary text-xs font-medium">Total do Orçamento</Label>
+                </div>
+                <div className="h-9 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-md flex items-center justify-center">
+                  <span className="font-bold text-sm md:text-base text-primary">
+                    R$ {(calcularTotal() + (orcamento.valorFrete || 0)).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Cliente */}
           <Card className="border-primary/20 shadow-sm">
@@ -1034,7 +1036,7 @@ export default function FormularioOrcamento({
         </div>
 
         {/* Coluna da direita - Itens do orçamento */}
-        <div>
+        <div className="lg:col-span-2">
           <Card className="border-primary/20 shadow-sm">
             <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center justify-between">
