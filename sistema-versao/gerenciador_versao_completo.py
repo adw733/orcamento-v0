@@ -24,6 +24,16 @@ class VersionControlGUI:
         # Detectar caminho do projeto
         self.project_path = os.path.dirname(os.path.dirname(__file__))
         
+        # Variáveis para controle de ordenação
+        self.versions_sort_column = None
+        self.versions_sort_reverse = False
+        self.forks_sort_column = None
+        self.forks_sort_reverse = False
+        
+        # Dados originais para ordenação
+        self.versions_data = []
+        self.forks_data = []
+        
         self.setup_interface()
         
     def setup_interface(self):
@@ -58,6 +68,10 @@ class VersionControlGUI:
         self.notebook.add(deploy_tab, text="🚀 Deploy Vercel")
         self.setup_deploy_tab(deploy_tab)
         
+        # Inicializar cabeçalhos com indicadores de ordenação
+        self.root.after(50, self.update_versions_headers)
+        self.root.after(50, self.update_forks_headers)
+        
         # Carregar dados iniciais após a interface estar pronta
         self.root.after(100, self.refresh_all)
         
@@ -69,8 +83,8 @@ class VersionControlGUI:
         
         # Lista de versões
         self.versions_tree = ttk.Treeview(versions_frame, columns=('date', 'message'), show='headings', height=15)
-        self.versions_tree.heading('#1', text='Data/Hora')
-        self.versions_tree.heading('#2', text='Descrição')
+        self.versions_tree.heading('#1', text='Data/Hora ↕️', command=lambda: self.sort_versions('date'))
+        self.versions_tree.heading('#2', text='Descrição ↕️', command=lambda: self.sort_versions('message'))
         self.versions_tree.column('#1', width=120)
         self.versions_tree.column('#2', width=300)
         self.versions_tree.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
@@ -120,9 +134,9 @@ class VersionControlGUI:
         
         # Lista de forks
         self.forks_tree = ttk.Treeview(forks_frame, columns=('status', 'name', 'date'), show='headings', height=8)
-        self.forks_tree.heading('#1', text='Status')
-        self.forks_tree.heading('#2', text='Nome do Fork')
-        self.forks_tree.heading('#3', text='Criado em')
+        self.forks_tree.heading('#1', text='Status ↕️', command=lambda: self.sort_forks('status'))
+        self.forks_tree.heading('#2', text='Nome do Fork ↕️', command=lambda: self.sort_forks('name'))
+        self.forks_tree.heading('#3', text='Criado em ↕️', command=lambda: self.sort_forks('date'))
         self.forks_tree.column('#1', width=80)
         self.forks_tree.column('#2', width=150)
         self.forks_tree.column('#3', width=120)
@@ -315,20 +329,20 @@ class VersionControlGUI:
     def load_versions(self):
         """Carrega lista de versões (commits)"""
         try:
-            # Limpar lista
-            for item in self.versions_tree.get_children():
-                self.versions_tree.delete(item)
+            # Limpar dados anteriores
+            self.versions_data = []
             
             # Buscar commits com formato de data/hora mais limpo
-            success, output, _ = self.run_command('git log --oneline --date=format:"%d/%m/%Y %H:%M" --pretty=format:"%h|%ad|%s" -20')
+            success, output, _ = self.run_command('git log --oneline --date=format:"%d/%m/%Y %H:%M" --pretty=format:"%h|%ad|%s|%at" -20')
             if success and output:
                 for line in output.strip().split('\n'):
                     if '|' in line:
                         parts = line.split('|')
-                        if len(parts) >= 3:
+                        if len(parts) >= 4:
                             hash_short = parts[0]
                             date_time = parts[1]
                             message = parts[2]
+                            timestamp = int(parts[3]) if parts[3].isdigit() else 0
                             
                             # Verificar se há tag (nome personalizado) para este commit
                             tag_success, tag_output, _ = self.run_command(f'git tag --points-at {hash_short}')
@@ -339,10 +353,26 @@ class VersionControlGUI:
                             else:
                                 display_message = message
                             
-                            self.versions_tree.insert('', tk.END, values=(date_time, display_message), tags=(hash_short,))
-            else:
+                            # Armazenar dados para ordenação
+                            self.versions_data.append({
+                                'hash': hash_short,
+                                'date': date_time,
+                                'message': display_message,
+                                'timestamp': timestamp
+                            })
+            
+            if not self.versions_data:
                 # Se não há commits, adicionar uma mensagem informativa
-                self.versions_tree.insert('', tk.END, values=("", "Nenhuma versão salva ainda"), tags=("",))
+                self.versions_data.append({
+                    'hash': '',
+                    'date': '',
+                    'message': 'Nenhuma versão salva ainda',
+                    'timestamp': 0
+                })
+            
+            # Exibir dados (inicialmente ordenados por data, mais recente primeiro)
+            self.display_versions()
+            
         except Exception as e:
             print(f"Erro ao carregar versões: {e}")
     
@@ -368,9 +398,8 @@ class VersionControlGUI:
     def load_forks(self):
         """Carrega lista de forks (branches)"""
         try:
-            # Limpar lista
-            for item in self.forks_tree.get_children():
-                self.forks_tree.delete(item)
+            # Limpar dados anteriores
+            self.forks_data = []
             
             # Buscar branch atual
             current_success, current_output, _ = self.run_command('git branch --show-current')
@@ -383,7 +412,6 @@ class VersionControlGUI:
             success, output, _ = self.run_command('git for-each-ref --format="%(refname:short)|%(committerdate:format:%d/%m/%Y %H:%M)|%(committerdate:unix)" refs/heads/')
             
             if success and output:
-                branch_list = []
                 for line in output.strip().split('\n'):
                     if line and '|' in line:
                         parts = line.split('|')
@@ -398,33 +426,53 @@ class VersionControlGUI:
                             else:
                                 status = "🔀 Fork"
                             
-                            branch_list.append((date_unix, status, branch_name, date_formatted))
-                
-                # Ordenar por data de criação (mais recente primeiro)
-                branch_list.sort(key=lambda x: x[0], reverse=True)
-                
-                # Adicionar à lista
-                for _, status, branch_name, date_formatted in branch_list:
-                    self.forks_tree.insert('', tk.END, values=(status, branch_name, date_formatted), tags=(branch_name,))
+                            # Armazenar dados para ordenação
+                            self.forks_data.append({
+                                'status': status,
+                                'name': branch_name,
+                                'date': date_formatted,
+                                'timestamp': date_unix,
+                                'tag': branch_name
+                            })
             
             # Se está em HEAD detached, adicionar entrada especial
             if is_detached:
                 # Buscar informações do commit atual
-                commit_success, commit_output, _ = self.run_command('git log -1 --format="%h|%ad" --date=format:"%d/%m/%Y %H:%M"')
+                commit_success, commit_output, _ = self.run_command('git log -1 --format="%h|%ad|%at" --date=format:"%d/%m/%Y %H:%M"')
                 if commit_success and commit_output.strip():
                     parts = commit_output.strip().split('|')
-                    if len(parts) >= 2:
+                    if len(parts) >= 3:
                         hash_short = parts[0]
                         commit_date = parts[1]
+                        timestamp = int(parts[2]) if parts[2].isdigit() else 0
                         detached_name = f"(HEAD detached at {hash_short})"
-                        # Inserir no topo da lista
-                        self.forks_tree.insert('', 0, values=("🔴 Detached", detached_name, commit_date), tags=(detached_name,))
+                        
+                        # Inserir no início da lista
+                        self.forks_data.insert(0, {
+                            'status': "🔴 Detached",
+                            'name': detached_name,
+                            'date': commit_date,
+                            'timestamp': timestamp,
+                            'tag': detached_name
+                        })
             
             # Se não há branches, criar entrada padrão
-            if not success or not output:
+            if not self.forks_data:
                 import datetime
-                now = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
-                self.forks_tree.insert('', tk.END, values=("🌟 Atual", "main", now), tags=("main",))
+                now = datetime.datetime.now()
+                now_str = now.strftime('%d/%m/%Y %H:%M')
+                timestamp = int(now.timestamp())
+                
+                self.forks_data.append({
+                    'status': "🌟 Atual",
+                    'name': "main",
+                    'date': now_str,
+                    'timestamp': timestamp,
+                    'tag': "main"
+                })
+            
+            # Exibir dados (inicialmente ordenados por data, mais recente primeiro)
+            self.display_forks()
             
             # Mostrar/ocultar botão de sair do detached
             if hasattr(self, 'detached_button'):
@@ -438,7 +486,139 @@ class VersionControlGUI:
             # Fallback em caso de erro
             import datetime
             now = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
-            self.forks_tree.insert('', tk.END, values=("❌ Erro", "Erro ao carregar", now), tags=("",))
+            timestamp = int(datetime.datetime.now().timestamp())
+            
+            self.forks_data = [{
+                'status': "❌ Erro",
+                'name': "Erro ao carregar",
+                'date': now,
+                'timestamp': timestamp,
+                'tag': ""
+            }]
+            
+            self.display_forks()
+    
+    def display_versions(self):
+        """Exibe os dados das versões na tabela"""
+        # Limpar tabela
+        for item in self.versions_tree.get_children():
+            self.versions_tree.delete(item)
+        
+        # Adicionar dados
+        for version in self.versions_data:
+            self.versions_tree.insert('', tk.END, 
+                                    values=(version['date'], version['message']), 
+                                    tags=(version['hash'],))
+    
+    def display_forks(self):
+        """Exibe os dados dos forks na tabela"""
+        # Limpar tabela
+        for item in self.forks_tree.get_children():
+            self.forks_tree.delete(item)
+        
+        # Adicionar dados
+        for fork in self.forks_data:
+            self.forks_tree.insert('', tk.END, 
+                                  values=(fork['status'], fork['name'], fork['date']), 
+                                  tags=(fork['tag'],))
+    
+    def sort_versions(self, column):
+        """Ordena a tabela de versões pela coluna especificada"""
+        # Determinar se deve reverter a ordenação
+        if self.versions_sort_column == column:
+            self.versions_sort_reverse = not self.versions_sort_reverse
+        else:
+            self.versions_sort_column = column
+            self.versions_sort_reverse = False
+        
+        # Ordenar dados
+        if column == 'date':
+            # Ordenar por timestamp para ordenação correta de datas
+            self.versions_data.sort(key=lambda x: x['timestamp'], reverse=self.versions_sort_reverse)
+        elif column == 'message':
+            # Ordenar por mensagem (alfabética)
+            self.versions_data.sort(key=lambda x: x['message'].lower(), reverse=self.versions_sort_reverse)
+        
+        # Atualizar cabeçalhos com indicadores de ordenação
+        self.update_versions_headers()
+        
+        # Reexibir dados
+        self.display_versions()
+    
+    def sort_forks(self, column):
+        """Ordena a tabela de forks pela coluna especificada"""
+        # Determinar se deve reverter a ordenação
+        if self.forks_sort_column == column:
+            self.forks_sort_reverse = not self.forks_sort_reverse
+        else:
+            self.forks_sort_column = column
+            self.forks_sort_reverse = False
+        
+        # Ordenar dados
+        if column == 'status':
+            # Ordenar por status (alfabética)
+            self.forks_data.sort(key=lambda x: x['status'].lower(), reverse=self.forks_sort_reverse)
+        elif column == 'name':
+            # Ordenar por nome (alfabética)
+            self.forks_data.sort(key=lambda x: x['name'].lower(), reverse=self.forks_sort_reverse)
+        elif column == 'date':
+            # Ordenar por timestamp para ordenação correta de datas
+            self.forks_data.sort(key=lambda x: x['timestamp'], reverse=self.forks_sort_reverse)
+        
+        # Atualizar cabeçalhos com indicadores de ordenação
+        self.update_forks_headers()
+        
+        # Reexibir dados
+        self.display_forks()
+    
+    def update_versions_headers(self):
+        """Atualiza os cabeçalhos da tabela de versões com indicadores de ordenação"""
+        # Resetar cabeçalhos
+        date_text = 'Data/Hora'
+        message_text = 'Descrição'
+        
+        # Adicionar indicadores de ordenação
+        if self.versions_sort_column == 'date':
+            date_text += ' ↑' if not self.versions_sort_reverse else ' ↓'
+        else:
+            date_text += ' ↕️'
+            
+        if self.versions_sort_column == 'message':
+            message_text += ' ↑' if not self.versions_sort_reverse else ' ↓'
+        else:
+            message_text += ' ↕️'
+        
+        # Atualizar cabeçalhos
+        self.versions_tree.heading('#1', text=date_text, command=lambda: self.sort_versions('date'))
+        self.versions_tree.heading('#2', text=message_text, command=lambda: self.sort_versions('message'))
+    
+    def update_forks_headers(self):
+        """Atualiza os cabeçalhos da tabela de forks com indicadores de ordenação"""
+        # Resetar cabeçalhos
+        status_text = 'Status'
+        name_text = 'Nome do Fork'
+        date_text = 'Criado em'
+        
+        # Adicionar indicadores de ordenação
+        if self.forks_sort_column == 'status':
+            status_text += ' ↑' if not self.forks_sort_reverse else ' ↓'
+        else:
+            status_text += ' ↕️'
+            
+        if self.forks_sort_column == 'name':
+            name_text += ' ↑' if not self.forks_sort_reverse else ' ↓'
+        else:
+            name_text += ' ↕️'
+            
+        if self.forks_sort_column == 'date':
+            date_text += ' ↑' if not self.forks_sort_reverse else ' ↓'
+        else:
+            date_text += ' ↕️'
+        
+        # Atualizar cabeçalhos
+        self.forks_tree.heading('#1', text=status_text, command=lambda: self.sort_forks('status'))
+        self.forks_tree.heading('#2', text=name_text, command=lambda: self.sort_forks('name'))
+        self.forks_tree.heading('#3', text=date_text, command=lambda: self.sort_forks('date'))
     
     def save_version(self):
         """Salva uma nova versão"""
