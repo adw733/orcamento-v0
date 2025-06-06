@@ -1741,22 +1741,7 @@ export default function FormularioOrcamento({
                       <td colSpan={5} className="p-3 text-right font-medium">
                         Valor do Frete:
                       </td>
-                      <td className="p-3 text-right font-medium">
-                        <div className="flex justify-end">
-                          <span className="mr-2">R$</span>
-                          <Input
-                            type="number"
-                            value={orcamento.valorFrete || ""}
-                            onChange={(e) =>
-                              atualizarOrcamento({ valorFrete: e.target.value ? Number(e.target.value) : undefined })
-                            }
-                            className="w-24 h-7 text-right text-black border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                            placeholder="0,00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                      </td>
+                      <td className="p-3 text-right font-medium">R$ {(orcamento.valorFrete || 0).toFixed(2)}</td>
                       <td></td>
                     </tr>
                     <tr>
