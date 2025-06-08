@@ -14,8 +14,21 @@ import {
   Palette,
   Menu,
   X,
+  Building2,
+  Settings,
+  Moon,
+  Sun,
+  Monitor,
+  Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useTheme } from "next-themes"
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu"
 
 interface AppSidebarProps {
   abaAtiva: string
@@ -25,10 +38,10 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarNovoOrcamento }: AppSidebarProps) {
+  const { theme, setTheme } = useTheme()
   const [expandido, setExpandido] = useState(() => {
-    // On mobile devices, start collapsed by default
     if (typeof window !== "undefined") {
-      return window.innerWidth >= 768
+      return window.innerWidth >= 1024
     }
     return true
   })
@@ -37,10 +50,11 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
   useEffect(() => {
     window.history.pushState({}, "", `#${abaAtiva}`)
 
-    // Add event listener for window resize
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1024) {
         setExpandido(false)
+      } else {
+        setExpandido(true)
       }
     }
 
@@ -48,183 +62,180 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
     return () => window.removeEventListener("resize", handleResize)
   }, [abaAtiva])
 
-  // Function to handle menu item click on mobile
   const handleMenuItemClick = (aba: string) => {
     setAbaAtiva(aba)
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 1024) {
       setIsMobileMenuOpen(false)
     }
   }
 
+  const menuSections = [
+    {
+      title: "Orçamentos",
+      icon: FileText,
+      items: [
+        { id: "orcamento", label: "Edição Orçamento", icon: FileText },
+        { id: "orcamentos", label: "Orçamentos Salvos", icon: Save },
+        { id: "produtos-tabela", label: "Tabela de Produtos", icon: Table },
+      ]
+    },
+    {
+      title: "Cadastros",
+      icon: Users,
+      items: [
+        { id: "clientes", label: "Clientes", icon: Users },
+        { id: "produtos", label: "Produtos", icon: ShoppingBag },
+        { id: "materiais", label: "Materiais", icon: Palette },
+        { id: "empresa", label: "Empresa", icon: Building2 },
+      ]
+    },
+    {
+      title: "Sistema",
+      icon: Settings,
+      items: [
+        { id: "lixeira", label: "Lixeira", icon: Trash2, variant: "destructive" as const },
+      ]
+    }
+  ]
+
   return (
     <>
-      {/* Mobile menu button - only visible on small screens */}
-      <button
+      {/* Mobile menu button */}
+      <Button
+        variant="outline"
+        size="icon"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 bg-white p-2 rounded-md shadow-md"
+        className="lg:hidden fixed top-4 left-4 z-50 shadow-md bg-background"
         aria-label="Toggle menu"
       >
-        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+        {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+      </Button>
 
       <div
-        className={`h-full ${expandido ? "w-64" : "w-20"} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out relative
-                   md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} 
-                   fixed md:static z-40 top-0 left-0`}
+        className={`h-full ${expandido ? "w-72" : "w-20"} bg-background border-r border-border flex flex-col transition-all duration-300 ease-in-out relative
+                   lg:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} 
+                   fixed lg:static z-40 top-0 left-0 shadow-lg lg:shadow-none`}
       >
-        <button
+        {/* Collapse/Expand button */}
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => setExpandido(!expandido)}
-          className="absolute -right-4 top-20 bg-white border border-gray-200 rounded-full p-2 shadow-md z-10 hover:bg-gray-50 hidden md:block"
+          className="absolute -right-4 top-20 shadow-md z-10 hidden lg:flex"
           aria-label={expandido ? "Recolher menu" : "Expandir menu"}
         >
-          {expandido ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-        </button>
+          {expandido ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </Button>
 
-        <div className="h-12 border-b border-gray-200 flex items-center px-3">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary p-1.5 rounded-md">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z"
-                  fill="white"
-                  stroke="white"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z"
-                  fill="#0f4c81"
-                  stroke="#0f4c81"
-                  strokeWidth="0.5"
-                />
-                <path
-                  d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"
-                  fill="#0f4c81"
-                  stroke="#0f4c81"
-                  strokeWidth="0.5"
-                />
-              </svg>
+        {/* Header */}
+        <div className="h-16 border-b border-border flex items-center px-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary p-2 rounded-lg shadow-sm">
+              <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             {expandido && (
-              <div>
-                <h1 className="text-base font-bold text-primary tracking-tight">ONEBASE</h1>
-                <p className="text-xs text-gray-500">Uniformes Industriais</p>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold text-foreground tracking-tight">ONEBASE</h1>
+                <p className="text-xs text-muted-foreground">Sistema de Orçamentos</p>
               </div>
             )}
           </div>
+          {expandido && (
+            <div className="ml-auto flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    <span className="sr-only">Toggle theme</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setTheme("light")}>
+                    <Sun className="mr-2 h-4 w-4" />
+                    Light
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")}>
+                    <Moon className="mr-2 h-4 w-4" />
+                    Dark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")}>
+                    <Monitor className="mr-2 h-4 w-4" />
+                    System
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
-          <div className="mb-4">
-            {expandido ? (
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Orçamentos</h2>
-            ) : (
-              <div className="flex justify-center mb-2">
-                <FileText className="h-4 w-4 text-gray-500" />
+        {/* Quick Action */}
+        <div className="p-4 border-b border-border">
+          <Button
+            onClick={() => {
+              criarNovoOrcamento()
+              handleMenuItemClick("orcamento")
+            }}
+            className={`w-full ${expandido ? "justify-start" : "justify-center px-0"}`}
+            size={expandido ? "default" : "icon"}
+          >
+            <Plus className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
+            {expandido && "Novo Orçamento"}
+          </Button>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="space-y-6">
+            {menuSections.map((section) => (
+              <div key={section.title}>
+                {expandido ? (
+                  <div className="flex items-center gap-2 mb-3">
+                    <section.icon className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                      {section.title}
+                    </h3>
+                  </div>
+                ) : (
+                  <div className="flex justify-center mb-3">
+                    <section.icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const IconComponent = item.icon
+                    const isActive = abaAtiva === item.id
+                    const isDestructive = item.variant === "destructive"
+                    
+                    return (
+                      <Button
+                        key={item.id}
+                        variant={isActive ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => handleMenuItemClick(item.id)}
+                        className={`w-full ${expandido ? "justify-start" : "justify-center px-0"} ${
+                          isDestructive && !isActive ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""
+                        } ${isActive && isDestructive ? "bg-destructive hover:bg-destructive" : ""}`}
+                      >
+                        <IconComponent className={`h-4 w-4 ${expandido ? "mr-3" : ""}`} />
+                        {expandido && <span className="truncate">{item.label}</span>}
+                      </Button>
+                    )
+                  })}
+                </div>
               </div>
-            )}
-            <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className={`w-full h-8 ${expandido ? "justify-start text-xs" : "justify-center"}`}
-                onClick={() => {
-                  criarNovoOrcamento()
-                  handleMenuItemClick("orcamento")
-                }}
-              >
-                <Plus className={`${expandido ? "mr-2" : ""} h-4 w-4`} />
-                {expandido && <span>Novo Orçamento</span>}
-              </Button>
-
-              <button
-                onClick={() => handleMenuItemClick("orcamento")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "orcamento" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <FileText className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Edição Orçamento</span>}
-              </button>
-
-              <button
-                onClick={() => handleMenuItemClick("orcamentos")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "orcamentos" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Save className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Orçamentos Salvos</span>}
-              </button>
-
-              <button
-                onClick={() => handleMenuItemClick("produtos-tabela")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "produtos-tabela"
-                    ? "bg-primary text-white font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Table className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Tabela de Produtos</span>}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            {expandido ? (
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Cadastros</h2>
-            ) : (
-              <div className="flex justify-center mb-2">
-                <Users className="h-4 w-4 text-gray-500" />
-              </div>
-            )}
-            <div className="space-y-1">
-              <button
-                onClick={() => handleMenuItemClick("clientes")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "clientes" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Users className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Clientes</span>}
-              </button>
-
-              <button
-                onClick={() => handleMenuItemClick("produtos")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "produtos" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <ShoppingBag className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Produtos</span>}
-              </button>
-
-              <button
-                onClick={() => handleMenuItemClick("materiais")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "materiais" ? "bg-primary text-white font-medium" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Palette className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Materiais</span>}
-              </button>
-
-              <button
-                onClick={() => handleMenuItemClick("lixeira")}
-                className={`w-full flex items-center ${expandido ? "px-2" : "justify-center px-1"} py-2 text-xs rounded-md transition-colors ${
-                  abaAtiva === "lixeira" ? "bg-red-500 text-white font-medium" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Trash2 className={`h-4 w-4 ${expandido ? "mr-2" : ""}`} />
-                {expandido && <span>Lixeira</span>}
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" 
+          onClick={() => setIsMobileMenuOpen(false)} 
+        />
       )}
     </>
   )
