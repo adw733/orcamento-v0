@@ -320,6 +320,32 @@ export interface Database {
           updated_at?: string | null
         }
       }
+      tipos_tamanho: {
+        Row: {
+          id: string
+          nome: string
+          descricao: string | null
+          tamanhos: string[]
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          nome: string
+          descricao?: string | null
+          tamanhos: string[]
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          nome?: string
+          descricao?: string | null
+          tamanhos?: string[]
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
     }
   }
 }

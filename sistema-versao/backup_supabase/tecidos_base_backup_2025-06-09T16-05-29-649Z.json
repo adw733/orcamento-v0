@@ -1,0 +1,86 @@
+[
+  {
+    "id": "c6a8177b-b9cf-46ea-9fec-6c3df9a56754",
+    "nome": "MALHA PIQUET",
+    "composicao": "50% ALGODÃO 50% POLIÉSTER",
+    "created_at": "2025-05-02T20:59:43.454547+00:00",
+    "updated_at": "2025-05-02T20:59:43.454547+00:00"
+  },
+  {
+    "id": "c0ea858a-0806-4c4a-9caa-0aa7b34b5c4e",
+    "nome": "OXFORD",
+    "composicao": "100% POLIÉSTER",
+    "created_at": "2025-05-02T20:59:43.454547+00:00",
+    "updated_at": "2025-05-02T20:59:43.454547+00:00"
+  },
+  {
+    "id": "de2d731b-57f0-4e06-8ca0-69c7aae3c821",
+    "nome": "MALHA PV",
+    "composicao": "67% POLIÉSTER 33% VISCOSE",
+    "created_at": "2025-05-02T20:59:43.454547+00:00",
+    "updated_at": "2025-05-02T20:59:43.454547+00:00"
+  },
+  {
+    "id": "27c511e1-c813-40b1-a671-ac9990d88b4c",
+    "nome": "NYLON 210",
+    "composicao": "100% POLIAMIDA",
+    "created_at": "2025-05-03T00:44:08.995427+00:00",
+    "updated_at": "2025-05-03T00:44:08.995427+00:00"
+  },
+  {
+    "id": "e90ec757-8cc4-4497-9a0f-20cd5e344768",
+    "nome": "TRICOLINE IBIZA",
+    "composicao": " 75% POLIÉSTER • 21% ALGODÃO •  4% ELASTANO",
+    "created_at": "2025-05-04T16:52:26.738188+00:00",
+    "updated_at": "2025-05-04T16:52:26.738188+00:00"
+  },
+  {
+    "id": "c8f7e6a2-8718-4003-b4dd-09de13ef9a58",
+    "nome": "BRIM LEVE",
+    "composicao": "100% ALGODÃO",
+    "created_at": "2025-05-02T20:59:43.454547+00:00",
+    "updated_at": "2025-05-04T17:08:53.567+00:00"
+  },
+  {
+    "id": "3279000e-6684-4a74-a385-238c772babe1",
+    "nome": "BRIM PESADO",
+    "composicao": "100% ALGODÃO",
+    "created_at": "2025-05-04T17:09:13.579848+00:00",
+    "updated_at": "2025-05-04T17:09:13.579848+00:00"
+  },
+  {
+    "id": "18f091ca-4d4f-4581-9402-3a9bb634e8a7",
+    "nome": "MALHA ALGODÃO",
+    "composicao": "100% ALGODÃO",
+    "created_at": "2025-05-02T20:59:43.454547+00:00",
+    "updated_at": "2025-05-04T17:22:57.994+00:00"
+  },
+  {
+    "id": "cb96699c-8d27-4d1d-862b-16a302d04ff7",
+    "nome": "VISCOLYCRA",
+    "composicao": "96% VISCOSE 4% ELASTANO",
+    "created_at": "2025-05-04T18:49:29.01752+00:00",
+    "updated_at": "2025-05-04T18:49:29.01752+00:00"
+  },
+  {
+    "id": "65d96e45-371a-41d7-9dca-815fdd3e754e",
+    "nome": "MALHA PP",
+    "composicao": "100% POLIÉSTER",
+    "created_at": "2025-05-04T18:55:15.142259+00:00",
+    "updated_at": "2025-05-04T18:55:15.142259+00:00"
+  },
+  {
+    "id": "5285b9ce-e040-4d63-a1ca-0052e8c59e97",
+    "nome": "MALHA PP",
+    "composicao": "100% POLIÉSTER",
+    "created_at": "2025-05-04T18:55:34.975413+00:00",
+    "updated_at": "2025-05-04T18:55:34.975413+00:00"
+  },
+  {
+    "id": "1a211711-6190-4f3f-92d6-2bda7400e058",
+    "nome": "MALHA PP",
+    "composicao": "100% POLIÉSTER",
+    "created_at": "2025-05-04T18:57:11.979771+00:00",
+    "updated_at": "2025-05-04T18:57:11.979771+00:00"
+  }
+]

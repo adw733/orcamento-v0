@@ -1,0 +1,128 @@
+[
+  {
+    "id": "8b0da1bb-27d5-4a9c-ac68-9dfcabee02f5",
+    "nome": "NYLON 210",
+    "composicao": "100% POLIAMIDA",
+    "produto_id": "bf173502-e3f2-4f88-9d37-879a18bbec5c",
+    "created_at": "2025-05-09T00:47:25.836949+00:00"
+  },
+  {
+    "id": "6f706f0b-d164-4b9b-bd37-475f78682901",
+    "nome": "MALHA PIQUET",
+    "composicao": "50% ALGODÃO 50% POLIÉSTER",
+    "produto_id": "a5a0b740-328b-43e8-a20a-bddc2855964e",
+    "created_at": "2025-05-09T00:48:06.022429+00:00"
+  },
+  {
+    "id": "164cee5a-3610-49fd-9525-14d73a262fe8",
+    "nome": "MALHA PIQUET",
+    "composicao": "50% ALGODÃO 50% POLIÉSTER",
+    "produto_id": "d6cf0e6b-1a9b-4bad-8f6a-b94ff5a640fd",
+    "created_at": "2025-05-09T00:48:50.124032+00:00"
+  },
+  {
+    "id": "40e1bc30-e24f-4705-8521-59494e5fcefd",
+    "nome": "OXFORD",
+    "composicao": "100% POLIÉSTER",
+    "produto_id": "0d86cbae-d35d-4b37-8b31-33c9d1c473da",
+    "created_at": "2025-05-09T00:49:18.210086+00:00"
+  },
+  {
+    "id": "d813b0b6-8960-4688-bb13-ab6628b8bd1c",
+    "nome": "BRIM LEVE",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "debffbff-d477-4864-9d4d-130251aa58e0",
+    "created_at": "2025-05-09T00:49:45.827508+00:00"
+  },
+  {
+    "id": "619fdf63-d9e6-4138-9770-43ea86aa311a",
+    "nome": "BRIM LEVE",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "debffbff-d477-4864-9d4d-130251aa58e0",
+    "created_at": "2025-05-09T00:49:45.827508+00:00"
+  },
+  {
+    "id": "f2afe958-a720-4d6e-bca9-b326d2a64515",
+    "nome": "MALHA PV",
+    "composicao": "67% POLIÉSTER 33% VISCOSE",
+    "produto_id": "3b9996c6-300f-407d-bdda-653a0b3e3361",
+    "created_at": "2025-05-09T00:50:07.014344+00:00"
+  },
+  {
+    "id": "df8678d1-f30d-4676-b804-e0566d0f15f0",
+    "nome": "MALHA PP",
+    "composicao": "100% POLIÉSTER",
+    "produto_id": "3b9996c6-300f-407d-bdda-653a0b3e3361",
+    "created_at": "2025-05-09T00:50:07.014344+00:00"
+  },
+  {
+    "id": "9fd2486b-d659-499f-a70e-6404f13ca831",
+    "nome": "MALHA ALGODÃO",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "3b9996c6-300f-407d-bdda-653a0b3e3361",
+    "created_at": "2025-05-09T00:50:07.014344+00:00"
+  },
+  {
+    "id": "b52efc08-5bb1-4343-9a64-fe44ff0a132e",
+    "nome": "TRICOLINE IBIZA",
+    "composicao": " 75% POLIÉSTER • 21% ALGODÃO •  4% ELASTANO",
+    "produto_id": "18294a4f-5723-4af6-b128-f719c9a5575e",
+    "created_at": "2025-05-11T02:34:14.215805+00:00"
+  },
+  {
+    "id": "860612ff-1943-4b3c-baf7-08cf2837302d",
+    "nome": "TRICOLINE IBIZA",
+    "composicao": " 75% POLIÉSTER • 21% ALGODÃO •  4% ELASTANO",
+    "produto_id": "5bde9762-d8a9-42bc-8538-70f801026873",
+    "created_at": "2025-05-11T02:34:28.404758+00:00"
+  },
+  {
+    "id": "ad7229f6-a4a2-4dd3-8788-8977c4dc3743",
+    "nome": "TRICOLINE IBIZA",
+    "composicao": " 75% POLIÉSTER • 21% ALGODÃO •  4% ELASTANO",
+    "produto_id": "bfc3aa93-dc79-4be8-818d-6c9115d6d0bc",
+    "created_at": "2025-05-11T02:44:52.402681+00:00"
+  },
+  {
+    "id": "f855d26d-61de-441b-955c-98d412ee3a6a",
+    "nome": "BRIM PESADO",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "5621e120-6087-4a8a-950d-d28083c68b53",
+    "created_at": "2025-05-11T03:37:24.545564+00:00"
+  },
+  {
+    "id": "c10e8b39-fe6d-497d-8943-009300cd6224",
+    "nome": "TRICOLINE IBIZA",
+    "composicao": " 75% POLIÉSTER • 21% ALGODÃO •  4% ELASTANO",
+    "produto_id": "47c1d461-08bd-4eed-858b-4c66743e8a45",
+    "created_at": "2025-05-11T03:38:58.408617+00:00"
+  },
+  {
+    "id": "4b1482a9-c598-4021-8e60-a8c0e11289cb",
+    "nome": "BRIM LEVE",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "0deac171-2427-480e-ba2c-14ceb2e0e868",
+    "created_at": "2025-05-28T02:07:27.99864+00:00"
+  },
+  {
+    "id": "fb814cf6-c756-4c39-a1cd-e2f7fd65f387",
+    "nome": "BRIM PESADO",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "0deac171-2427-480e-ba2c-14ceb2e0e868",
+    "created_at": "2025-05-28T02:07:27.99864+00:00"
+  },
+  {
+    "id": "530d9d9e-1396-4cb9-948d-a150feda785f",
+    "nome": "BRIM PESADO",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "069adde6-5812-427d-b119-ce2443f2b885",
+    "created_at": "2025-05-30T13:47:21.554691+00:00"
+  },
+  {
+    "id": "7dac5f19-3a12-4cb2-8980-7497a0222960",
+    "nome": "BRIM LEVE",
+    "composicao": "100% ALGODÃO",
+    "produto_id": "069adde6-5812-427d-b119-ce2443f2b885",
+    "created_at": "2025-05-30T13:47:21.554691+00:00"
+  }
+]

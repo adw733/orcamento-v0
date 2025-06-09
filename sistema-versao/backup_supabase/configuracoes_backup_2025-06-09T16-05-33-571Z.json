@@ -1,0 +1,65 @@
+[
+  {
+    "id": 2,
+    "chave": "empresa_nome",
+    "valor": "Estamparia Exemplo Ltda",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 3,
+    "chave": "empresa_cnpj",
+    "valor": "12.345.678/0001-90",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 4,
+    "chave": "empresa_endereco",
+    "valor": "Rua Exemplo, 123 - Centro - São Paulo/SP",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 5,
+    "chave": "empresa_telefone",
+    "valor": "(11) 98765-4321",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 6,
+    "chave": "empresa_email",
+    "valor": "contato@estampariaexemplo.com.br",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 7,
+    "chave": "empresa_site",
+    "valor": "www.estampariaexemplo.com.br",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 8,
+    "chave": "orcamento_termos_padrao",
+    "valor": "1. Prazo de entrega: 7 dias úteis após aprovação.\\n2. Pagamento: 50% de entrada e 50% na entrega.\\n3. Frete não incluso.\\n4. Orçamento válido por 15 dias.",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 9,
+    "chave": "orcamento_observacoes_padrao",
+    "valor": "Agradecemos a preferência. Estamos à disposição para quaisquer esclarecimentos.",
+    "created_at": "2025-05-02T15:55:04.588816+00:00",
+    "updated_at": "2025-05-02T15:55:04.588816+00:00"
+  },
+  {
+    "id": 1,
+    "chave": "gemini_api_key",
+    "valor": "AIzaSyCTqW48OFu3BPowgrc0xtBVmvGQAvUQX5I",
+    "created_at": "2025-05-02T04:59:42.331886+00:00",
+    "updated_at": "2025-05-02T04:59:42.331886+00:00"
+  }
+]

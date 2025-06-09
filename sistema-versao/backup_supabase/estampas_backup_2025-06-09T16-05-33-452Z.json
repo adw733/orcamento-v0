@@ -1,0 +1,450 @@
+[
+  {
+    "id": "26ef6ba5-8f7b-414e-b3b6-9f4ac5a5264d",
+    "item_orcamento_id": "1dabb2bf-05c9-47d1-ab6b-f9572153d826",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Silk",
+    "largura": 10,
+    "created_at": "2025-05-19T22:17:35.541327+00:00"
+  },
+  {
+    "id": "e31f5d68-1b85-4b09-b485-7dbcc51336f1",
+    "item_orcamento_id": "1dabb2bf-05c9-47d1-ab6b-f9572153d826",
+    "posicao": "Costas",
+    "tipo": "Silk",
+    "largura": 30,
+    "created_at": "2025-05-19T22:17:35.541327+00:00"
+  },
+  {
+    "id": "33dffe03-357f-4144-b510-821c4cde5ee7",
+    "item_orcamento_id": "a0f4e540-d683-48fb-9793-2de04043377e",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-22T23:03:38.41806+00:00"
+  },
+  {
+    "id": "cd279b36-5fd8-4252-ac00-b7e2b90d38f6",
+    "item_orcamento_id": "288375a4-4721-4c70-b589-4985ae1790f1",
+    "posicao": "Peito esquerdo",
+    "tipo": "Silk",
+    "largura": 8,
+    "created_at": "2025-05-22T23:12:46.285609+00:00"
+  },
+  {
+    "id": "d46c1927-bd76-43d9-be6d-08af23af7668",
+    "item_orcamento_id": "74e1a777-09de-4c31-a5ea-778586c5a9af",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-22T23:25:02.603039+00:00"
+  },
+  {
+    "id": "d917a630-c1c7-4960-9d96-89d5a46c2227",
+    "item_orcamento_id": "bd8696bc-e728-4704-8b4e-fb6956fb363d",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-19T23:45:39.262272+00:00"
+  },
+  {
+    "id": "df15eea8-69b3-4a31-b820-01b9ab89ec9a",
+    "item_orcamento_id": "347511af-e16c-4d7b-881d-43a4300a35b7",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-19T23:46:16.827806+00:00"
+  },
+  {
+    "id": "0d28a8a6-9200-4d0c-860f-5d795c665e0a",
+    "item_orcamento_id": "b0430668-9650-4142-8e31-4e0f3c830d22",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-19T23:46:39.588148+00:00"
+  },
+  {
+    "id": "e9b3f8d2-4868-4475-b4f9-045e341661ed",
+    "item_orcamento_id": "97d3efdc-6355-49ba-ae56-28c559ce3346",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-26T16:01:06.128024+00:00"
+  },
+  {
+    "id": "2ff5c7c4-e7a8-4035-ae82-44a5e835d05c",
+    "item_orcamento_id": "15e395c5-d2c9-4264-b24a-5e0c5bc4f7db",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 4.5,
+    "created_at": "2025-05-20T00:17:36.298588+00:00"
+  },
+  {
+    "id": "044e9ac8-faf1-431b-8ff9-5f7a41cd9bd5",
+    "item_orcamento_id": "15e395c5-d2c9-4264-b24a-5e0c5bc4f7db",
+    "posicao": "Costas",
+    "tipo": "Bordado",
+    "largura": 3,
+    "created_at": "2025-05-20T00:17:36.298588+00:00"
+  },
+  {
+    "id": "c0a1f064-6f17-4afe-9790-e2ac6eeeb7ba",
+    "item_orcamento_id": "ae131d9e-1a5b-471b-863b-40ef44cd4901",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 4.5,
+    "created_at": "2025-05-20T00:18:32.683394+00:00"
+  },
+  {
+    "id": "ac04fc33-cecc-48c6-8a1c-30cf13bae731",
+    "item_orcamento_id": "ae131d9e-1a5b-471b-863b-40ef44cd4901",
+    "posicao": "Costas",
+    "tipo": "Bordado",
+    "largura": 3,
+    "created_at": "2025-05-20T00:18:32.683394+00:00"
+  },
+  {
+    "id": "6dd35b07-97fe-4d87-912e-364c0262e67d",
+    "item_orcamento_id": "3867cdb0-cc9d-49c6-8aba-1688d09bfad0",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 4.5,
+    "created_at": "2025-05-20T00:19:00.22702+00:00"
+  },
+  {
+    "id": "5ce32445-f6c0-4f88-976c-16d7b47e7db7",
+    "item_orcamento_id": "3867cdb0-cc9d-49c6-8aba-1688d09bfad0",
+    "posicao": "Costas",
+    "tipo": "Bordado",
+    "largura": 3,
+    "created_at": "2025-05-20T00:19:00.22702+00:00"
+  },
+  {
+    "id": "749b25ed-4eb4-4f52-b281-c9fdde17c06a",
+    "item_orcamento_id": "274639a4-d930-461e-b277-ea89e61ef7a5",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 4.5,
+    "created_at": "2025-05-20T00:20:25.788011+00:00"
+  },
+  {
+    "id": "9e8346f8-19df-4d71-ba55-7b466a18cb84",
+    "item_orcamento_id": "274639a4-d930-461e-b277-ea89e61ef7a5",
+    "posicao": "Costas",
+    "tipo": "Bordado",
+    "largura": 3,
+    "created_at": "2025-05-20T00:20:25.788011+00:00"
+  },
+  {
+    "id": "95303a9f-1d70-4f94-8d76-5094914eecd0",
+    "item_orcamento_id": "8a2d7431-376a-4ca8-ac66-daa769918664",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T00:21:20.188384+00:00"
+  },
+  {
+    "id": "59c38ac0-5379-459c-90ce-f9e104f11d2d",
+    "item_orcamento_id": "f32fa07c-1ed2-4ad6-bab2-f622a97cc798",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T00:21:32.54363+00:00"
+  },
+  {
+    "id": "bc428b92-c10b-41d0-b51f-a155bd2225e6",
+    "item_orcamento_id": "c9a6e97f-b67f-405b-9087-b9427c2a1920",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T00:22:10.69504+00:00"
+  },
+  {
+    "id": "1a5f7d33-2725-4e06-884a-f4d556eff58a",
+    "item_orcamento_id": "1cfb18e3-4498-4e81-87d6-6e5418071c7b",
+    "posicao": "Peito esquerdo",
+    "tipo": "Silk",
+    "largura": 7.2,
+    "created_at": "2025-05-08T02:34:41.02641+00:00"
+  },
+  {
+    "id": "964785bf-7395-439d-bac6-a3133f175030",
+    "item_orcamento_id": "5f252624-5abe-45eb-b1b6-f00bbefd77d7",
+    "posicao": "Bolso esquerdo",
+    "tipo": "DTF",
+    "largura": 10,
+    "created_at": "2025-05-20T00:22:24.675737+00:00"
+  },
+  {
+    "id": "6616d166-b832-46d4-8de1-af10bdce1b40",
+    "item_orcamento_id": "5f252624-5abe-45eb-b1b6-f00bbefd77d7",
+    "posicao": "Costas",
+    "tipo": "DTF",
+    "largura": 30,
+    "created_at": "2025-05-20T00:22:24.675737+00:00"
+  },
+  {
+    "id": "fd5c0db3-a6c0-4211-baf8-d5e0013dd9eb",
+    "item_orcamento_id": "dd79bd72-a9a0-4c93-8574-fd2dd2b589ca",
+    "posicao": "Peito direito",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-09T00:39:03.405788+00:00"
+  },
+  {
+    "id": "e7944ceb-b115-475a-9dbf-ca653446220a",
+    "item_orcamento_id": "b1bc9159-d702-434e-85ca-e9fde3408c98",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-09T00:40:07.338297+00:00"
+  },
+  {
+    "id": "6ff2ca9f-bc8c-472d-b4c5-e15f5f4552c1",
+    "item_orcamento_id": "0ad9b17d-249c-48e0-9a4c-a98820507dc5",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 6,
+    "created_at": "2025-05-20T00:30:41.382276+00:00"
+  },
+  {
+    "id": "bbd199b9-bed6-4e68-8e55-ec0903e7a587",
+    "item_orcamento_id": "c5cdbcf8-0905-441d-9faf-add79486744e",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-09T00:41:18.447853+00:00"
+  },
+  {
+    "id": "20449595-3022-433e-8e3e-790060966be9",
+    "item_orcamento_id": "c3c930ec-8b7b-4088-920b-40a095c2b389",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 6,
+    "created_at": "2025-05-30T12:36:24.393854+00:00"
+  },
+  {
+    "id": "7199ce3a-9634-4f25-8222-eb43071e9a13",
+    "item_orcamento_id": "a7ffc34d-6614-43f6-b329-2bc21a87f706",
+    "posicao": "Peito esquerdo",
+    "tipo": "DTF",
+    "largura": 7,
+    "created_at": "2025-05-09T18:40:56.546616+00:00"
+  },
+  {
+    "id": "0af3926a-1207-4deb-8f9c-143237a84db8",
+    "item_orcamento_id": "291f3a72-67cb-41c9-948e-4b42210c8b86",
+    "posicao": "Peito esquerdo",
+    "tipo": "Silk",
+    "largura": 8,
+    "created_at": "2025-05-30T12:46:33.723543+00:00"
+  },
+  {
+    "id": "d279eb5c-aadb-4cb4-861e-6535020bf2aa",
+    "item_orcamento_id": "c1f02e77-ebf1-4a7a-b0e8-b82c53cf04b6",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-30T13:50:23.421233+00:00"
+  },
+  {
+    "id": "1986d121-497a-4068-8b85-0078a7a7d039",
+    "item_orcamento_id": "3d168304-4b60-43e1-90a6-f978c887d42f",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Silk",
+    "largura": 10,
+    "created_at": "2025-05-30T14:03:15.164837+00:00"
+  },
+  {
+    "id": "ef919bed-e7cf-4c84-8b9c-e802ce0cfde6",
+    "item_orcamento_id": "7b3b036c-73e3-4876-970b-138416bae1ec",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 10,
+    "created_at": "2025-05-30T19:27:28.185481+00:00"
+  },
+  {
+    "id": "beeb0302-0970-4f03-8ea3-ddf1df5c795f",
+    "item_orcamento_id": "7b3b036c-73e3-4876-970b-138416bae1ec",
+    "posicao": "Costas",
+    "tipo": "Bordado",
+    "largura": 21,
+    "created_at": "2025-05-30T19:27:28.185481+00:00"
+  },
+  {
+    "id": "ad42ebf1-7b9a-4633-b754-0b112ba49f10",
+    "item_orcamento_id": "ea9ff591-1f3e-400e-8668-ebc82915bfae",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-06-03T15:26:54.619074+00:00"
+  },
+  {
+    "id": "15ee7981-e970-4c2e-8caf-2984e5373f5c",
+    "item_orcamento_id": "b6dd0390-4d9b-479d-a667-e4d405e2dd50",
+    "posicao": "Peito esquerdo",
+    "tipo": "Silk",
+    "largura": 7.5,
+    "created_at": "2025-06-04T22:47:04.26182+00:00"
+  },
+  {
+    "id": "61d2517a-2f75-4ff1-9f23-be1c18152601",
+    "item_orcamento_id": "792044d2-da34-4e74-bce9-cf57cb4743cc",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-06-05T19:20:43.618367+00:00"
+  },
+  {
+    "id": "02fe9158-038b-4d23-b3ce-1685d22bc9aa",
+    "item_orcamento_id": "cc3f3e0e-b60c-4c5e-af76-bb16053e7013",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T18:42:53.93415+00:00"
+  },
+  {
+    "id": "371b9fc2-80e1-4f6b-8988-f6cb8feb8c92",
+    "item_orcamento_id": "85fe40ec-3cdd-4235-b516-d14983411ebd",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T19:01:08.569282+00:00"
+  },
+  {
+    "id": "4410c9bd-d37b-4093-ba8c-6b8c13dada5c",
+    "item_orcamento_id": "9a30ff7f-4f3c-4b2c-9010-45bbccaf489f",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T19:02:45.159499+00:00"
+  },
+  {
+    "id": "11538967-4a4e-4c22-a9df-c8d310565159",
+    "item_orcamento_id": "33c1fa39-ccd2-4252-89ca-3a37b10d113c",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-06-05T19:23:33.553902+00:00"
+  },
+  {
+    "id": "95d75d37-e0c2-4d2a-8641-c32a9cb0faab",
+    "item_orcamento_id": "4ad43861-57b1-44f4-b772-bd43d6414f6f",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-13T22:47:00.766304+00:00"
+  },
+  {
+    "id": "3308d37c-955f-427b-855b-35523414c3dc",
+    "item_orcamento_id": "ad800d04-e567-4238-aa7c-6ab190915908",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-06-06T16:42:24.552379+00:00"
+  },
+  {
+    "id": "16ca32c0-56a8-4cac-8a12-7abb5211c96d",
+    "item_orcamento_id": "b9631538-b13d-4305-a8df-5aea59b016d4",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-14T02:18:33.419237+00:00"
+  },
+  {
+    "id": "393d16e4-b3bf-47a3-9fe8-056030a92053",
+    "item_orcamento_id": "96d95e89-ae7a-4a94-a87f-bb017ea07680",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T19:08:11.005333+00:00"
+  },
+  {
+    "id": "213de5b7-222c-4658-bc37-fc8032d06e91",
+    "item_orcamento_id": "c101b4a6-ab07-4290-bbd4-b63647e5e63a",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 7.5,
+    "created_at": "2025-05-20T19:09:09.288822+00:00"
+  },
+  {
+    "id": "048075d9-ce74-42a3-915d-ee4498820142",
+    "item_orcamento_id": "a74e2560-5848-4b10-869f-05a44f9c9eb1",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 6,
+    "created_at": "2025-05-14T02:21:41.269373+00:00"
+  },
+  {
+    "id": "9d273f99-8e03-48e3-83ef-8c18abcd4e10",
+    "item_orcamento_id": "65665085-763a-4e7b-9791-a02d2d16bd0e",
+    "posicao": "Peito esquerdo",
+    "tipo": "Bordado",
+    "largura": 6,
+    "created_at": "2025-05-14T02:21:45.798506+00:00"
+  },
+  {
+    "id": "ae85806c-7f19-487f-a67a-b6693941d174",
+    "item_orcamento_id": "8735d027-ddab-4ea2-bd28-dcceb72d6e60",
+    "posicao": "Peito esquerdo",
+    "tipo": "DTF",
+    "largura": 8,
+    "created_at": "2025-06-06T17:49:09.266452+00:00"
+  },
+  {
+    "id": "695ed3c1-3078-4800-a978-39933f7bdff9",
+    "item_orcamento_id": "e9b2869d-b6fb-4fd4-a107-b674037202cf",
+    "posicao": "Peito esquerdo",
+    "tipo": "DTF",
+    "largura": 8,
+    "created_at": "2025-06-06T19:41:13.31972+00:00"
+  },
+  {
+    "id": "95b3bdeb-8a40-43c1-a174-b49c296ff364",
+    "item_orcamento_id": "2de46fe5-ba45-4c13-ac2d-0cf756183fdb",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Silk",
+    "largura": 10,
+    "created_at": "2025-05-19T22:14:50.538737+00:00"
+  },
+  {
+    "id": "5ebe0487-79c8-4262-aed6-8df5403d3e20",
+    "item_orcamento_id": "2de46fe5-ba45-4c13-ac2d-0cf756183fdb",
+    "posicao": "Costas",
+    "tipo": "Silk",
+    "largura": 30,
+    "created_at": "2025-05-19T22:14:50.538737+00:00"
+  },
+  {
+    "id": "19d07da5-e569-4b05-a1fb-041bc89248ae",
+    "item_orcamento_id": "2ffe7dab-af80-41fb-bc44-585dc8dc4635",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Silk",
+    "largura": 10,
+    "created_at": "2025-05-19T22:15:00.226641+00:00"
+  },
+  {
+    "id": "c77b18f6-8e75-4116-9933-28d5339782b2",
+    "item_orcamento_id": "274d1e38-afc5-48c5-a53c-fdd44f3f7002",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 7,
+    "created_at": "2025-05-19T22:15:14.194478+00:00"
+  },
+  {
+    "id": "0fffae8f-1d63-494b-ab29-77f006d5339f",
+    "item_orcamento_id": "274d1e38-afc5-48c5-a53c-fdd44f3f7002",
+    "posicao": "Costas",
+    "tipo": "Bordado",
+    "largura": 6,
+    "created_at": "2025-05-19T22:15:14.194478+00:00"
+  },
+  {
+    "id": "854165f3-d593-4219-98cc-ac14d4e8e626",
+    "item_orcamento_id": "ff2927af-7e63-49cb-9e88-9421c1b3a487",
+    "posicao": "Bolso esquerdo",
+    "tipo": "Bordado",
+    "largura": 8,
+    "created_at": "2025-05-20T19:46:30.646663+00:00"
+  }
+]

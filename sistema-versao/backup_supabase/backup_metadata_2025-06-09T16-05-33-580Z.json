@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-06-09T16:05:33.580Z",
+  "tables_backed_up": [
+    "clientes",
+    "produtos",
+    "tecidos",
+    "tecidos_base",
+    "cores",
+    "orcamentos",
+    "itens_orcamento",
+    "estampas",
+    "empresa",
+    "configuracoes"
+  ],
+  "tables_failed": [],
+  "total_tables": 10,
+  "successful_backups": 10,
+  "failed_backups": 0
+}

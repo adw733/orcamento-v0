@@ -148,56 +148,97 @@ export const tecidoBaseService = {
   },
 }
 
+// Tipos padrão para fallback quando a tabela não existe
+const TIPOS_PADRAO: TipoTamanho[] = [
+  {
+    id: "padrao",
+    nome: "PADRÃO",
+    descricao: "PP, P, M, G, GG, G1, G2, G3, G4, G5, G6, G7",
+    tamanhos: ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+  },
+  {
+    id: "numerico",
+    nome: "NUMÉRICO",
+    descricao: "36 AO 58 - NÚMEROS PARES",
+    tamanhos: ["36", "38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58"]
+  },
+  {
+    id: "infantil",
+    nome: "INFANTIL",
+    descricao: "0 AO 13 - TAMANHOS INFANTIS",
+    tamanhos: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
+  }
+]
+
+// Armazenamento local em memória para tipos customizados
+let tiposCustomizados: TipoTamanho[] = []
+let tabelaExiste: boolean | null = null
+
 // Serviço para gerenciar tipos de tamanho
 export const tipoTamanhoService = {
+  async verificarTabelaExiste(): Promise<boolean> {
+    if (tabelaExiste !== null) {
+      return tabelaExiste
+    }
+
+    try {
+      const { error } = await supabase.from("tipos_tamanho").select("id").limit(1)
+      tabelaExiste = !error
+      return tabelaExiste
+    } catch (error) {
+      tabelaExiste = false
+      return false
+    }
+  },
+
   async listarTodos(): Promise<TipoTamanho[]> {
     try {
+      const tabelaExisteResult = await this.verificarTabelaExiste()
+      
+      if (!tabelaExisteResult) {
+        console.warn("Tabela tipos_tamanho não existe. Usando tipos padrão + customizados.")
+        return [...TIPOS_PADRAO, ...tiposCustomizados]
+      }
+
       const { data, error } = await supabase.from("tipos_tamanho").select("*").order("nome")
 
       if (error) {
-        // Se a tabela não existir, retornar tipos padrão
-        if (error.message.includes("does not exist")) {
-          console.warn("Tabela tipos_tamanho não existe. Retornando tipos padrão.")
-          return [
-            {
-              id: "padrao",
-              nome: "PADRÃO",
-              descricao: "PP, P, M, G, GG, G1, G2, G3, G4, G5, G6, G7",
-              tamanhos: ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
-            },
-            {
-              id: "numerico",
-              nome: "NUMÉRICO",
-              descricao: "36 AO 58 - NÚMEROS PARES",
-              tamanhos: ["36", "38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58"]
-            },
-            {
-              id: "infantil",
-              nome: "INFANTIL",
-              descricao: "0 AO 13 - TAMANHOS INFANTIS",
-              tamanhos: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
-            }
-          ]
-        }
         console.error("Erro ao listar tipos de tamanho:", error)
-        throw error
+        return [...TIPOS_PADRAO, ...tiposCustomizados]
       }
 
-      return data.map((tipo) => ({
+      const tiposBanco = data.map((tipo) => ({
         id: tipo.id,
         nome: tipo.nome,
         descricao: tipo.descricao || "",
         tamanhos: tipo.tamanhos || [],
       }))
+
+      return [...TIPOS_PADRAO, ...tiposBanco, ...tiposCustomizados]
     } catch (error) {
       console.error("Erro ao listar tipos de tamanho:", error)
-      // Em caso de erro, retornar array vazio para não quebrar a aplicação
-      return []
+      return [...TIPOS_PADRAO, ...tiposCustomizados]
     }
   },
 
   async adicionar(tipo: Omit<TipoTamanho, "id">): Promise<TipoTamanho> {
     try {
+      const tabelaExisteResult = await this.verificarTabelaExiste()
+      
+      if (!tabelaExisteResult) {
+        // Se a tabela não existe, adicionar aos tipos customizados em memória
+        const novoTipo: TipoTamanho = {
+          id: `custom_${Date.now()}`,
+          nome: tipo.nome.toUpperCase(),
+          descricao: tipo.descricao.toUpperCase(),
+          tamanhos: tipo.tamanhos,
+        }
+        
+        tiposCustomizados.push(novoTipo)
+        console.warn("Tabela tipos_tamanho não existe. Tipo adicionado em memória:", novoTipo.nome)
+        return novoTipo
+      }
+
       const { data, error } = await supabase
         .from("tipos_tamanho")
         .insert({
@@ -208,9 +249,6 @@ export const tipoTamanhoService = {
         .select()
 
       if (error) {
-        if (error.message.includes("does not exist")) {
-          throw new Error("Tabela tipos_tamanho não existe. Por favor, crie a tabela no banco de dados.")
-        }
         console.error("Erro ao adicionar tipo de tamanho:", error)
         throw error
       }
@@ -229,6 +267,31 @@ export const tipoTamanhoService = {
 
   async atualizar(tipo: TipoTamanho): Promise<void> {
     try {
+      // Se é um tipo customizado em memória
+      if (tipo.id.startsWith('custom_')) {
+        const index = tiposCustomizados.findIndex(t => t.id === tipo.id)
+        if (index !== -1) {
+          tiposCustomizados[index] = {
+            ...tipo,
+            nome: tipo.nome.toUpperCase(),
+            descricao: tipo.descricao.toUpperCase(),
+          }
+          console.warn("Tipo customizado atualizado em memória:", tipo.nome)
+          return
+        }
+      }
+
+      // Se é um tipo padrão, não permitir edição
+      if (['padrao', 'numerico', 'infantil'].includes(tipo.id)) {
+        throw new Error("Não é possível editar tipos padrão do sistema.")
+      }
+
+      const tabelaExisteResult = await this.verificarTabelaExiste()
+      
+      if (!tabelaExisteResult) {
+        throw new Error("Tabela tipos_tamanho não existe. Não é possível atualizar tipos salvos no banco.")
+      }
+
       const { error } = await supabase
         .from("tipos_tamanho")
         .update({
@@ -240,9 +303,6 @@ export const tipoTamanhoService = {
         .eq("id", tipo.id)
 
       if (error) {
-        if (error.message.includes("does not exist")) {
-          throw new Error("Tabela tipos_tamanho não existe. Por favor, crie a tabela no banco de dados.")
-        }
         console.error("Erro ao atualizar tipo de tamanho:", error)
         throw error
       }
@@ -254,12 +314,27 @@ export const tipoTamanhoService = {
 
   async remover(id: string): Promise<void> {
     try {
+      // Se é um tipo customizado em memória
+      if (id.startsWith('custom_')) {
+        tiposCustomizados = tiposCustomizados.filter(t => t.id !== id)
+        console.warn("Tipo customizado removido da memória")
+        return
+      }
+
+      // Se é um tipo padrão, não permitir remoção
+      if (['padrao', 'numerico', 'infantil'].includes(id)) {
+        throw new Error("Não é possível remover tipos padrão do sistema.")
+      }
+
+      const tabelaExisteResult = await this.verificarTabelaExiste()
+      
+      if (!tabelaExisteResult) {
+        throw new Error("Tabela tipos_tamanho não existe. Não é possível remover tipos salvos no banco.")
+      }
+
       const { error } = await supabase.from("tipos_tamanho").delete().eq("id", id)
 
       if (error) {
-        if (error.message.includes("does not exist")) {
-          throw new Error("Tabela tipos_tamanho não existe. Por favor, crie a tabela no banco de dados.")
-        }
         console.error("Erro ao remover tipo de tamanho:", error)
         throw error
       }

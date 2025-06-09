@@ -43,7 +43,7 @@ export type Produto = {
   tecidos: Tecido[]
   cores: string[]
   tamanhosDisponiveis: string[]
-  categoria: string // Nova propriedade para categorização
+  categoria?: string // Nova propriedade para categorização
 }
 
 export type ItemOrcamento = {

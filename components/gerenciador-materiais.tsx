@@ -360,6 +360,12 @@ export default function GerenciadorMateriais() {
   }
 
   const iniciarEdicaoTipoTamanho = (tipo: TipoTamanho) => {
+    // Verificar se é um tipo padrão
+    if (['padrao', 'numerico', 'infantil'].includes(tipo.id)) {
+      setError("Não é possível editar tipos padrão do sistema.")
+      return
+    }
+
     setEditandoTipoTamanhoId(tipo.id)
     setTipoTamanhoEditando({ ...tipo })
   }
@@ -395,6 +401,12 @@ export default function GerenciadorMateriais() {
   }
 
   const handleRemoverTipoTamanho = async (id: string) => {
+    // Verificar se é um tipo padrão
+    if (['padrao', 'numerico', 'infantil'].includes(id)) {
+      setError("Não é possível remover tipos padrão do sistema.")
+      return
+    }
+
     if (!window.confirm("Tem certeza que deseja excluir este tipo de tamanho? Esta ação não pode ser desfeita.")) {
       return
     }
@@ -1300,24 +1312,32 @@ export default function GerenciadorMateriais() {
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => iniciarEdicaoTipoTamanho(tipo)}
-                                  className="h-8 w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
-                                  disabled={isLoading}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoverTipoTamanho(tipo.id)}
-                                  className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
-                                  disabled={isLoading}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                {['padrao', 'numerico', 'infantil'].includes(tipo.id) ? (
+                                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                    SISTEMA
+                                  </span>
+                                ) : (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => iniciarEdicaoTipoTamanho(tipo)}
+                                      className="h-8 w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
+                                      disabled={isLoading}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleRemoverTipoTamanho(tipo.id)}
+                                      className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
+                                      disabled={isLoading}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </>
