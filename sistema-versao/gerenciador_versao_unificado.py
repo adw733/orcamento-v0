@@ -809,17 +809,60 @@ class VersionControlUnified:
     # ==================== MÉTODOS AUXILIARES ====================
     
     def start_project(self):
-        """Inicia o projeto (npm run dev)"""
-        self.log_deploy_message("Iniciando projeto...", "INFO")
-        
-        def start_thread():
-            success, output, error = self.run_command("npm run dev")
-            if success:
-                self.root.after(0, lambda: self.log_deploy_message("Projeto iniciado!", "SUCCESS"))
+        """Inicia o projeto Next.js"""
+        package_json = os.path.join(self.project_path, 'package.json')
+        if not os.path.exists(package_json):
+            messagebox.showerror("Erro", "Arquivo package.json não encontrado!")
+            return
+
+        def kill_node_processes():
+            """Termina todos os processos Node.js em execução"""
+            try:
+                result = subprocess.run(
+                    ['taskkill', '/F', '/IM', 'node.exe'],
+                    capture_output=True,
+                    text=True
+                )
+                return True, f"Processos Node.js terminados: {result.stdout}"
+            except Exception as e:
+                return False, f"Erro ao terminar processos Node.js: {str(e)}"
+
+        def start_in_background():
+            kill_success, kill_message = kill_node_processes()
+            if kill_success:
+                print(f"✅ {kill_message}")
             else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error}", "ERROR"))
-        
-        threading.Thread(target=start_thread, daemon=True).start()
+                print(f"⚠️ {kill_message}")
+            
+            import time
+            time.sleep(2)
+            
+            commands = ['npm run dev', 'yarn dev', 'pnpm dev']
+            for cmd in commands:
+                try:
+                    manager = cmd.split()[0]
+                    check_result = subprocess.run(f'{manager} --version', shell=True, capture_output=True)
+                    if check_result.returncode == 0:
+                        subprocess.Popen(
+                            cmd,
+                            shell=True,
+                            cwd=self.project_path,
+                            creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+                        )
+                        return True, cmd
+                except:
+                    continue
+            return False, "Nenhum gerenciador de pacotes encontrado"
+
+        def run_start():
+            success, result = start_in_background()
+            if success:
+                self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Sistemas Node.js anteriores terminados.\nProjeto iniciado com: {result}"))
+                self.root.after(3000, self.open_browser)
+            else:
+                self.root.after(0, lambda: messagebox.showerror("Erro", result))
+
+        threading.Thread(target=run_start, daemon=True).start()
     
     def open_browser(self):
         """Abre o projeto no navegador"""
