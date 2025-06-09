@@ -103,7 +103,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
     valorBase: 0,
     tecidos: [],
     cores: [],
-    tamanhosDisponiveis: [],
+    tamanhosDisponiveis: [], // Manter array vazio para compatibilidade
     categoria: "", // Inicializar categoria vazia
   })
 
@@ -112,8 +112,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Estados para gerenciar tecidos
-  const [novoTamanho, setNovoTamanho] = useState("")
 
   // Estados para cores e tecidos pré-cadastrados
   const [coresCadastradas, setCoresCadastradas] = useState<Cor[]>([])
@@ -213,9 +211,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
           nome: novoProduto.nome.toUpperCase(),
           valor_base: novoProduto.valorBase,
           cores: novoProduto.cores ? novoProduto.cores.map((cor) => cor.toUpperCase()) : [],
-          tamanhos_disponiveis: novoProduto.tamanhosDisponiveis
-            ? novoProduto.tamanhosDisponiveis.map((tamanho) => tamanho.toUpperCase())
-            : [],
+          tamanhos_disponiveis: [], // Array vazio - tamanhos não são mais cadastrados no produto
         }
 
         // Adicionar categoria apenas se a coluna existir
@@ -269,10 +265,9 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
             valorBase: 0,
             tecidos: [],
             cores: [],
-            tamanhosDisponiveis: [],
+            tamanhosDisponiveis: [], // Manter para compatibilidade
             categoria: "",
           })
-          setNovoTamanho("")
           setMostrarFormulario(false)
         }
       } catch (error) {
@@ -377,7 +372,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
           nome: produtoEditando.nome.toUpperCase(),
           valor_base: produtoEditando.valorBase,
           cores: produtoEditando.cores.map((cor) => cor.toUpperCase()),
-          tamanhos_disponiveis: produtoEditando.tamanhosDisponiveis.map((tamanho) => tamanho.toUpperCase()),
+          tamanhos_disponiveis: [], // Array vazio - tamanhos não são mais cadastrados no produto
           updated_at: new Date().toISOString(),
         }
 
@@ -452,36 +447,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
     }
   }
 
-  const adicionarTamanho = () => {
-    if (novoTamanho) {
-      if (editandoId && produtoEditando) {
-        setProdutoEditando({
-          ...produtoEditando,
-          tamanhosDisponiveis: [...produtoEditando.tamanhosDisponiveis, novoTamanho],
-        })
-      } else {
-        setNovoProduto({
-          ...novoProduto,
-          tamanhosDisponiveis: [...(novoProduto.tamanhosDisponiveis || []), novoTamanho],
-        })
-      }
-      setNovoTamanho("")
-    }
-  }
-
-  const removerTamanho = (index: number) => {
-    if (editandoId && produtoEditando) {
-      setProdutoEditando({
-        ...produtoEditando,
-        tamanhosDisponiveis: produtoEditando.tamanhosDisponiveis.filter((_, i) => i !== index),
-      })
-    } else {
-      setNovoProduto({
-        ...novoProduto,
-        tamanhosDisponiveis: (novoProduto.tamanhosDisponiveis || []).filter((_, i) => i !== index),
-      })
-    }
-  }
 
   // Função para alternar a ordenação
   const alternarOrdenacao = (campo: string) => {
@@ -724,7 +689,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tecidos</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tamanhos</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
@@ -1019,149 +983,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                                   </div>
                                 </div>
 
-                                {/* Tamanhos */}
-                                <div>
-                                  <Label className="text-primary flex items-center gap-2">
-                                    <Ruler className="h-4 w-4" />
-                                    Tamanhos Disponíveis
-                                  </Label>
-                                  <div className="mt-2 space-y-4">
-                                    <div className="grid grid-cols-1 gap-4">
-                                      <div className="border rounded-md p-3 bg-white">
-                                        <div className="flex items-center mb-2">
-                                          <input
-                                            type="radio"
-                                            id={`tamanho-tipo-1-edit`}
-                                            name={`tamanho-tipo-edit`}
-                                            className="mr-2"
-                                            checked={produtoEditando.tamanhosDisponiveis.some((t) =>
-                                              [
-                                                "PP",
-                                                "P",
-                                                "M",
-                                                "G",
-                                                "GG",
-                                                "G1",
-                                                "G2",
-                                                "G3",
-                                                "G4",
-                                                "G5",
-                                                "G6",
-                                                "G7",
-                                              ].includes(t),
-                                            )}
-                                            onChange={() => {
-                                              setProdutoEditando({
-                                                ...produtoEditando,
-                                                tamanhosDisponiveis: [
-                                                  "PP",
-                                                  "P",
-                                                  "M",
-                                                  "G",
-                                                  "GG",
-                                                  "G1",
-                                                  "G2",
-                                                  "G3",
-                                                  "G4",
-                                                  "G5",
-                                                  "G6",
-                                                  "G7",
-                                                ],
-                                              })
-                                            }}
-                                          />
-                                          <Label htmlFor={`tamanho-tipo-1-edit`} className="font-medium">
-                                            Padrão (PP ao G7)
-                                          </Label>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"].map(
-                                            (tamanho) => (
-                                              <div
-                                                key={tamanho}
-                                                className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full"
-                                              >
-                                                <span className="text-sm font-medium">{tamanho}</span>
-                                              </div>
-                                            ),
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="border rounded-md p-3 bg-white">
-                                        <div className="flex items-center mb-2">
-                                          <input
-                                            type="radio"
-                                            id={`tamanho-tipo-2-edit`}
-                                            name={`tamanho-tipo-edit`}
-                                            className="mr-2"
-                                            checked={produtoEditando.tamanhosDisponiveis.some((t) =>
-                                              t.match(/^(3[68]|[4-5][02468])$/),
-                                            )}
-                                            onChange={() => {
-                                              const numericos = Array.from({ length: 12 }, (_, i) =>
-                                                (36 + i * 2).toString(),
-                                              )
-                                              setProdutoEditando({
-                                                ...produtoEditando,
-                                                tamanhosDisponiveis: numericos,
-                                              })
-                                            }}
-                                          />
-                                          <Label htmlFor={`tamanho-tipo-2-edit`} className="font-medium">
-                                            Numérico (36 ao 58 - pares)
-                                          </Label>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                                          {Array.from({ length: 12 }, (_, i) => (36 + i * 2).toString()).map(
-                                            (tamanho) => (
-                                              <div
-                                                key={tamanho}
-                                                className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full"
-                                              >
-                                                <span className="text-sm font-medium">{tamanho}</span>
-                                              </div>
-                                            ),
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="border rounded-md p-3 bg-white">
-                                        <div className="flex items-center mb-2">
-                                          <input
-                                            type="radio"
-                                            id={`tamanho-tipo-3-edit`}
-                                            name={`tamanho-tipo-edit`}
-                                            className="mr-2"
-                                            checked={produtoEditando.tamanhosDisponiveis.some((t) =>
-                                              t.match(/^([0-9]|1[0-3])$/),
-                                            )}
-                                            onChange={() => {
-                                              const infantis = Array.from({ length: 14 }, (_, i) => i.toString())
-                                              setProdutoEditando({
-                                                ...produtoEditando,
-                                                tamanhosDisponiveis: infantis,
-                                              })
-                                            }}
-                                          />
-                                          <Label htmlFor={`tamanho-tipo-3-edit`} className="font-medium">
-                                            Infantil (0 ao 13)
-                                          </Label>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {Array.from({ length: 14 }, (_, i) => i.toString()).map((tamanho) => (
-                                            <div
-                                              key={tamanho}
-                                              className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full"
-                                            >
-                                              <span className="text-sm font-medium">{tamanho}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
 
                                 <div className="flex justify-end gap-2">
                                   <Button
@@ -1209,19 +1030,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                                 <div className="max-w-[200px] truncate">
                                   {produto.tecidos.length > 0 ? (
                                     produto.tecidos.map((t) => t.nome).join(", ")
-                                  ) : (
-                                    <span className="text-gray-400 italic">Nenhum</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 align-middle">
-                                <div className="max-w-[200px] truncate">
-                                  {produto.tamanhosDisponiveis.length > 0 ? (
-                                    produto.tamanhosDisponiveis.length > 5 ? (
-                                      `${produto.tamanhosDisponiveis.slice(0, 5).join(", ")}... +${produto.tamanhosDisponiveis.length - 5}`
-                                    ) : (
-                                      produto.tamanhosDisponiveis.join(", ")
-                                    )
                                   ) : (
                                     <span className="text-gray-400 italic">Nenhum</span>
                                   )}
@@ -1488,119 +1296,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                 </div>
               </div>
 
-              {/* Tamanhos */}
-              <div>
-                <Label className="text-primary flex items-center gap-2">
-                  <Ruler className="h-4 w-4" />
-                  Tamanhos Disponíveis
-                </Label>
-                <div className="mt-2 space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="border rounded-md p-3 bg-white">
-                      <div className="flex items-center mb-2">
-                        <input
-                          type="radio"
-                          id={`tamanho-tipo-1-novo`}
-                          name={`tamanho-tipo-novo`}
-                          className="mr-2"
-                          checked={(novoProduto.tamanhosDisponiveis || []).some((t) =>
-                            ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"].includes(t),
-                          )}
-                          onChange={() => {
-                            setNovoProduto({
-                              ...novoProduto,
-                              tamanhosDisponiveis: [
-                                "PP",
-                                "P",
-                                "M",
-                                "G",
-                                "GG",
-                                "G1",
-                                "G2",
-                                "G3",
-                                "G4",
-                                "G5",
-                                "G6",
-                                "G7",
-                              ],
-                            })
-                          }}
-                        />
-                        <Label htmlFor={`tamanho-tipo-1-novo`} className="font-medium">
-                          Padrão (PP ao G7)
-                        </Label>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"].map((tamanho) => (
-                          <div key={tamanho} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
-                            <span className="text-sm font-medium">{tamanho}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md p-3 bg-white">
-                      <div className="flex items-center mb-2">
-                        <input
-                          type="radio"
-                          id={`tamanho-tipo-2-novo`}
-                          name={`tamanho-tipo-novo`}
-                          className="mr-2"
-                          checked={(novoProduto.tamanhosDisponiveis || []).some((t) =>
-                            t.match(/^(3[68]|[4-5][02468])$/),
-                          )}
-                          onChange={() => {
-                            const numericos = Array.from({ length: 12 }, (_, i) => (36 + i * 2).toString())
-                            setNovoProduto({
-                              ...novoProduto,
-                              tamanhosDisponiveis: numericos,
-                            })
-                          }}
-                        />
-                        <Label htmlFor={`tamanho-tipo-2-novo`} className="font-medium">
-                          Numérico (36 ao 58 - pares)
-                        </Label>
-                      </div>
-                      <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                        {Array.from({ length: 12 }, (_, i) => (36 + i * 2).toString()).map((tamanho) => (
-                          <div key={tamanho} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
-                            <span className="text-sm font-medium">{tamanho}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md p-3 bg-white">
-                      <div className="flex items-center mb-2">
-                        <input
-                          type="radio"
-                          id={`tamanho-tipo-3-novo`}
-                          name={`tamanho-tipo-novo`}
-                          className="mr-2"
-                          checked={(novoProduto.tamanhosDisponiveis || []).some((t) => t.match(/^([0-9]|1[0-3])$/))}
-                          onChange={() => {
-                            const infantis = Array.from({ length: 14 }, (_, i) => i.toString())
-                            setNovoProduto({
-                              ...novoProduto,
-                              tamanhosDisponiveis: infantis,
-                            })
-                          }}
-                        />
-                        <Label htmlFor={`tamanho-tipo-3-novo`} className="font-medium">
-                          Infantil (0 ao 13)
-                        </Label>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.from({ length: 14 }, (_, i) => i.toString()).map((tamanho) => (
-                          <div key={tamanho} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
-                            <span className="text-sm font-medium">{tamanho}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <Button
                 onClick={handleAdicionarProduto}

@@ -54,6 +54,7 @@ export type ItemOrcamento = {
   valorUnitario: number
   tecidoSelecionado?: Tecido
   corSelecionada?: string
+  tipoTamanhoSelecionado?: string // Novo campo para o tipo de tamanho
   estampas?: Estampa[] // Alterado para array de estampas
   tamanhos: {
     [tamanho: string]: number

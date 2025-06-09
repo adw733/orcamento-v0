@@ -16,6 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
+// Importar serviços de materiais
+import { type TipoTamanho, tipoTamanhoService } from "@/lib/services-materiais"
+
 // Helper function to generate UUID
 const generateUUID = () => {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -228,25 +231,28 @@ const EstampaInput = ({
   )
 }
 
-// Modifique a função renderTabelaTamanhos para preservar a ordem original dos tamanhos
+// Modifique a função renderTabelaTamanhos para usar tipos de tamanho
 const renderTabelaTamanhos = (
   tamanhos: Record<string, number>,
   quantidade: number,
   isEditing: boolean,
   onChange: (tamanho: string, valor: number) => void,
-  tamanhosDisponiveis?: string[],
+  tipoTamanho?: TipoTamanho,
 ) => {
-  // Criar um objeto que mantém apenas os tamanhos disponíveis, mas preserva a ordem original
+  // Criar um objeto que mantém apenas os tamanhos do tipo selecionado
   const tamanhosFiltrados: Record<string, number> = {}
 
-  // Percorrer os tamanhos na ordem original do tamanhosPadrao
-  Object.keys(tamanhosPadrao).forEach((tamanho) => {
-    // Se não houver lista de tamanhos disponíveis OU o tamanho estiver na lista de disponíveis
-    if (!tamanhosDisponiveis || tamanhosDisponiveis.includes(tamanho)) {
-      // Adicionar o tamanho ao objeto filtrado, mantendo seu valor atual
+  if (tipoTamanho && tipoTamanho.tamanhos) {
+    // Usar os tamanhos do tipo selecionado
+    tipoTamanho.tamanhos.forEach((tamanho) => {
       tamanhosFiltrados[tamanho] = tamanhos[tamanho] || 0
-    }
-  })
+    })
+  } else {
+    // Se não houver tipo selecionado, usar todos os tamanhos do padrão
+    Object.keys(tamanhosPadrao).forEach((tamanho) => {
+      tamanhosFiltrados[tamanho] = tamanhos[tamanho] || 0
+    })
+  }
 
   return (
     <div className="space-y-3">
@@ -442,6 +448,7 @@ export default function FormularioOrcamento({
     produtoId: "",
     quantidade: 0,
     valorUnitario: 0,
+    tipoTamanhoSelecionado: "",
     tamanhos: { ...tamanhosPadrao },
     imagem: "",
     observacaoComercial: "",
@@ -455,6 +462,9 @@ export default function FormularioOrcamento({
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
   // Novo estado para controlar se o formulário de novo item está expandido
   const [novoItemExpandido, setNovoItemExpandido] = useState(false)
+  // Estado para tipos de tamanho disponíveis
+  const [tiposTamanho, setTiposTamanho] = useState<TipoTamanho[]>([])
+  const [tipoTamanhoSelecionado, setTipoTamanhoSelecionado] = useState<TipoTamanho | null>(null)
 
   // Refs para os inputs de arquivo
   const novoImagemInputRef = useRef<HTMLInputElement>(null)
@@ -499,6 +509,20 @@ export default function FormularioOrcamento({
     // Retornar todos os tamanhos ordenados
     return [...tamanhosLetras, ...tamanhosNumericos, ...tamanhosInfantis]
   }
+
+  // Carregar tipos de tamanho ao montar o componente
+  useEffect(() => {
+    const carregarTiposTamanho = async () => {
+      try {
+        const tiposData = await tipoTamanhoService.listarTodos()
+        setTiposTamanho(tiposData)
+      } catch (error) {
+        console.error("Erro ao carregar tipos de tamanho:", error)
+      }
+    }
+
+    carregarTiposTamanho()
+  }, [])
 
   // Mostrar tabela de tamanhos automaticamente quando um produto for selecionado
   useEffect(() => {
@@ -633,6 +657,7 @@ export default function FormularioOrcamento({
           produtoId: "",
           quantidade: 0,
           valorUnitario: 0,
+          tipoTamanhoSelecionado: "",
           tamanhos: { ...tamanhosPadrao },
           imagem: "",
           observacaoComercial: "",
@@ -640,6 +665,7 @@ export default function FormularioOrcamento({
           estampas: [],
         })
         setProdutoSelecionado(null)
+        setTipoTamanhoSelecionado(null)
         setLinhaAtiva(null)
         setNovoItemExpandido(false)
 
@@ -670,6 +696,11 @@ export default function FormularioOrcamento({
     if (item.produto) {
       setProdutoSelecionado(item.produto)
     }
+    // Buscar o tipo de tamanho se disponível
+    if (item.tipoTamanhoSelecionado) {
+      const tipoEncontrado = tiposTamanho.find(t => t.id === item.tipoTamanhoSelecionado)
+      setTipoTamanhoSelecionado(tipoEncontrado || null)
+    }
   }
 
   const salvarEdicaoItem = async () => {
@@ -680,6 +711,7 @@ export default function FormularioOrcamento({
         setEditandoItem(null)
         setItemEmEdicao(null)
         setProdutoSelecionado(null)
+        setTipoTamanhoSelecionado(null)
       } catch (error) {
         console.error("Erro ao salvar item:", error)
       } finally {
@@ -692,6 +724,7 @@ export default function FormularioOrcamento({
     setEditandoItem(null)
     setItemEmEdicao(null)
     setProdutoSelecionado(null)
+    setTipoTamanhoSelecionado(null)
   }
 
   const handleTamanhoChange = (tamanho: keyof ItemOrcamento["tamanhos"], valor: number) => {
@@ -768,6 +801,40 @@ export default function FormularioOrcamento({
       setNovoItem({
         ...novoItem,
         corSelecionada: cor,
+      })
+    }
+  }
+
+  const handleTipoTamanhoChange = (tipoTamanhoId: string) => {
+    const tipoSelecionado = tiposTamanho.find(t => t.id === tipoTamanhoId)
+    setTipoTamanhoSelecionado(tipoSelecionado || null)
+    
+    // Limpar os tamanhos atuais e resetar com base no novo tipo
+    const novosTamanhos: Record<string, number> = {}
+    if (tipoSelecionado && tipoSelecionado.tamanhos) {
+      tipoSelecionado.tamanhos.forEach((tamanho) => {
+        novosTamanhos[tamanho] = 0
+      })
+    } else {
+      // Se não houver tipo selecionado, usar tamanhos padrão
+      Object.keys(tamanhosPadrao).forEach((tamanho) => {
+        novosTamanhos[tamanho] = 0
+      })
+    }
+
+    if (editandoItem && itemEmEdicao) {
+      setItemEmEdicao({
+        ...itemEmEdicao,
+        tipoTamanhoSelecionado: tipoTamanhoId,
+        tamanhos: novosTamanhos,
+        quantidade: 0
+      })
+    } else {
+      setNovoItem({
+        ...novoItem,
+        tipoTamanhoSelecionado: tipoTamanhoId,
+        tamanhos: novosTamanhos,
+        quantidade: 0
       })
     }
   }
@@ -1297,113 +1364,90 @@ export default function FormularioOrcamento({
                           <tr>
                             <td colSpan={7} className="p-3 bg-accent/50 border-t border-b">
                               <div className="space-y-3">
-                                {/* Linha 1: Tecido e Cor */}
-                                <div className="grid grid-cols-2 gap-3">
-                                  {produtoSelecionado?.tecidos && produtoSelecionado.tecidos.length > 0 && (
-                                    <div>
-                                      <Label htmlFor="tecido" className="text-primary text-xs mb-1">
-                                        Tecido
-                                      </Label>
-                                      <Select
-                                        value={itemEmEdicao.tecidoSelecionado?.nome || ""}
-                                        onValueChange={handleTecidoChange}
-                                      >
-                                        <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
-                                          <SelectValue placeholder="Selecione o tecido" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {produtoSelecionado.tecidos.map((tecido) => (
-                                            <SelectItem key={tecido.nome} value={tecido.nome}>
-                                              {tecido.nome} {tecido.composicao ? `- ${tecido.composicao}` : ""}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  )}
-
-                                  {produtoSelecionado?.cores && produtoSelecionado.cores.length > 0 && (
-                                    <div>
-                                      <Label htmlFor="cor" className="text-primary text-xs mb-1">
-                                        Cor
-                                      </Label>
-                                      <Select value={itemEmEdicao.corSelecionada || ""} onValueChange={handleCorChange}>
-                                        <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
-                                          <SelectValue placeholder="Selecione a cor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {produtoSelecionado.cores.map((cor) => (
-                                            <SelectItem key={cor} value={cor}>
-                                              {cor}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Linha 2: Tabela de tamanhos compacta */}
-                                <div>
-                                  <Label className="text-primary text-xs mb-1">Tamanhos</Label>
-                                  <div className="border border-gray-200 rounded-md bg-white">
-                                    <table className="w-full border-collapse text-xs">
-                                      <thead>
-                                        <tr className="bg-accent">
-                                          <th className="border-b p-1 text-center font-medium text-xs text-primary w-12">
-                                            TAM.
-                                          </th>
-                                          {Object.keys(tamanhosPadrao)
-                                            .filter(
-                                              (tamanho) =>
-                                                !produtoSelecionado?.tamanhosDisponiveis ||
-                                                produtoSelecionado.tamanhosDisponiveis.includes(tamanho),
-                                            )
-                                            .map((tamanho) => (
-                                              <th
-                                                key={`header-${tamanho}`}
-                                                className="border-b p-1 text-center font-medium text-xs text-primary min-w-8"
-                                              >
-                                                {tamanho}
-                                              </th>
+                                {/* Linha 1: Tecido, Cor e Tipo de Tamanho */}
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    {produtoSelecionado?.tecidos && produtoSelecionado.tecidos.length > 0 && (
+                                      <div>
+                                        <Label htmlFor="tecido" className="text-primary text-xs mb-1">
+                                          Tecido
+                                        </Label>
+                                        <Select
+                                          value={itemEmEdicao.tecidoSelecionado?.nome || ""}
+                                          onValueChange={handleTecidoChange}
+                                        >
+                                          <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
+                                            <SelectValue placeholder="Selecione o tecido" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {produtoSelecionado.tecidos.map((tecido) => (
+                                              <SelectItem key={tecido.nome} value={tecido.nome}>
+                                                {tecido.nome} {tecido.composicao ? `- ${tecido.composicao}` : ""}
+                                              </SelectItem>
                                             ))}
-                                          <th className="border-b p-1 text-center font-medium text-xs text-primary w-12">
-                                            TOT.
-                                          </th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        <tr>
-                                          <td className="border-b p-1 text-center font-medium text-xs bg-accent">
-                                            QTD.
-                                          </td>
-                                          {Object.keys(tamanhosPadrao)
-                                            .filter(
-                                              (tamanho) =>
-                                                !produtoSelecionado?.tamanhosDisponiveis ||
-                                                produtoSelecionado.tamanhosDisponiveis.includes(tamanho),
-                                            )
-                                            .map((tamanho) => (
-                                              <td key={`cell-${tamanho}`} className="border-b p-1 text-center">
-                                                <input
-                                                  type="number"
-                                                  min="0"
-                                                  value={itemEmEdicao.tamanhos[tamanho] || 0}
-                                                  onChange={(e) =>
-                                                    handleTamanhoChange(tamanho, Number.parseInt(e.target.value) || 0)
-                                                  }
-                                                  className="w-full h-6 text-center text-xs border border-gray-300 rounded focus:border-primary focus:ring-1 focus:ring-primary"
-                                                />
-                                              </td>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
+
+                                    {produtoSelecionado?.cores && produtoSelecionado.cores.length > 0 && (
+                                      <div>
+                                        <Label htmlFor="cor" className="text-primary text-xs mb-1">
+                                          Cor
+                                        </Label>
+                                        <Select value={itemEmEdicao.corSelecionada || ""} onValueChange={handleCorChange}>
+                                          <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
+                                            <SelectValue placeholder="Selecione a cor" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {produtoSelecionado.cores.map((cor) => (
+                                              <SelectItem key={cor} value={cor}>
+                                                {cor}
+                                              </SelectItem>
                                             ))}
-                                          <td className="border-b p-1 text-center font-medium text-xs bg-accent">
-                                            {itemEmEdicao.quantidade}
-                                          </td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <Label htmlFor="tipo-tamanho-edit" className="text-primary text-xs mb-1">
+                                      Tipo de Tamanho
+                                    </Label>
+                                    <Select 
+                                      value={itemEmEdicao.tipoTamanhoSelecionado || ""} 
+                                      onValueChange={handleTipoTamanhoChange}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
+                                        <SelectValue placeholder="Selecione o tipo de tamanho" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {tiposTamanho.map((tipo) => (
+                                          <SelectItem key={tipo.id} value={tipo.id}>
+                                            {tipo.nome} - {tipo.descricao}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </div>
+
+                                {/* Linha 2: Tabela de tamanhos */}
+                                {itemEmEdicao.tipoTamanhoSelecionado ? (
+                                  renderTabelaTamanhos(
+                                    itemEmEdicao.tamanhos || {},
+                                    itemEmEdicao.quantidade || 0,
+                                    true,
+                                    handleTamanhoChange,
+                                    tiposTamanho.find(t => t.id === itemEmEdicao.tipoTamanhoSelecionado)
+                                  )
+                                ) : (
+                                  <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-md">
+                                    <Ruler className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                    <p className="text-sm">Selecione um tipo de tamanho para continuar</p>
+                                  </div>
+                                )}
 
                                 {/* Linha 3: Observações lado a lado */}
                                 <div className="grid grid-cols-2 gap-3">
@@ -1590,59 +1634,89 @@ export default function FormularioOrcamento({
                       <tr>
                         <td colSpan={7} className="p-3 bg-accent/20 border-t">
                           <div className="space-y-3">
-                            {/* Linha 1: Tecido e Cor */}
-                            <div className="grid grid-cols-2 gap-3">
-                              {produtoSelecionado?.tecidos && produtoSelecionado.tecidos.length > 0 && (
-                                <div>
-                                  <Label htmlFor="tecido-novo" className="text-primary text-xs mb-1">
-                                    Tecido
-                                  </Label>
-                                  <Select
-                                    value={novoItem.tecidoSelecionado?.nome || ""}
-                                    onValueChange={handleTecidoChange}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary">
-                                      <SelectValue placeholder="Selecione o tecido" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {produtoSelecionado.tecidos.map((tecido) => (
-                                        <SelectItem key={tecido.nome} value={tecido.nome}>
-                                          {tecido.nome} {tecido.composicao ? `- ${tecido.composicao}` : ""}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
+                            {/* Linha 1: Tecido, Cor e Tipo de Tamanho */}
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-3">
+                                {produtoSelecionado?.tecidos && produtoSelecionado.tecidos.length > 0 && (
+                                  <div>
+                                    <Label htmlFor="tecido-novo" className="text-primary text-xs mb-1">
+                                      Tecido
+                                    </Label>
+                                    <Select
+                                      value={novoItem.tecidoSelecionado?.nome || ""}
+                                      onValueChange={handleTecidoChange}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary">
+                                        <SelectValue placeholder="Selecione o tecido" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {produtoSelecionado.tecidos.map((tecido) => (
+                                          <SelectItem key={tecido.nome} value={tecido.nome}>
+                                            {tecido.nome} {tecido.composicao ? `- ${tecido.composicao}` : ""}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
 
-                              {produtoSelecionado?.cores && produtoSelecionado.cores.length > 0 && (
-                                <div>
-                                  <Label htmlFor="cor-novo" className="text-primary text-xs mb-1">
-                                    Cor
-                                  </Label>
-                                  <Select value={novoItem.corSelecionada || ""} onValueChange={handleCorChange}>
-                                    <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary">
-                                      <SelectValue placeholder="Selecione a cor" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {produtoSelecionado.cores.map((cor) => (
-                                        <SelectItem key={cor} value={cor}>
-                                          {cor}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
+                                {produtoSelecionado?.cores && produtoSelecionado.cores.length > 0 && (
+                                  <div>
+                                    <Label htmlFor="cor-novo" className="text-primary text-xs mb-1">
+                                      Cor
+                                    </Label>
+                                    <Select value={novoItem.corSelecionada || ""} onValueChange={handleCorChange}>
+                                      <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary">
+                                        <SelectValue placeholder="Selecione a cor" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {produtoSelecionado.cores.map((cor) => (
+                                          <SelectItem key={cor} value={cor}>
+                                            {cor}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label htmlFor="tipo-tamanho-novo" className="text-primary text-xs mb-1">
+                                  Tipo de Tamanho
+                                </Label>
+                                <Select 
+                                  value={novoItem.tipoTamanhoSelecionado || ""} 
+                                  onValueChange={handleTipoTamanhoChange}
+                                >
+                                  <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-primary">
+                                    <SelectValue placeholder="Selecione o tipo de tamanho" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {tiposTamanho.map((tipo) => (
+                                      <SelectItem key={tipo.id} value={tipo.id}>
+                                        {tipo.nome} - {tipo.descricao}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
 
                             {/* Linha 2: Tabela de tamanhos */}
-                            {renderTabelaTamanhos(
-                              novoItem.tamanhos || tamanhosPadrao,
-                              novoItem.quantidade || 0,
-                              true,
-                              handleNovoTamanhoChange,
-                              produtoSelecionado?.tamanhosDisponiveis,
+                            {novoItem.tipoTamanhoSelecionado ? (
+                              renderTabelaTamanhos(
+                                novoItem.tamanhos || {},
+                                novoItem.quantidade || 0,
+                                true,
+                                handleNovoTamanhoChange,
+                                tiposTamanho.find(t => t.id === novoItem.tipoTamanhoSelecionado)
+                              )
+                            ) : (
+                              <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-md">
+                                <Ruler className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                <p className="text-sm">Selecione um tipo de tamanho para continuar</p>
+                              </div>
                             )}
 
                             {/* Linha 3: Observações */}
@@ -1699,6 +1773,7 @@ export default function FormularioOrcamento({
                                     produtoId: "",
                                     quantidade: 0,
                                     valorUnitario: 0,
+                                    tipoTamanhoSelecionado: "",
                                     tamanhos: { ...tamanhosPadrao },
                                     imagem: "",
                                     observacaoComercial: "",
@@ -1706,6 +1781,7 @@ export default function FormularioOrcamento({
                                     estampas: [],
                                   })
                                   setProdutoSelecionado(null)
+                                  setTipoTamanhoSelecionado(null)
                                 }}
                                 className="h-8"
                               >

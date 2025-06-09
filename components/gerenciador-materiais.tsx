@@ -17,8 +17,9 @@ import {
   Search,
   ChevronUp,
   ChevronDown,
+  Ruler,
 } from "lucide-react"
-import { type Cor, type TecidoBase, corService, tecidoBaseService } from "@/lib/services-materiais"
+import { type Cor, type TecidoBase, type TipoTamanho, corService, tecidoBaseService, tipoTamanhoService } from "@/lib/services-materiais"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function GerenciadorMateriais() {
@@ -46,6 +47,22 @@ export default function GerenciadorMateriais() {
     direcao: "asc",
   })
 
+  // Estados para tipos de tamanho
+  const [tiposTamanho, setTiposTamanho] = useState<TipoTamanho[]>([])
+  const [novoTipoTamanho, setNovoTipoTamanho] = useState<Partial<TipoTamanho>>({ 
+    nome: "", 
+    descricao: "", 
+    tamanhos: [] 
+  })
+  const [editandoTipoTamanhoId, setEditandoTipoTamanhoId] = useState<string | null>(null)
+  const [tipoTamanhoEditando, setTipoTamanhoEditando] = useState<TipoTamanho | null>(null)
+  const [mostrarFormTipoTamanho, setMostrarFormTipoTamanho] = useState(false)
+  const [pesquisaTipoTamanho, setPesquisaTipoTamanho] = useState("")
+  const [ordenacaoTipoTamanho, setOrdenacaoTipoTamanho] = useState<{ coluna: string; direcao: "asc" | "desc" }>({
+    coluna: "nome",
+    direcao: "asc",
+  })
+
   // Estados gerais
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +82,10 @@ export default function GerenciadorMateriais() {
         // Carregar tecidos
         const tecidosData = await tecidoBaseService.listarTodos()
         setTecidos(tecidosData)
+
+        // Carregar tipos de tamanho
+        const tiposTamanhoData = await tipoTamanhoService.listarTodos()
+        setTiposTamanho(tiposTamanhoData)
       } catch (error) {
         console.error("Erro ao carregar dados:", error)
         setError(`Erro ao carregar dados: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
@@ -93,6 +114,15 @@ export default function GerenciadorMateriais() {
     } as const
 
     setOrdenacaoTecido(novaOrdenacao)
+  }
+
+  const ordenarTiposTamanho = (coluna: string) => {
+    const novaOrdenacao = {
+      coluna,
+      direcao: ordenacaoTipoTamanho.coluna === coluna && ordenacaoTipoTamanho.direcao === "asc" ? "desc" : "asc",
+    } as const
+
+    setOrdenacaoTipoTamanho(novaOrdenacao)
   }
 
   // Funções para filtrar dados
@@ -126,6 +156,23 @@ export default function GerenciadorMateriais() {
         return ordenacaoTecido.direcao === "asc"
           ? a.composicao.localeCompare(b.composicao)
           : b.composicao.localeCompare(a.composicao)
+      }
+      return 0
+    })
+
+  const tiposTamanhoFiltrados = tiposTamanho
+    .filter(
+      (tipo) =>
+        tipo.nome.toLowerCase().includes(pesquisaTipoTamanho.toLowerCase()) ||
+        tipo.descricao.toLowerCase().includes(pesquisaTipoTamanho.toLowerCase()),
+    )
+    .sort((a, b) => {
+      if (ordenacaoTipoTamanho.coluna === "nome") {
+        return ordenacaoTipoTamanho.direcao === "asc" ? a.nome.localeCompare(b.nome) : b.nome.localeCompare(a.nome)
+      } else if (ordenacaoTipoTamanho.coluna === "descricao") {
+        return ordenacaoTipoTamanho.direcao === "asc"
+          ? a.descricao.localeCompare(b.descricao)
+          : b.descricao.localeCompare(a.descricao)
       }
       return 0
     })
@@ -287,6 +334,85 @@ export default function GerenciadorMateriais() {
     }
   }
 
+  // Funções para gerenciar tipos de tamanho
+  const handleAdicionarTipoTamanho = async () => {
+    if (novoTipoTamanho.nome && novoTipoTamanho.descricao && novoTipoTamanho.tamanhos && novoTipoTamanho.tamanhos.length > 0) {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const tipoTamanhoAdicionado = await tipoTamanhoService.adicionar({
+          nome: novoTipoTamanho.nome.toUpperCase(),
+          descricao: novoTipoTamanho.descricao.toUpperCase(),
+          tamanhos: novoTipoTamanho.tamanhos,
+        })
+
+        setTiposTamanho([...tiposTamanho, tipoTamanhoAdicionado])
+        setNovoTipoTamanho({ nome: "", descricao: "", tamanhos: [] })
+        setMostrarFormTipoTamanho(false)
+      } catch (error) {
+        console.error("Erro ao adicionar tipo de tamanho:", error)
+        setError(`Erro ao adicionar tipo de tamanho: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
+
+  const iniciarEdicaoTipoTamanho = (tipo: TipoTamanho) => {
+    setEditandoTipoTamanhoId(tipo.id)
+    setTipoTamanhoEditando({ ...tipo })
+  }
+
+  const cancelarEdicaoTipoTamanho = () => {
+    setEditandoTipoTamanhoId(null)
+    setTipoTamanhoEditando(null)
+  }
+
+  const salvarEdicaoTipoTamanho = async () => {
+    if (tipoTamanhoEditando) {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const tipoTamanhoAtualizado = {
+          ...tipoTamanhoEditando,
+          nome: tipoTamanhoEditando.nome.toUpperCase(),
+          descricao: tipoTamanhoEditando.descricao.toUpperCase(),
+        }
+
+        await tipoTamanhoService.atualizar(tipoTamanhoAtualizado)
+        setTiposTamanho(tiposTamanho.map((tipo) => (tipo.id === tipoTamanhoAtualizado.id ? tipoTamanhoAtualizado : tipo)))
+        setEditandoTipoTamanhoId(null)
+        setTipoTamanhoEditando(null)
+      } catch (error) {
+        console.error("Erro ao atualizar tipo de tamanho:", error)
+        setError(`Erro ao atualizar tipo de tamanho: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
+
+  const handleRemoverTipoTamanho = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este tipo de tamanho? Esta ação não pode ser desfeita.")) {
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      await tipoTamanhoService.remover(id)
+      setTiposTamanho(tiposTamanho.filter((tipo) => tipo.id !== id))
+    } catch (error) {
+      console.error("Erro ao remover tipo de tamanho:", error)
+      setError(`Erro ao remover tipo de tamanho: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -304,7 +430,7 @@ export default function GerenciadorMateriais() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="cores" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             Cores
@@ -312,6 +438,10 @@ export default function GerenciadorMateriais() {
           <TabsTrigger value="tecidos" className="flex items-center gap-2">
             <Shirt className="h-4 w-4" />
             Tecidos
+          </TabsTrigger>
+          <TabsTrigger value="tamanhos" className="flex items-center gap-2">
+            <Ruler className="h-4 w-4" />
+            Tamanhos
           </TabsTrigger>
         </TabsList>
 
@@ -802,6 +932,387 @@ export default function GerenciadorMateriais() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleRemoverTecido(tecido.id)}
+                                  className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
+                                  disabled={isLoading}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Aba de Tipos de Tamanho */}
+        <TabsContent value="tamanhos" className="space-y-4 pt-4">
+          <div className="flex flex-col space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="relative w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Pesquisar tipos de tamanho..."
+                  value={pesquisaTipoTamanho}
+                  onChange={(e) => setPesquisaTipoTamanho(e.target.value)}
+                  className="pl-8 pr-4 py-2"
+                />
+              </div>
+              <Button
+                onClick={() => setMostrarFormTipoTamanho(!mostrarFormTipoTamanho)}
+                className="bg-primary hover:bg-primary-dark text-white"
+              >
+                {mostrarFormTipoTamanho ? (
+                  <>
+                    <X className="h-4 w-4 mr-2" /> Cancelar
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" /> Novo Tipo
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {mostrarFormTipoTamanho && (
+              <Card className="overflow-hidden shadow-sm border-0 border-l-4 border-l-primary">
+                <CardContent className="p-4">
+                  <h4 className="font-medium mb-4 text-primary flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Adicionar Novo Tipo de Tamanho
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="nome-tipo-tamanho" className="text-primary flex items-center gap-2">
+                          <Ruler className="h-4 w-4" />
+                          Nome do Tipo
+                        </Label>
+                        <Input
+                          id="nome-tipo-tamanho"
+                          value={novoTipoTamanho.nome}
+                          onChange={(e) => setNovoTipoTamanho({ ...novoTipoTamanho, nome: e.target.value.toUpperCase() })}
+                          className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                          placeholder="Ex: PADRÃO"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="descricao-tipo-tamanho" className="text-primary flex items-center gap-2">
+                          <Ruler className="h-4 w-4" />
+                          Descrição
+                        </Label>
+                        <Input
+                          id="descricao-tipo-tamanho"
+                          value={novoTipoTamanho.descricao}
+                          onChange={(e) => setNovoTipoTamanho({ ...novoTipoTamanho, descricao: e.target.value.toUpperCase() })}
+                          className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                          placeholder="Ex: PP, P, M, G, GG, G1-G7"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-primary flex items-center gap-2 mb-2">
+                        <Ruler className="h-4 w-4" />
+                        Tamanhos Disponíveis
+                      </Label>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="border rounded-md p-3 bg-white">
+                          <div className="flex items-center mb-2">
+                            <input
+                              type="radio"
+                              id="tamanho-padrao"
+                              name="tipo-tamanho"
+                              className="mr-2"
+                              onChange={() => {
+                                setNovoTipoTamanho({
+                                  ...novoTipoTamanho,
+                                  nome: "PADRÃO",
+                                  descricao: "PP, P, M, G, GG, G1, G2, G3, G4, G5, G6, G7",
+                                  tamanhos: ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+                                })
+                              }}
+                            />
+                            <Label htmlFor="tamanho-padrao" className="font-medium">
+                              Padrão (PP ao G7)
+                            </Label>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"].map((tamanho) => (
+                              <div key={tamanho} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
+                                <span className="text-sm font-medium">{tamanho}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="border rounded-md p-3 bg-white">
+                          <div className="flex items-center mb-2">
+                            <input
+                              type="radio"
+                              id="tamanho-numerico"
+                              name="tipo-tamanho"
+                              className="mr-2"
+                              onChange={() => {
+                                const numericos = Array.from({ length: 12 }, (_, i) => (36 + i * 2).toString())
+                                setNovoTipoTamanho({
+                                  ...novoTipoTamanho,
+                                  nome: "NUMÉRICO",
+                                  descricao: "36 AO 58 - NÚMEROS PARES",
+                                  tamanhos: numericos
+                                })
+                              }}
+                            />
+                            <Label htmlFor="tamanho-numerico" className="font-medium">
+                              Numérico (36 ao 58 - pares)
+                            </Label>
+                          </div>
+                          <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                            {Array.from({ length: 12 }, (_, i) => (36 + i * 2).toString()).map((tamanho) => (
+                              <div key={tamanho} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
+                                <span className="text-sm font-medium">{tamanho}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="border rounded-md p-3 bg-white">
+                          <div className="flex items-center mb-2">
+                            <input
+                              type="radio"
+                              id="tamanho-infantil"
+                              name="tipo-tamanho"
+                              className="mr-2"
+                              onChange={() => {
+                                const infantis = Array.from({ length: 14 }, (_, i) => i.toString())
+                                setNovoTipoTamanho({
+                                  ...novoTipoTamanho,
+                                  nome: "INFANTIL",
+                                  descricao: "0 AO 13 - TAMANHOS INFANTIS",
+                                  tamanhos: infantis
+                                })
+                              }}
+                            />
+                            <Label htmlFor="tamanho-infantil" className="font-medium">
+                              Infantil (0 ao 13)
+                            </Label>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Array.from({ length: 14 }, (_, i) => i.toString()).map((tamanho) => (
+                              <div key={tamanho} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
+                                <span className="text-sm font-medium">{tamanho}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {novoTipoTamanho.tamanhos && novoTipoTamanho.tamanhos.length > 0 && (
+                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                          <Label className="text-green-700 font-medium mb-2 block">
+                            Tamanhos Selecionados: {novoTipoTamanho.tamanhos.length}
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {novoTipoTamanho.tamanhos.map((tamanho, index) => (
+                              <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {tamanho}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={handleAdicionarTipoTamanho}
+                      className="w-full bg-primary hover:bg-primary-dark text-white transition-colors"
+                      disabled={isLoading || !novoTipoTamanho.nome || !novoTipoTamanho.descricao || !novoTipoTamanho.tamanhos || novoTipoTamanho.tamanhos.length === 0}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> {isLoading ? "Adicionando..." : "Adicionar Tipo de Tamanho"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {isLoading && tiposTamanho.length === 0 ? (
+              <div className="text-center py-8">Carregando tipos de tamanho...</div>
+            ) : tiposTamanhoFiltrados.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {pesquisaTipoTamanho ? "Nenhum tipo de tamanho encontrado para esta pesquisa." : "Nenhum tipo de tamanho cadastrado."}
+              </div>
+            ) : (
+              <div className="border rounded-md overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        onClick={() => ordenarTiposTamanho("nome")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Nome
+                          {ordenacaoTipoTamanho.coluna === "nome" &&
+                            (ordenacaoTipoTamanho.direcao === "asc" ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            ))}
+                        </div>
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        onClick={() => ordenarTiposTamanho("descricao")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Descrição
+                          {ordenacaoTipoTamanho.coluna === "descricao" &&
+                            (ordenacaoTipoTamanho.direcao === "asc" ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            ))}
+                        </div>
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Tamanhos
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {tiposTamanhoFiltrados.map((tipo) => (
+                      <tr key={tipo.id} className="hover:bg-gray-50">
+                        {editandoTipoTamanhoId === tipo.id && tipoTamanhoEditando ? (
+                          <td colSpan={4} className="px-4 py-3">
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label
+                                    htmlFor={`edit-nome-${tipo.id}`}
+                                    className="text-primary flex items-center gap-2"
+                                  >
+                                    <Ruler className="h-4 w-4" />
+                                    Nome do Tipo
+                                  </Label>
+                                  <Input
+                                    id={`edit-nome-${tipo.id}`}
+                                    value={tipoTamanhoEditando.nome}
+                                    onChange={(e) =>
+                                      setTipoTamanhoEditando({
+                                        ...tipoTamanhoEditando,
+                                        nome: e.target.value.toUpperCase(),
+                                      })
+                                    }
+                                    className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                                  />
+                                </div>
+                                <div>
+                                  <Label
+                                    htmlFor={`edit-descricao-${tipo.id}`}
+                                    className="text-primary flex items-center gap-2"
+                                  >
+                                    <Ruler className="h-4 w-4" />
+                                    Descrição
+                                  </Label>
+                                  <Input
+                                    id={`edit-descricao-${tipo.id}`}
+                                    value={tipoTamanhoEditando.descricao}
+                                    onChange={(e) =>
+                                      setTipoTamanhoEditando({
+                                        ...tipoTamanhoEditando,
+                                        descricao: e.target.value.toUpperCase(),
+                                      })
+                                    }
+                                    className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <Label className="text-primary flex items-center gap-2 mb-2">
+                                  <Ruler className="h-4 w-4" />
+                                  Tamanhos ({tipoTamanhoEditando.tamanhos.length})
+                                </Label>
+                                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md max-h-32 overflow-y-auto">
+                                  {tipoTamanhoEditando.tamanhos.map((tamanho, index) => (
+                                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary text-white">
+                                      {tamanho}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={cancelarEdicaoTipoTamanho}
+                                  className="text-gray-500 hover:text-gray-700"
+                                >
+                                  <X className="h-4 w-4 mr-2" /> Cancelar
+                                </Button>
+                                <Button
+                                  onClick={salvarEdicaoTipoTamanho}
+                                  className="bg-primary hover:bg-primary-dark text-white"
+                                  disabled={isLoading}
+                                >
+                                  <Save className="h-4 w-4 mr-2" /> {isLoading ? "Salvando..." : "Salvar"}
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        ) : (
+                          <>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{tipo.nome}</div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{tipo.descricao}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {tipo.tamanhos.slice(0, 8).map((tamanho, index) => (
+                                  <span key={index} className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                    {tamanho}
+                                  </span>
+                                ))}
+                                {tipo.tamanhos.length > 8 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                                    +{tipo.tamanhos.length - 8}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => iniciarEdicaoTipoTamanho(tipo)}
+                                  className="h-8 w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
+                                  disabled={isLoading}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoverTipoTamanho(tipo.id)}
                                   className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
                                   disabled={isLoading}
                                 >
