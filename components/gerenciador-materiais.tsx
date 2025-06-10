@@ -62,6 +62,7 @@ export default function GerenciadorMateriais() {
     coluna: "nome",
     direcao: "asc",
   })
+  const [novoTamanho, setNovoTamanho] = useState("")
 
   // Estados gerais
   const [isLoading, setIsLoading] = useState(false)
@@ -341,14 +342,24 @@ export default function GerenciadorMateriais() {
         setIsLoading(true)
         setError(null)
 
+        // Verificar se já existe um tipo com o mesmo nome
+        const nomeUpperCase = novoTipoTamanho.nome.toUpperCase()
+        const tipoExistente = tiposTamanho.find(t => t.nome.toUpperCase() === nomeUpperCase)
+        
+        if (tipoExistente) {
+          setError(`Já existe um tipo de tamanho com o nome "${nomeUpperCase}". Escolha um nome diferente.`)
+          return
+        }
+
         const tipoTamanhoAdicionado = await tipoTamanhoService.adicionar({
-          nome: novoTipoTamanho.nome.toUpperCase(),
+          nome: nomeUpperCase,
           descricao: novoTipoTamanho.descricao.toUpperCase(),
           tamanhos: novoTipoTamanho.tamanhos,
         })
 
         setTiposTamanho([...tiposTamanho, tipoTamanhoAdicionado])
         setNovoTipoTamanho({ nome: "", descricao: "", tamanhos: [] })
+        setNovoTamanho("")
         setMostrarFormTipoTamanho(false)
       } catch (error) {
         console.error("Erro ao adicionar tipo de tamanho:", error)
@@ -356,6 +367,8 @@ export default function GerenciadorMateriais() {
       } finally {
         setIsLoading(false)
       }
+    } else {
+      setError("Preencha todos os campos: nome, descrição e selecione pelo menos um tamanho.")
     }
   }
 
@@ -423,6 +436,24 @@ export default function GerenciadorMateriais() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Funções para gerenciar tamanhos customizados
+  const adicionarTamanhoCustomizado = () => {
+    if (novoTamanho.trim() && !novoTipoTamanho.tamanhos?.includes(novoTamanho.trim().toUpperCase())) {
+      setNovoTipoTamanho({
+        ...novoTipoTamanho,
+        tamanhos: [...(novoTipoTamanho.tamanhos || []), novoTamanho.trim().toUpperCase()]
+      })
+      setNovoTamanho("")
+    }
+  }
+
+  const removerTamanhoCustomizado = (tamanho: string) => {
+    setNovoTipoTamanho({
+      ...novoTipoTamanho,
+      tamanhos: novoTipoTamanho.tamanhos?.filter(t => t !== tamanho) || []
+    })
   }
 
   return (
@@ -1036,22 +1067,29 @@ export default function GerenciadorMateriais() {
                       <div className="grid grid-cols-1 gap-4">
                         <div className="border rounded-md p-3 bg-white">
                           <div className="flex items-center mb-2">
-                            <input
-                              type="radio"
-                              id="tamanho-padrao"
-                              name="tipo-tamanho"
-                              className="mr-2"
-                              onChange={() => {
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (!novoTipoTamanho.nome) {
+                                  setNovoTipoTamanho({
+                                    ...novoTipoTamanho,
+                                    nome: "PADRÃO CUSTOMIZADO",
+                                    descricao: "PP, P, M, G, GG, G1, G2, G3, G4, G5, G6, G7",
+                                  })
+                                }
                                 setNovoTipoTamanho({
                                   ...novoTipoTamanho,
-                                  nome: "PADRÃO",
-                                  descricao: "PP, P, M, G, GG, G1, G2, G3, G4, G5, G6, G7",
                                   tamanhos: ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
                                 })
                               }}
-                            />
-                            <Label htmlFor="tamanho-padrao" className="font-medium">
-                              Padrão (PP ao G7)
+                              className="mr-2"
+                            >
+                              Usar Template
+                            </Button>
+                            <Label className="font-medium">
+                              Template Padrão (PP ao G7)
                             </Label>
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -1065,23 +1103,30 @@ export default function GerenciadorMateriais() {
 
                         <div className="border rounded-md p-3 bg-white">
                           <div className="flex items-center mb-2">
-                            <input
-                              type="radio"
-                              id="tamanho-numerico"
-                              name="tipo-tamanho"
-                              className="mr-2"
-                              onChange={() => {
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (!novoTipoTamanho.nome) {
+                                  setNovoTipoTamanho({
+                                    ...novoTipoTamanho,
+                                    nome: "NUMÉRICO CUSTOMIZADO",
+                                    descricao: "36 AO 58 - NÚMEROS PARES",
+                                  })
+                                }
                                 const numericos = Array.from({ length: 12 }, (_, i) => (36 + i * 2).toString())
                                 setNovoTipoTamanho({
                                   ...novoTipoTamanho,
-                                  nome: "NUMÉRICO",
-                                  descricao: "36 AO 58 - NÚMEROS PARES",
                                   tamanhos: numericos
                                 })
                               }}
-                            />
-                            <Label htmlFor="tamanho-numerico" className="font-medium">
-                              Numérico (36 ao 58 - pares)
+                              className="mr-2"
+                            >
+                              Usar Template
+                            </Button>
+                            <Label className="font-medium">
+                              Template Numérico (36 ao 58 - pares)
                             </Label>
                           </div>
                           <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
@@ -1095,23 +1140,30 @@ export default function GerenciadorMateriais() {
 
                         <div className="border rounded-md p-3 bg-white">
                           <div className="flex items-center mb-2">
-                            <input
-                              type="radio"
-                              id="tamanho-infantil"
-                              name="tipo-tamanho"
-                              className="mr-2"
-                              onChange={() => {
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (!novoTipoTamanho.nome) {
+                                  setNovoTipoTamanho({
+                                    ...novoTipoTamanho,
+                                    nome: "INFANTIL CUSTOMIZADO",
+                                    descricao: "0 AO 13 - TAMANHOS INFANTIS",
+                                  })
+                                }
                                 const infantis = Array.from({ length: 14 }, (_, i) => i.toString())
                                 setNovoTipoTamanho({
                                   ...novoTipoTamanho,
-                                  nome: "INFANTIL",
-                                  descricao: "0 AO 13 - TAMANHOS INFANTIS",
                                   tamanhos: infantis
                                 })
                               }}
-                            />
-                            <Label htmlFor="tamanho-infantil" className="font-medium">
-                              Infantil (0 ao 13)
+                              className="mr-2"
+                            >
+                              Usar Template
+                            </Button>
+                            <Label className="font-medium">
+                              Template Infantil (0 ao 13)
                             </Label>
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -1120,6 +1172,76 @@ export default function GerenciadorMateriais() {
                                 <span className="text-sm font-medium">{tamanho}</span>
                               </div>
                             ))}
+                          </div>
+                        </div>
+
+                        <div className="border rounded-md p-3 bg-white">
+                          <div className="flex items-center mb-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setNovoTipoTamanho({
+                                  ...novoTipoTamanho,
+                                  tamanhos: []
+                                })
+                              }}
+                              className="mr-2"
+                            >
+                              Limpar Todos
+                            </Button>
+                            <Label className="font-medium">
+                              Criar Tamanhos Customizados
+                            </Label>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div className="flex gap-2">
+                              <Input
+                                value={novoTamanho}
+                                onChange={(e) => setNovoTamanho(e.target.value.toUpperCase())}
+                                placeholder="Ex: XXG, 60, ESPECIAL..."
+                                className="flex-1"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    adicionarTamanhoCustomizado()
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={adicionarTamanhoCustomizado}
+                                disabled={!novoTamanho.trim()}
+                              >
+                                <Plus className="h-4 w-4 mr-1" /> Adicionar
+                              </Button>
+                            </div>
+                            
+                            {novoTipoTamanho.tamanhos && novoTipoTamanho.tamanhos.length > 0 && (
+                              <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-md max-h-32 overflow-y-auto">
+                                {novoTipoTamanho.tamanhos.map((tamanho, index) => (
+                                  <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                    <span className="text-sm font-medium">{tamanho}</span>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => removerTamanhoCustomizado(tamanho)}
+                                      className="h-4 w-4 p-0 hover:bg-blue-200"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            <p className="text-sm text-gray-500">
+                              Use os templates acima ou adicione tamanhos customizados um por vez.
+                            </p>
                           </div>
                         </div>
                       </div>

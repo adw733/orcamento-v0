@@ -176,14 +176,17 @@ let tabelaExiste: boolean | null = null
 
 // Serviço para gerenciar tipos de tamanho
 export const tipoTamanhoService = {
-  async verificarTabelaExiste(): Promise<boolean> {
-    if (tabelaExiste !== null) {
+  async verificarTabelaExiste(forceCheck: boolean = false): Promise<boolean> {
+    if (tabelaExiste !== null && !forceCheck) {
       return tabelaExiste
     }
 
     try {
       const { error } = await supabase.from("tipos_tamanho").select("id").limit(1)
       tabelaExiste = !error
+      if (tabelaExiste) {
+        console.log("✅ Tabela tipos_tamanho encontrada e funcionando!")
+      }
       return tabelaExiste
     } catch (error) {
       tabelaExiste = false
@@ -342,5 +345,11 @@ export const tipoTamanhoService = {
       console.error("Erro ao remover tipo de tamanho:", error)
       throw error
     }
+  },
+
+  // Função para forçar nova verificação da tabela (útil após criação)
+  async recarregarVerificacaoTabela(): Promise<boolean> {
+    tabelaExiste = null
+    return await this.verificarTabelaExiste(true)
   },
 }
