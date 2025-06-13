@@ -2370,17 +2370,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     </CardContent>
                   </Card>
                 )
-              case "tipos-tamanho":
-        return (
-          <GerenciadorTiposTamanho 
-            onTipoTamanhoChange={() => {
-              // Callback para quando tipos de tamanho são alterados
-              // Pode ser usado para recarregar dados se necessário
-            }}
-          />
-        )
-
-      case "empresa":
+              case "empresa":
                 return (
                   <Card className="shadow-sm border border-gray-200">
                     <CardContent className="p-3 md:p-4">

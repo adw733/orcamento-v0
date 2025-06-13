@@ -87,7 +87,6 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
         { id: "clientes", label: "Clientes", icon: Users },
         { id: "produtos", label: "Produtos", icon: ShoppingBag },
         { id: "materiais", label: "Materiais", icon: Palette },
-        { id: "tipos-tamanho", label: "Tipos de Tamanho", icon: Ruler },
         { id: "empresa", label: "Empresa", icon: Building2 },
       ]
     },
