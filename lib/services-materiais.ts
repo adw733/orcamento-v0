@@ -199,15 +199,15 @@ export const tipoTamanhoService = {
       const tabelaExisteResult = await this.verificarTabelaExiste()
       
       if (!tabelaExisteResult) {
-        console.warn("Tabela tipos_tamanho não existe. Usando tipos padrão + customizados.")
-        return [...TIPOS_PADRAO, ...tiposCustomizados]
+        console.warn("Tabela tipos_tamanho não existe. Usando apenas tipos customizados.")
+        return [...tiposCustomizados]
       }
 
       const { data, error } = await supabase.from("tipos_tamanho").select("*").order("nome")
 
       if (error) {
         console.error("Erro ao listar tipos de tamanho:", error)
-        return [...TIPOS_PADRAO, ...tiposCustomizados]
+        return [...tiposCustomizados]
       }
 
       const tiposBanco = data.map((tipo) => ({
@@ -217,10 +217,11 @@ export const tipoTamanhoService = {
         tamanhos: tipo.tamanhos || [],
       }))
 
-      return [...TIPOS_PADRAO, ...tiposBanco, ...tiposCustomizados]
+      // Retornar apenas os tipos do banco + customizados (sem tipos padrão hardcoded)
+      return [...tiposBanco, ...tiposCustomizados]
     } catch (error) {
       console.error("Erro ao listar tipos de tamanho:", error)
-      return [...TIPOS_PADRAO, ...tiposCustomizados]
+      return [...tiposCustomizados]
     }
   },
 
@@ -284,11 +285,6 @@ export const tipoTamanhoService = {
         }
       }
 
-      // Se é um tipo padrão, não permitir edição
-      if (['padrao', 'numerico', 'infantil'].includes(tipo.id)) {
-        throw new Error("Não é possível editar tipos padrão do sistema.")
-      }
-
       const tabelaExisteResult = await this.verificarTabelaExiste()
       
       if (!tabelaExisteResult) {
@@ -322,11 +318,6 @@ export const tipoTamanhoService = {
         tiposCustomizados = tiposCustomizados.filter(t => t.id !== id)
         console.warn("Tipo customizado removido da memória")
         return
-      }
-
-      // Se é um tipo padrão, não permitir remoção
-      if (['padrao', 'numerico', 'infantil'].includes(id)) {
-        throw new Error("Não é possível remover tipos padrão do sistema.")
       }
 
       const tabelaExisteResult = await this.verificarTabelaExiste()

@@ -19,7 +19,8 @@ import {
   Tag, 
   AlertCircle,
   Check,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { tipoTamanhoService, type TipoTamanho } from "@/lib/services-materiais"
@@ -43,8 +44,29 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
   const carregarTipos = async () => {
     try {
       setLoading(true)
+      
+      // Forçar nova verificação da tabela
+      await tipoTamanhoService.recarregarVerificacaoTabela()
+      
       const tiposData = await tipoTamanhoService.listarTodos()
-      setTipos(tiposData)
+      
+      // Debug: verificar duplicações
+      const nomesTypes = tiposData.map(t => t.nome)
+      const duplicados = nomesTypes.filter((nome, index) => nomesTypes.indexOf(nome) !== index)
+      
+      if (duplicados.length > 0) {
+        console.warn("⚠️ Tipos duplicados detectados:", duplicados)
+        // Remover duplicações mantendo apenas a primeira ocorrência
+        const tiposSemDuplicados = tiposData.filter((tipo, index, arr) => 
+          arr.findIndex(t => t.nome === tipo.nome) === index
+        )
+        setTipos(tiposSemDuplicados)
+        console.log("✅ Duplicações removidas, tipos únicos:", tiposSemDuplicados.length)
+      } else {
+        setTipos(tiposData)
+        console.log("✅ Tipos carregados sem duplicações:", tiposData.length)
+      }
+      
     } catch (error) {
       console.error("Erro ao carregar tipos de tamanho:", error)
       toast({
@@ -239,10 +261,7 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
     setModalAberto(false)
   }
 
-  // Verificar se é tipo padrão
-  const ehTipoPadrao = (tipo: TipoTamanho) => {
-    return ['padrao', 'numerico', 'infantil'].includes(tipo.id)
-  }
+  // Remover função que verificava tipos padrão - agora todos são editáveis
 
   return (
     <div className="space-y-4">
@@ -252,13 +271,23 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
           <h2 className="text-xl font-semibold text-primary">Gerenciar Tipos de Tamanho</h2>
         </div>
         
-        <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Tipo
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={carregarTipos}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Recarregar
+          </Button>
+          
+          <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Tipo
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -329,6 +358,7 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {loading && (
@@ -346,11 +376,7 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4 text-primary" />
                   <CardTitle className="text-lg">{tipo.nome}</CardTitle>
-                  {ehTipoPadrao(tipo) && (
-                    <Badge variant="secondary" className="text-xs">
-                      Padrão
-                    </Badge>
-                  )}
+                  {/* Todos os tipos são agora editáveis */}
                 </div>
                 
                 <div className="flex gap-1">
@@ -358,7 +384,7 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
                     variant="ghost"
                     size="sm"
                     onClick={() => iniciarEdicao(tipo)}
-                    disabled={loading || ehTipoPadrao(tipo)}
+                    disabled={loading}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -366,7 +392,7 @@ export default function GerenciadorTiposTamanho({ onTipoTamanhoChange }: Gerenci
                     variant="ghost"
                     size="sm"
                     onClick={() => removerTipo(tipo)}
-                    disabled={loading || ehTipoPadrao(tipo)}
+                    disabled={loading}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
