@@ -510,6 +510,81 @@ export default function FormularioOrcamento({
     return [...tamanhosLetras, ...tamanhosNumericos, ...tamanhosInfantis]
   }
 
+  // Função para detectar e aplicar tipos de tamanho automaticamente em todos os itens do orçamento
+  const detectarTiposTamanhoOrcamento = async () => {
+    if (!orcamento?.itens || orcamento.itens.length === 0 || tiposTamanho.length === 0) return
+
+    let itensAtualizados = false
+    const novosItens = orcamento.itens.map(item => {
+      // Se o item já tem tipo definido, não alterar
+      if (item.tipoTamanhoSelecionado) return item
+      
+      // Detectar tipo automaticamente
+      const tipoDetectado = detectarTipoTamanho(item.tamanhos || {})
+      
+      if (tipoDetectado) {
+        console.log(`🎯 Auto-detectado tipo "${tipoDetectado.nome}" para produto: ${item.produto?.nome}`)
+        itensAtualizados = true
+        return {
+          ...item,
+          tipoTamanhoSelecionado: tipoDetectado.id
+        }
+      }
+      
+      return item
+    })
+
+    // Atualizar o orçamento se houve mudanças
+    if (itensAtualizados) {
+      atualizarOrcamento({ itens: novosItens })
+      console.log('✅ Tipos de tamanho auto-detectados e aplicados ao orçamento')
+    }
+  }
+
+  // Executar detecção automática quando carregar tipos de tamanho ou itens mudarem
+  useEffect(() => {
+    if (tiposTamanho.length > 0 && orcamento?.itens && orcamento.itens.length > 0) {
+      detectarTiposTamanhoOrcamento()
+    }
+  }, [tiposTamanho.length, orcamento?.itens?.length])
+
+  // Função para detectar automaticamente o tipo de tamanho baseado nos tamanhos com quantidade > 0
+  const detectarTipoTamanho = (tamanhosItem: Record<string, number>): TipoTamanho | null => {
+    if (!tamanhosItem || Object.keys(tamanhosItem).length === 0) return null
+
+    // Obter tamanhos que têm quantidade > 0
+    const tamanhosComQuantidade = Object.keys(tamanhosItem).filter(tamanho => tamanhosItem[tamanho] > 0)
+    
+    if (tamanhosComQuantidade.length === 0) return null
+
+    // Procurar qual tipo de tamanho contém a maior quantidade dos tamanhos usados
+    let melhorTipo: TipoTamanho | null = null
+    let maiorCompatibilidade = 0
+
+    for (const tipo of tiposTamanho) {
+      // Verificar quantos dos tamanhos usados existem neste tipo
+      const tamanhosCompativeis = tamanhosComQuantidade.filter(tamanho => 
+        tipo.tamanhos && tipo.tamanhos.includes(tamanho)
+      )
+      
+      const compatibilidade = tamanhosCompativeis.length / tamanhosComQuantidade.length
+      
+      // Se encontrou 100% de compatibilidade, é o tipo correto
+      if (compatibilidade === 1.0) {
+        return tipo
+      }
+      
+      // Senão, guardar o tipo com maior compatibilidade
+      if (compatibilidade > maiorCompatibilidade) {
+        maiorCompatibilidade = compatibilidade
+        melhorTipo = tipo
+      }
+    }
+
+    // Retornar o tipo com maior compatibilidade (mínimo 50%)
+    return maiorCompatibilidade >= 0.5 ? melhorTipo : null
+  }
+
   // Carregar tipos de tamanho ao montar o componente
   useEffect(() => {
     const carregarTiposTamanho = async () => {
@@ -692,14 +767,41 @@ export default function FormularioOrcamento({
   const iniciarEdicaoItem = (item: ItemOrcamento) => {
     setItemEmEdicao({ ...item })
     setEditandoItem(item.id)
+    
     // Buscar o produto para ter acesso às opções de tecido, cor e tamanho
     if (item.produto) {
       setProdutoSelecionado(item.produto)
     }
-    // Buscar o tipo de tamanho se disponível
+    
+    // Detectar automaticamente o tipo de tamanho baseado nos tamanhos salvos
+    let tipoDetectado: TipoTamanho | null = null
+    
+    // Primeiro, tentar usar o tipo salvo se existir
     if (item.tipoTamanhoSelecionado) {
-      const tipoEncontrado = tiposTamanho.find(t => t.id === item.tipoTamanhoSelecionado)
-      setTipoTamanhoSelecionado(tipoEncontrado || null)
+      tipoDetectado = tiposTamanho.find(t => t.id === item.tipoTamanhoSelecionado) || null
+    }
+    
+    // Se não encontrou o tipo salvo, detectar automaticamente
+    if (!tipoDetectado && item.tamanhos) {
+      tipoDetectado = detectarTipoTamanho(item.tamanhos)
+      
+      if (tipoDetectado) {
+        console.log(`✅ Tipo de tamanho detectado automaticamente: ${tipoDetectado.nome}`)
+        
+        // Atualizar o item com o tipo detectado para salvar na próxima edição
+        setItemEmEdicao(prevItem => prevItem ? {
+          ...prevItem,
+          tipoTamanhoSelecionado: tipoDetectado!.id
+        } : null)
+      }
+    }
+    
+    setTipoTamanhoSelecionado(tipoDetectado)
+    
+    if (tipoDetectado) {
+      console.log(`📝 Editando item com tipo de tamanho: ${tipoDetectado.nome}`)
+    } else {
+      console.warn('⚠️ Não foi possível detectar o tipo de tamanho para este item')
     }
   }
 
@@ -809,32 +911,40 @@ export default function FormularioOrcamento({
     const tipoSelecionado = tiposTamanho.find(t => t.id === tipoTamanhoId)
     setTipoTamanhoSelecionado(tipoSelecionado || null)
     
-    // Limpar os tamanhos atuais e resetar com base no novo tipo
+    // Preservar quantidades dos tamanhos existentes ao mudar o tipo
+    const tamanhosAtuais = editandoItem && itemEmEdicao ? itemEmEdicao.tamanhos : novoItem.tamanhos || {}
     const novosTamanhos: Record<string, number> = {}
+    
     if (tipoSelecionado && tipoSelecionado.tamanhos) {
       tipoSelecionado.tamanhos.forEach((tamanho) => {
-        novosTamanhos[tamanho] = 0
+        // Preservar a quantidade se o tamanho já existia, senão usar 0
+        novosTamanhos[tamanho] = tamanhosAtuais[tamanho] || 0
       })
     } else {
-      // Se não houver tipo selecionado, usar tamanhos padrão
+      // Se não houver tipo selecionado, usar tamanhos padrão preservando quantidades
       Object.keys(tamanhosPadrao).forEach((tamanho) => {
-        novosTamanhos[tamanho] = 0
+        novosTamanhos[tamanho] = tamanhosAtuais[tamanho] || 0
       })
     }
+
+    // Calcular nova quantidade total
+    const novaQuantidade = Object.values(novosTamanhos).reduce((sum, val) => sum + val, 0)
 
     if (editandoItem && itemEmEdicao) {
       setItemEmEdicao({
         ...itemEmEdicao,
         tipoTamanhoSelecionado: tipoTamanhoId,
         tamanhos: novosTamanhos,
-        quantidade: 0
+        quantidade: novaQuantidade
       })
+      
+      console.log(`🔄 Tipo alterado para: ${tipoSelecionado?.nome || 'Padrão'} - Quantidade preservada: ${novaQuantidade}`)
     } else {
       setNovoItem({
         ...novoItem,
         tipoTamanhoSelecionado: tipoTamanhoId,
         tamanhos: novosTamanhos,
-        quantidade: 0
+        quantidade: novaQuantidade
       })
     }
   }
@@ -1434,18 +1544,18 @@ export default function FormularioOrcamento({
                                 </div>
 
                                 {/* Linha 2: Tabela de tamanhos */}
-                                {itemEmEdicao.tipoTamanhoSelecionado ? (
+                                {(itemEmEdicao.tipoTamanhoSelecionado || tipoTamanhoSelecionado) ? (
                                   renderTabelaTamanhos(
                                     itemEmEdicao.tamanhos || {},
                                     itemEmEdicao.quantidade || 0,
                                     true,
                                     handleTamanhoChange,
-                                    tiposTamanho.find(t => t.id === itemEmEdicao.tipoTamanhoSelecionado)
+                                    tiposTamanho.find(t => t.id === (itemEmEdicao.tipoTamanhoSelecionado || tipoTamanhoSelecionado?.id))
                                   )
                                 ) : (
                                   <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-md">
                                     <Ruler className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                    <p className="text-sm">Selecione um tipo de tamanho para continuar</p>
+                                    <p className="text-sm">Detectando tipo de tamanho automaticamente...</p>
                                   </div>
                                 )}
 
