@@ -18,6 +18,8 @@ import ListaOrcamentos from "@/components/lista-orcamentos"
 import AssistenteIA from "@/components/assistente-ia"
 // Adicionar a importação do GerenciadorMateriais no início do arquivo, junto com as outras importações
 import GerenciadorMateriais from "@/components/gerenciador-materiais"
+// Adicionar a importação do GerenciadorTiposTamanho
+import GerenciadorTiposTamanho from "@/components/gerenciador-tipos-tamanho"
 // Adicionar a importação do GerenciadorEmpresa e DadosEmpresa
 import GerenciadorEmpresa from "@/components/gerenciador-empresa"
 // Importar o GerenciadorCategorias
@@ -2368,7 +2370,17 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     </CardContent>
                   </Card>
                 )
-              case "empresa":
+              case "tipos-tamanho":
+        return (
+          <GerenciadorTiposTamanho 
+            onTipoTamanhoChange={() => {
+              // Callback para quando tipos de tamanho são alterados
+              // Pode ser usado para recarregar dados se necessário
+            }}
+          />
+        )
+
+      case "empresa":
                 return (
                   <Card className="shadow-sm border border-gray-200">
                     <CardContent className="p-3 md:p-4">
