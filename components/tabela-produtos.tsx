@@ -16,9 +16,21 @@ import {
   ChevronUp,
   ChevronDown,
   Printer,
+  Settings,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 
 interface ProdutoOrcamento {
   id: string
@@ -49,6 +61,14 @@ export default function TabelaProdutos() {
   const [imprimindo, setImprimindo] = useState(false)
   const tabelaRef = useRef<HTMLDivElement>(null)
   const impressaoRef = useRef<HTMLDivElement>(null)
+  
+  // Estados para o popup de filtros avançados
+  const [filtroDialogAberto, setFiltroDialogAberto] = useState(false)
+  const [produtosSelecionados, setProdutosSelecionados] = useState<Set<string>>(new Set())
+  const [clientesSelecionados, setClientesSelecionados] = useState<Set<string>>(new Set())
+  const [coresSelecionadas, setCoresSelecionadas] = useState<Set<string>>(new Set())
+  const [tamanhosSelecionados, setTamanhosSelecionados] = useState<Set<string>>(new Set())
+  const [filtrosAtivos, setFiltrosAtivos] = useState(false)
 
   // Estados para ordenação
   const [ordenacao, setOrdenacao] = useState<{ campo: string; direcao: "asc" | "desc" }>({
@@ -96,7 +116,7 @@ export default function TabelaProdutos() {
 
   useEffect(() => {
     filtrarProdutos()
-  }, [produtos, searchTerm, statusFilter, ordenacao, modoVisualizacao])
+  }, [produtos, searchTerm, statusFilter, ordenacao, modoVisualizacao, produtosSelecionados, clientesSelecionados, coresSelecionadas, tamanhosSelecionados])
 
   const carregarProdutos = async () => {
     try {
@@ -278,6 +298,23 @@ export default function TabelaProdutos() {
       })
     }
 
+    // Aplicar filtros avançados se houver algum ativo
+    if (produtosSelecionados.size > 0) {
+      resultado = resultado.filter(produto => produtosSelecionados.has(produto.produtoNome))
+    }
+    
+    if (clientesSelecionados.size > 0) {
+      resultado = resultado.filter(produto => clientesSelecionados.has(produto.clienteNome))
+    }
+    
+    if (coresSelecionadas.size > 0) {
+      resultado = resultado.filter(produto => coresSelecionadas.has(produto.cor))
+    }
+    
+    if (tamanhosSelecionados.size > 0) {
+      resultado = resultado.filter(produto => tamanhosSelecionados.has(produto.tamanho))
+    }
+
     // Ordenar os resultados com base no modo de visualização
     if (modoVisualizacao === "orcamento") {
       // Ordenação original por orçamento
@@ -374,6 +411,46 @@ export default function TabelaProdutos() {
     }
 
     setProdutosFiltrados(resultado)
+  }
+
+  // Função para obter listas únicas para os filtros
+  const obterOpcoesFiltro = () => {
+    const produtosUnicos = [...new Set(produtos.map(p => p.produtoNome))].sort()
+    const clientesUnicos = [...new Set(produtos.map(p => p.clienteNome))].sort()
+    const coresUnicas = [...new Set(produtos.map(p => p.cor))].sort()
+    const tamanhosUnicos = [...new Set(produtos.map(p => p.tamanho))].sort((a, b) => ordenarTamanhos(a, b))
+    
+    return { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos }
+  }
+
+  // Função para aplicar filtros selecionados
+  const aplicarFiltros = () => {
+    const temFiltros = produtosSelecionados.size > 0 || 
+                     clientesSelecionados.size > 0 || 
+                     coresSelecionadas.size > 0 || 
+                     tamanhosSelecionados.size > 0
+    setFiltrosAtivos(temFiltros)
+    setFiltroDialogAberto(false)
+  }
+
+  // Função para limpar filtros
+  const limparFiltros = () => {
+    setProdutosSelecionados(new Set())
+    setClientesSelecionados(new Set())
+    setCoresSelecionadas(new Set())
+    setTamanhosSelecionados(new Set())
+    setFiltrosAtivos(false)
+  }
+
+  // Função para alternar seleção de item em um filtro
+  const alternarSelecao = (item: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+    const novoSet = new Set(set)
+    if (novoSet.has(item)) {
+      novoSet.delete(item)
+    } else {
+      novoSet.add(item)
+    }
+    setter(novoSet)
   }
 
   const alternarOrdenacao = (campo: string) => {
@@ -1031,6 +1108,217 @@ export default function TabelaProdutos() {
               <SelectItem value="6">6 - Recusada</SelectItem>
             </SelectContent>
           </Select>
+          
+          <Dialog open={filtroDialogAberto} onOpenChange={setFiltroDialogAberto}>
+            <DialogTrigger asChild>
+              <Button 
+                variant={filtrosAtivos ? "default" : "outline"} 
+                size="sm" 
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Filtros
+                {filtrosAtivos && (
+                  <span className="bg-white text-primary rounded-full w-5 h-5 text-xs flex items-center justify-center font-bold">
+                    !
+                  </span>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Filtros Avançados</DialogTitle>
+                <DialogDescription>
+                  Selecione quais produtos aparecerão no relatório
+                </DialogDescription>
+              </DialogHeader>
+              
+              {(() => {
+                const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+                
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Filtro de Produtos */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Produtos</Label>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setProdutosSelecionados(new Set(produtosUnicos))}
+                            className="text-xs h-6 px-2"
+                          >
+                            Todos
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setProdutosSelecionados(new Set())}
+                            className="text-xs h-6 px-2"
+                          >
+                            Nenhum
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                        {produtosUnicos.map(produto => (
+                          <div key={produto} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`produto-${produto}`}
+                              checked={produtosSelecionados.has(produto)}
+                              onCheckedChange={() => alternarSelecao(produto, produtosSelecionados, setProdutosSelecionados)}
+                            />
+                            <Label 
+                              htmlFor={`produto-${produto}`} 
+                              className="text-xs cursor-pointer flex-1"
+                            >
+                              {produto}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Filtro de Clientes */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Clientes</Label>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setClientesSelecionados(new Set(clientesUnicos))}
+                            className="text-xs h-6 px-2"
+                          >
+                            Todos
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setClientesSelecionados(new Set())}
+                            className="text-xs h-6 px-2"
+                          >
+                            Nenhum
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                        {clientesUnicos.map(cliente => (
+                          <div key={cliente} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`cliente-${cliente}`}
+                              checked={clientesSelecionados.has(cliente)}
+                              onCheckedChange={() => alternarSelecao(cliente, clientesSelecionados, setClientesSelecionados)}
+                            />
+                            <Label 
+                              htmlFor={`cliente-${cliente}`} 
+                              className="text-xs cursor-pointer flex-1"
+                            >
+                              {cliente}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Filtro de Cores */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Cores</Label>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setCoresSelecionadas(new Set(coresUnicas))}
+                            className="text-xs h-6 px-2"
+                          >
+                            Todas
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setCoresSelecionadas(new Set())}
+                            className="text-xs h-6 px-2"
+                          >
+                            Nenhuma
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                        {coresUnicas.map(cor => (
+                          <div key={cor} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`cor-${cor}`}
+                              checked={coresSelecionadas.has(cor)}
+                              onCheckedChange={() => alternarSelecao(cor, coresSelecionadas, setCoresSelecionadas)}
+                            />
+                            <Label 
+                              htmlFor={`cor-${cor}`} 
+                              className="text-xs cursor-pointer flex-1"
+                            >
+                              {cor}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Filtro de Tamanhos */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Tamanhos</Label>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setTamanhosSelecionados(new Set(tamanhosUnicos))}
+                            className="text-xs h-6 px-2"
+                          >
+                            Todos
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setTamanhosSelecionados(new Set())}
+                            className="text-xs h-6 px-2"
+                          >
+                            Nenhum
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                        {tamanhosUnicos.map(tamanho => (
+                          <div key={tamanho} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`tamanho-${tamanho}`}
+                              checked={tamanhosSelecionados.has(tamanho)}
+                              onCheckedChange={() => alternarSelecao(tamanho, tamanhosSelecionados, setTamanhosSelecionados)}
+                            />
+                            <Label 
+                              htmlFor={`tamanho-${tamanho}`} 
+                              className="text-xs cursor-pointer flex-1"
+                            >
+                              {tamanho}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={limparFiltros}>
+                  Limpar Filtros
+                </Button>
+                <Button onClick={aplicarFiltros}>
+                  Aplicar Filtros
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
