@@ -77,6 +77,8 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       items: [
         { id: "orcamento", label: "Edição Orçamento", icon: FileText },
         { id: "orcamentos", label: "Orçamentos Salvos", icon: Save },
+        { id: "orcamentos-execucao", label: "Em Execução", icon: Ruler },
+        { id: "propostas", label: "Propostas", icon: Search },
         { id: "produtos-tabela", label: "Tabela de Produtos", icon: Table },
       ]
     },

@@ -30,6 +30,7 @@ interface ListaOrcamentosProps {
   onUpdateStatus?: (orcamentoId: string, status: string) => Promise<void>
   onExportOrcamento?: (orcamentoId: string, tipoExportacao: "completo" | "ficha") => Promise<void>
   reloadRef?: React.MutableRefObject<(() => Promise<void>) | null>
+  filtroStatus?: string
 }
 
 export default function ListaOrcamentos({
@@ -39,11 +40,12 @@ export default function ListaOrcamentos({
   reloadRef,
   onUpdateStatus,
   onExportOrcamento,
+  filtroStatus,
 }: ListaOrcamentosProps) {
   const [orcamentos, setOrcamentos] = useState<Partial<Orcamento>[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("4")
+  const [statusFilter, setStatusFilter] = useState<string>(filtroStatus || "4")
   const [error, setError] = useState<string | null>(null)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
 
@@ -52,6 +54,13 @@ export default function ListaOrcamentos({
     campo: "numero",
     direcao: "desc",
   })
+
+  // Definir o filtro inicial baseado na prop filtroStatus
+  useEffect(() => {
+    if (filtroStatus) {
+      setStatusFilter(filtroStatus)
+    }
+  }, [filtroStatus])
 
   // Expor a função de recarregar para o componente pai
   useEffect(() => {

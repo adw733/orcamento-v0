@@ -2144,42 +2144,50 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   ? "Gerador de Orçamento"
                   : abaAtiva === "orcamentos"
                     ? "Orçamentos Salvos"
-                    : abaAtiva === "clientes"
-                      ? "Gerenciador de Clientes"
-                      : abaAtiva === "produtos"
-                        ? "Gerenciador de Produtos"
-                        : abaAtiva === "categorias"
-                          ? "Gerenciador de Categorias"
-                          : abaAtiva === "materiais"
-                            ? "Gerenciador de Materiais"
-                            : abaAtiva === "empresa"
-                              ? "Gerenciador de Empresa"
-                              : abaAtiva === "lixeira"
-                                ? "Lixeira de Orçamentos"
-                                : abaAtiva === "produtos-tabela"
-                                  ? "Tabela de Produtos"
-                                  : "Gerador de Orçamento"}
+                    : abaAtiva === "orcamentos-execucao"
+                      ? "Orçamentos em Execução"
+                      : abaAtiva === "propostas"
+                        ? "Propostas"
+                        : abaAtiva === "clientes"
+                          ? "Gerenciador de Clientes"
+                          : abaAtiva === "produtos"
+                            ? "Gerenciador de Produtos"
+                            : abaAtiva === "categorias"
+                              ? "Gerenciador de Categorias"
+                              : abaAtiva === "materiais"
+                                ? "Gerenciador de Materiais"
+                                : abaAtiva === "empresa"
+                                  ? "Gerenciador de Empresa"
+                                  : abaAtiva === "lixeira"
+                                    ? "Lixeira de Orçamentos"
+                                    : abaAtiva === "produtos-tabela"
+                                      ? "Tabela de Produtos"
+                                      : "Gerador de Orçamento"}
               </h1>
               <p className="text-gray-500 mt-0.5 text-xs md:text-sm">
                 {abaAtiva === "orcamento"
                   ? "Crie orçamentos profissionais para uniformes industriais"
                   : abaAtiva === "orcamentos"
                     ? "Visualize e gerencie seus orçamentos salvos"
-                    : abaAtiva === "clientes"
-                      ? "Gerencie seus clientes"
-                      : abaAtiva === "produtos"
-                        ? "Gerencie seus produtos"
-                        : abaAtiva === "categorias"
-                          ? "Gerencie as categorias de produtos"
-                          : abaAtiva === "materiais"
-                            ? "Gerencie os materiais disponíveis"
-                            : abaAtiva === "empresa"
-                              ? "Gerencie os dados da sua empresa"
-                              : abaAtiva === "lixeira"
-                                ? "Gerencie orçamentos excluídos e restaure-os se necessário"
-                                : abaAtiva === "produtos-tabela"
-                                  ? "Visualize e edite seus produtos em formato de tabela"
-                                  : "Crie orçamentos profissionais para uniformes industriais"}
+                    : abaAtiva === "orcamentos-execucao"
+                      ? "Gerencie orçamentos aprovados que estão em execução"
+                      : abaAtiva === "propostas"
+                        ? "Visualize e gerencie suas propostas comerciais"
+                        : abaAtiva === "clientes"
+                          ? "Gerencie seus clientes"
+                          : abaAtiva === "produtos"
+                            ? "Gerencie seus produtos"
+                            : abaAtiva === "categorias"
+                              ? "Gerencie as categorias de produtos"
+                              : abaAtiva === "materiais"
+                                ? "Gerencie os materiais disponíveis"
+                                : abaAtiva === "empresa"
+                                  ? "Gerencie os dados da sua empresa"
+                                  : abaAtiva === "lixeira"
+                                    ? "Gerencie orçamentos excluídos e restaure-os se necessário"
+                                    : abaAtiva === "produtos-tabela"
+                                      ? "Visualize e edite seus produtos em formato de tabela"
+                                      : "Crie orçamentos profissionais para uniformes industriais"}
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
@@ -2318,6 +2326,46 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                         onUpdateStatus={atualizarStatusOrcamento}
                         onExportOrcamento={exportarOrcamento}
                         reloadRef={recarregarOrcamentosRef}
+                      />
+                    </CardContent>
+                  </Card>
+                )
+              case "orcamentos-execucao":
+                return (
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
+                      <ListaOrcamentos
+                        onSelectOrcamento={carregarOrcamento}
+                        onNovoOrcamento={() => {
+                          setOrcamentoJaCarregado(false)
+                          criarNovoOrcamento()
+                          setAbaAtiva("orcamento")
+                        }}
+                        onDeleteOrcamento={excluirOrcamento}
+                        onUpdateStatus={atualizarStatusOrcamento}
+                        onExportOrcamento={exportarOrcamento}
+                        reloadRef={recarregarOrcamentosRef}
+                        filtroStatus="4" // Status "Em Execução"
+                      />
+                    </CardContent>
+                  </Card>
+                )
+              case "propostas":
+                return (
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
+                      <ListaOrcamentos
+                        onSelectOrcamento={carregarOrcamento}
+                        onNovoOrcamento={() => {
+                          setOrcamentoJaCarregado(false)
+                          criarNovoOrcamento()
+                          setAbaAtiva("orcamento")
+                        }}
+                        onDeleteOrcamento={excluirOrcamento}
+                        onUpdateStatus={atualizarStatusOrcamento}
+                        onExportOrcamento={exportarOrcamento}
+                        reloadRef={recarregarOrcamentosRef}
+                        filtroStatus="5" // Status "Proposta"
                       />
                     </CardContent>
                   </Card>
