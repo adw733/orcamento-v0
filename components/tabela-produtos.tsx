@@ -114,6 +114,22 @@ export default function TabelaProdutos() {
     carregarProdutos()
   }, [])
 
+  // Atualizar filtros quando os produtos carregarem
+  useEffect(() => {
+    if (produtos.length > 0) {
+      const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+      
+      // Marcar todos os itens por padrão na primeira carga
+      if (produtosSelecionados.size === 0 && clientesSelecionados.size === 0 && 
+          coresSelecionadas.size === 0 && tamanhosSelecionados.size === 0) {
+        setProdutosSelecionados(new Set(produtosUnicos))
+        setClientesSelecionados(new Set(clientesUnicos))
+        setCoresSelecionadas(new Set(coresUnicas))
+        setTamanhosSelecionados(new Set(tamanhosUnicos))
+      }
+    }
+  }, [produtos])
+
   useEffect(() => {
     filtrarProdutos()
   }, [produtos, searchTerm, statusFilter, ordenacao, modoVisualizacao, produtosSelecionados, clientesSelecionados, coresSelecionadas, tamanhosSelecionados])
@@ -298,20 +314,22 @@ export default function TabelaProdutos() {
       })
     }
 
-    // Aplicar filtros avançados se houver algum ativo
-    if (produtosSelecionados.size > 0) {
+    // Aplicar filtros avançados apenas se nem todos os itens estão selecionados
+    const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+    
+    if (produtosSelecionados.size > 0 && produtosSelecionados.size < produtosUnicos.length) {
       resultado = resultado.filter(produto => produtosSelecionados.has(produto.produtoNome))
     }
     
-    if (clientesSelecionados.size > 0) {
+    if (clientesSelecionados.size > 0 && clientesSelecionados.size < clientesUnicos.length) {
       resultado = resultado.filter(produto => clientesSelecionados.has(produto.clienteNome))
     }
     
-    if (coresSelecionadas.size > 0) {
+    if (coresSelecionadas.size > 0 && coresSelecionadas.size < coresUnicas.length) {
       resultado = resultado.filter(produto => coresSelecionadas.has(produto.cor))
     }
     
-    if (tamanhosSelecionados.size > 0) {
+    if (tamanhosSelecionados.size > 0 && tamanhosSelecionados.size < tamanhosUnicos.length) {
       resultado = resultado.filter(produto => tamanhosSelecionados.has(produto.tamanho))
     }
 
@@ -425,20 +443,25 @@ export default function TabelaProdutos() {
 
   // Função para aplicar filtros selecionados
   const aplicarFiltros = () => {
-    const temFiltros = produtosSelecionados.size > 0 || 
-                     clientesSelecionados.size > 0 || 
-                     coresSelecionadas.size > 0 || 
-                     tamanhosSelecionados.size > 0
+    const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+    
+    // Verificar se há filtros ativos (nem todos estão selecionados)
+    const temFiltros = produtosSelecionados.size < produtosUnicos.length || 
+                     clientesSelecionados.size < clientesUnicos.length || 
+                     coresSelecionadas.size < coresUnicas.length || 
+                     tamanhosSelecionados.size < tamanhosUnicos.length
+    
     setFiltrosAtivos(temFiltros)
     setFiltroDialogAberto(false)
   }
 
-  // Função para limpar filtros
+  // Função para limpar filtros (marcar todos)
   const limparFiltros = () => {
-    setProdutosSelecionados(new Set())
-    setClientesSelecionados(new Set())
-    setCoresSelecionadas(new Set())
-    setTamanhosSelecionados(new Set())
+    const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+    setProdutosSelecionados(new Set(produtosUnicos))
+    setClientesSelecionados(new Set(clientesUnicos))
+    setCoresSelecionadas(new Set(coresUnicas))
+    setTamanhosSelecionados(new Set(tamanhosUnicos))
     setFiltrosAtivos(false)
   }
 
@@ -1311,7 +1334,7 @@ export default function TabelaProdutos() {
               
               <DialogFooter>
                 <Button variant="outline" onClick={limparFiltros}>
-                  Limpar Filtros
+                  Selecionar Todos
                 </Button>
                 <Button onClick={aplicarFiltros}>
                   Aplicar Filtros
