@@ -102,7 +102,7 @@ const converterImagemParaBase64 = (file: File, callback: (base64: string) => voi
   reader.readAsDataURL(file)
 }
 
-// Substituir o componente EstampaInput por um novo que suporta múltiplas estampas
+// Componente EstampaInput otimizado e mais compacto
 const EstampaInput = ({
   estampas = [],
   onChange,
@@ -138,7 +138,7 @@ const EstampaInput = ({
 
   const posicoes = [
     "Peito esquerdo",
-    "Peito direito",
+    "Peito direito", 
     "Costas",
     "Bolso esquerdo",
     "Bolso direito",
@@ -148,32 +148,29 @@ const EstampaInput = ({
   const tipos = ["Bordado", "Silk", "DTF", "Sublimação"]
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1.5">
       {estampas.map((estampa, index) => (
-        <div key={estampa.id} className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 relative shadow-sm">
-          <Button
+        <div key={estampa.id} className="border rounded-md p-2 bg-white relative text-xs shadow-sm">
+          <button
             type="button"
             onClick={() => removerEstampa(estampa.id!)}
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full"
+            className="absolute top-1 right-1 text-gray-400 hover:text-red-500 bg-white rounded-full p-0.5 shadow-sm transition-colors z-10"
           >
             <X className="h-3 w-3" />
-          </Button>
+          </button>
 
-          <div className="flex items-center gap-2 mb-3">
-            <Palette className="h-4 w-4 text-primary" />
-            <h5 className="font-medium text-primary">Arte {index + 1}</h5>
+          <div className="flex items-center gap-1 mb-1.5">
+            <Palette className="h-3 w-3 text-primary" />
+            <span className="font-medium text-primary text-xs">Arte {index + 1}</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-1.5">
             <div>
-              <Label className="text-xs text-gray-600 mb-1 block">Posição</Label>
               <Select
                 value={estampa.posicao || ""}
                 onValueChange={(value) => atualizarEstampa(estampa.id!, "posicao", value)}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-6 text-xs border-gray-300 focus:border-primary">
                   <SelectValue placeholder="Posição" />
                 </SelectTrigger>
                 <SelectContent>
@@ -187,12 +184,11 @@ const EstampaInput = ({
             </div>
 
             <div>
-              <Label className="text-xs text-gray-600 mb-1 block">Tipo</Label>
               <Select
                 value={estampa.tipo || ""}
                 onValueChange={(value) => atualizarEstampa(estampa.id!, "tipo", value)}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-6 text-xs border-gray-300 focus:border-primary">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -206,13 +202,12 @@ const EstampaInput = ({
             </div>
 
             <div>
-              <Label className="text-xs text-gray-600 mb-1 block">Largura (cm)</Label>
               <Input
                 type="number"
                 value={estampa.largura || ""}
                 onChange={(e) => atualizarEstampa(estampa.id!, "largura", Number(e.target.value))}
-                className="h-8 text-xs"
-                placeholder="0"
+                className="h-6 text-xs border-gray-300 focus:border-primary"
+                placeholder="Largura (cm)"
                 min="0"
                 step="0.5"
               />
@@ -226,10 +221,9 @@ const EstampaInput = ({
         onClick={adicionarEstampa}
         variant="outline"
         size="sm"
-        className="w-full h-10 border-dashed border-2 hover:bg-primary/5 hover:border-primary transition-all duration-200"
+        className="w-full h-6 text-xs border-dashed border-2 hover:bg-accent/20 flex items-center justify-center gap-1"
       >
-        <Plus className="h-4 w-4 mr-2" />
-        <Palette className="h-4 w-4 mr-2" />
+        <Plus className="h-3 w-3" />
         Adicionar Arte
       </Button>
     </div>
@@ -1611,7 +1605,7 @@ export default function FormularioOrcamento({
                                 {/* Linha 4: Estampas com largura total */}
                                 <div>
                                   <Label className="text-primary text-xs mb-1">Estampas</Label>
-                                  <div className="max-h-32 overflow-y-auto">
+                                  <div className="overflow-visible">
                                     <EstampaInput
                                       estampas={itemEmEdicao.estampas || []}
                                       onChange={handleEstampasChange}
