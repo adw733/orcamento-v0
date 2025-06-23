@@ -122,10 +122,34 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       orcamentoAtual.valorFrete !== orcamentoRef.valorFrete ||
       orcamentoAtual.nomeContato !== orcamentoRef.nomeContato ||
       orcamentoAtual.telefoneContato !== orcamentoRef.telefoneContato ||
-      orcamentoAtual.itens.length !== orcamentoRef.itens.length ||
-      JSON.stringify(orcamentoAtual.itens) !== JSON.stringify(orcamentoRef.itens)
+      orcamentoAtual.itens.length !== orcamentoRef.itens.length
 
-    return alteracoesDetectadas
+    if (alteracoesDetectadas) return true
+
+    // Comparação robusta de itens - apenas campos essenciais
+    for (let i = 0; i < orcamentoAtual.itens.length; i++) {
+      const itemAtual = orcamentoAtual.itens[i]
+      const itemRef = orcamentoRef.itens[i]
+      
+      if (!itemRef) return true
+      
+      // Comparar apenas campos essenciais que realmente importam
+      if (
+        itemAtual.produtoId !== itemRef.produtoId ||
+        itemAtual.quantidade !== itemRef.quantidade ||
+        Number(itemAtual.valorUnitario) !== Number(itemRef.valorUnitario) ||
+        (itemAtual.tecidoSelecionado?.nome || '') !== (itemRef.tecidoSelecionado?.nome || '') ||
+        (itemAtual.corSelecionada || '') !== (itemRef.corSelecionada || '') ||
+        (itemAtual.observacaoComercial || '') !== (itemRef.observacaoComercial || '') ||
+        (itemAtual.observacaoTecnica || '') !== (itemRef.observacaoTecnica || '') ||
+        JSON.stringify(itemAtual.tamanhos || {}) !== JSON.stringify(itemRef.tamanhos || {}) ||
+        (itemAtual.estampas?.length || 0) !== (itemRef.estampas?.length || 0)
+      ) {
+        return true
+      }
+    }
+
+    return false
   }
 
   // Função para abrir modal de confirmação
