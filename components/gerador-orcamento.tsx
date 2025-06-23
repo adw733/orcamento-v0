@@ -597,16 +597,25 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         // Salvar estampas do item
         if (item.estampas && item.estampas.length > 0) {
           for (const estampa of item.estampas) {
-            const { error: estampaError } = await supabase
-              .from("estampas")
-              .insert({
-                item_orcamento_id: itemData.id,
-                posicao: estampa.posicao,
-                tipo: estampa.tipo,
-                largura: estampa.largura,
-              })
+            try {
+              const { error: estampaError } = await supabase
+                .from("estampas")
+                .insert({
+                  id: estampa.id || generateUUID(), // Garantir que sempre tenha ID
+                  item_orcamento_id: itemData.id,
+                  posicao: estampa.posicao || null,
+                  tipo: estampa.tipo || null,
+                  largura: estampa.largura || null,
+                })
 
-            if (estampaError) throw estampaError
+              if (estampaError) {
+                console.error("Erro específico da estampa:", estampaError)
+                throw estampaError
+              }
+            } catch (estampaErr) {
+              console.error("Erro ao inserir estampa:", estampaErr)
+              // Continue com as outras estampas mesmo se uma falhar
+            }
           }
         }
       }
@@ -626,6 +635,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
     } catch (error) {
       console.error("Erro ao atualizar orçamento:", error)
+      
+      // Log mais detalhado do erro
+      if (error && typeof error === 'object') {
+        console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
+      }
+      
       setFeedbackSalvamento({
         visivel: true,
         sucesso: false,
@@ -1902,17 +1917,25 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
         // Inserir as estampas do item - CORRIGIDO: Sempre gerar novos IDs para as estampas
         if (item.estampas && item.estampas.length > 0) {
-          const estampasParaInserir = item.estampas.map((estampa) => ({
-            id: generateUUID(), // Sempre gerar um novo ID para evitar conflitos
-            item_orcamento_id: item.id,
-            posicao: estampa.posicao,
-            tipo: estampa.tipo,
-            largura: estampa.largura,
-          }))
+          try {
+            const estampasParaInserir = item.estampas.map((estampa) => ({
+              id: generateUUID(), // Sempre gerar um novo ID para evitar conflitos
+              item_orcamento_id: item.id,
+              posicao: estampa.posicao || null,
+              tipo: estampa.tipo || null,
+              largura: estampa.largura || null,
+            }))
 
-          const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
+            const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
 
-          if (estampasError) throw estampasError
+            if (estampasError) {
+              console.error("Erro ao inserir estampas:", estampasError)
+              throw estampasError
+            }
+          } catch (estampaErr) {
+            console.error("Erro ao processar estampas:", estampaErr)
+            // Continue mesmo se as estampas falharem
+          }
         }
 
         // Atualizar também o número do orçamento no banco de dados
