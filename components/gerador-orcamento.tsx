@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Save, Check, AlertCircle, FileDown, Eye } from "lucide-react"
+import { Save, Check, AlertCircle, FileDown, Eye, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
@@ -42,9 +42,8 @@ const generateUUID = () => {
 }
 
 export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", setAbaAtiva: setAbaAtivaExterna }) {
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  const [produtos, setProdutos] = useState<Produto[]>([])
-  const [orcamento, setOrcamento] = useState<Orcamento>({
+  // Estado inicial comum para evitar detectar alterações falsas
+  const orcamentoInicial: Orcamento = {
     numero: "Carregando...",
     data: new Date().toISOString().split("T")[0],
     cliente: null,
@@ -57,7 +56,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     valorFrete: 0, // Inicializar o valor do frete
     nomeContato: "",
     telefoneContato: "",
-  })
+  }
+  
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [orcamento, setOrcamento] = useState<Orcamento>(orcamentoInicial)
   const [isPrinting, setIsPrinting] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState<string>(abaAtivaInicial)
   const [isLoading, setIsLoading] = useState(false)
@@ -78,6 +81,14 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [exportandoFichaTecnica, setExportandoFichaTecnica] = useState(false)
   // Adicionar um estado para controlar o modal de visualização após os outros estados:
   const [modalVisualizacaoAberto, setModalVisualizacaoAberto] = useState(false)
+  
+  // Estados para controle de mudanças não salvas
+  const [temAlteracoes, setTemAlteracoes] = useState(false)
+  const [orcamentoOriginal, setOrcamentoOriginal] = useState<Orcamento | null>(orcamentoInicial)
+  const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false)
+  const [acaoPendente, setAcaoPendente] = useState<(() => void) | null>(null)
+  const [inicializacaoCompleta, setInicializacaoCompleta] = useState(false)
+  const [carregandoOrcamento, setCarregandoOrcamento] = useState(false)
 
   const documentoRef = useRef<HTMLDivElement>(null)
   const orcamentoRef = useRef<HTMLDivElement>(null)
@@ -93,6 +104,83 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       setAbaAtivaExterna(abaAtiva)
     }
   }, [abaAtiva, setAbaAtivaExterna])
+
+  // Função para verificar se há alterações no orçamento
+  const verificarAlteracoes = (orcamentoAtual: Orcamento, orcamentoRef: Orcamento | null) => {
+    if (!orcamentoRef) return false // Se não há referência, não há alterações para comparar
+
+    // Comparar campos principais
+    const alteracoesDetectadas = 
+      orcamentoAtual.numero !== orcamentoRef.numero ||
+      orcamentoAtual.data !== orcamentoRef.data ||
+      orcamentoAtual.cliente?.id !== orcamentoRef.cliente?.id ||
+      orcamentoAtual.observacoes !== orcamentoRef.observacoes ||
+      orcamentoAtual.condicoesPagamento !== orcamentoRef.condicoesPagamento ||
+      orcamentoAtual.prazoEntrega !== orcamentoRef.prazoEntrega ||
+      orcamentoAtual.validadeOrcamento !== orcamentoRef.validadeOrcamento ||
+      orcamentoAtual.status !== orcamentoRef.status ||
+      orcamentoAtual.valorFrete !== orcamentoRef.valorFrete ||
+      orcamentoAtual.nomeContato !== orcamentoRef.nomeContato ||
+      orcamentoAtual.telefoneContato !== orcamentoRef.telefoneContato ||
+      orcamentoAtual.itens.length !== orcamentoRef.itens.length ||
+      JSON.stringify(orcamentoAtual.itens) !== JSON.stringify(orcamentoRef.itens)
+
+    return alteracoesDetectadas
+  }
+
+  // Função para abrir modal de confirmação
+  const abrirModalConfirmacao = (acao: () => void) => {
+    setAcaoPendente(() => acao)
+    setModalConfirmacaoAberto(true)
+  }
+
+  // Função para salvar e executar ação pendente
+  const salvarEContinuar = async () => {
+    if (orcamentoSalvo) {
+      await atualizarOrcamentoExistente()
+    } else {
+      await salvarNovoOrcamento()
+    }
+    
+    setModalConfirmacaoAberto(false)
+    if (acaoPendente) {
+      acaoPendente()
+      setAcaoPendente(null)
+    }
+  }
+
+  // Função para descartar mudanças e continuar
+  const descartarEContinuar = () => {
+    setTemAlteracoes(false)
+    setModalConfirmacaoAberto(false)
+    if (acaoPendente) {
+      acaoPendente()
+      setAcaoPendente(null)
+    }
+  }
+
+  // useEffect para detectar mudanças - VERSÃO FINAL
+  useEffect(() => {
+    // Não detectar durante carregamento de orçamento ou inicialização
+    if (!inicializacaoCompleta || carregandoOrcamento) return
+    
+    const alteracoes = verificarAlteracoes(orcamento, orcamentoOriginal)
+    setTemAlteracoes(alteracoes)
+  }, [orcamento, orcamentoOriginal, inicializacaoCompleta, carregandoOrcamento])
+
+  // useEffect para prevenir fechamento da página com alterações não salvas
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (temAlteracoes && abaAtiva === "orcamento") {
+        e.preventDefault()
+        e.returnValue = "Você tem alterações não salvas. Tem certeza que deseja sair?"
+        return "Você tem alterações não salvas. Tem certeza que deseja sair?"
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [temAlteracoes, abaAtiva])
 
   // Função para obter o próximo número de orçamento
   const obterProximoNumeroOrcamento = async (): Promise<string> => {
@@ -176,7 +264,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         "-" +
         String(hoje.getDate()).padStart(2, "0")
 
-      setOrcamento({
+      const novoOrcamento = {
         numero: proximoNumero, // Usar apenas o número base (ex: "0154")
         data: dataLocal,
         cliente: null,
@@ -189,7 +277,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         valorFrete: 0,
         nomeContato: "",
         telefoneContato: "",
-      })
+      }
+
+      setOrcamento(novoOrcamento)
+      setOrcamentoOriginal(null) // Iniciar sem referência para novo orçamento
+      setInicializacaoCompleta(false) // Reset durante criação
 
       // Limpar o ID do orçamento salvo para indicar que é um novo
       setOrcamentoSalvo(null)
@@ -198,6 +290,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       // Mudar para a aba de orçamento
       setAbaAtiva("orcamento")
+
+      // Marcar inicialização como completa após criar
+      setTimeout(() => {
+        setInicializacaoCompleta(true)
+      }, 100)
 
       // Mostrar feedback
       setFeedbackSalvamento({
@@ -263,6 +360,252 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         visivel: true,
         sucesso: false,
         mensagem: `Erro ao copiar o orçamento: ${error instanceof Error ? error.message : "Tente novamente"}`,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Função para salvar novo orçamento
+  const salvarNovoOrcamento = async () => {
+    try {
+      setIsLoading(true)
+      
+      if (!orcamento.cliente) {
+        setFeedbackSalvamento({
+          visivel: true,
+          sucesso: false,
+          mensagem: "Selecione um cliente antes de salvar",
+        })
+        return
+      }
+
+      // Preparar dados para salvar
+      const dadosOrcamento = {
+        numero: orcamento.numero,
+        data: orcamento.data,
+        cliente_id: orcamento.cliente.id,
+        observacoes: orcamento.observacoes,
+        condicoes_pagamento: orcamento.condicoesPagamento,
+        prazo_entrega: orcamento.prazoEntrega,
+        validade_orcamento: orcamento.validadeOrcamento,
+        status: orcamento.status,
+        itens: {
+          metadados: {
+            valorFrete: orcamento.valorFrete,
+            nomeContato: orcamento.nomeContato,
+            telefoneContato: orcamento.telefoneContato,
+          },
+          items: orcamento.itens.map(item => ({
+            id: item.id,
+            produtoId: item.produtoId,
+            quantidade: item.quantidade,
+            valorUnitario: item.valorUnitario,
+            tecidoSelecionado: item.tecidoSelecionado,
+            corSelecionada: item.corSelecionada,
+            tamanhos: item.tamanhos,
+            estampas: item.estampas,
+            observacaoComercial: item.observacaoComercial,
+            observacaoTecnica: item.observacaoTecnica,
+            imagem: item.imagem,
+          }))
+        }
+      }
+
+      // Inserir orçamento
+      const { data: orcamentoData, error: orcamentoError } = await supabase
+        .from("orcamentos")
+        .insert(dadosOrcamento)
+        .select()
+        .single()
+
+      if (orcamentoError) throw orcamentoError
+
+      // Salvar itens individuais
+      for (const item of orcamento.itens) {
+        const { data: itemData, error: itemError } = await supabase
+          .from("itens_orcamento")
+          .insert({
+            orcamento_id: orcamentoData.id,
+            produto_id: item.produtoId,
+            quantidade: item.quantidade,
+            valor_unitario: item.valorUnitario,
+            tecido_nome: item.tecidoSelecionado?.nome,
+            tecido_composicao: item.tecidoSelecionado?.composicao,
+            cor_selecionada: item.corSelecionada,
+            tamanhos: item.tamanhos,
+            observacao_comercial: item.observacaoComercial,
+            observacao_tecnica: item.observacaoTecnica,
+            imagem: item.imagem,
+          })
+          .select()
+          .single()
+
+        if (itemError) throw itemError
+
+        // Salvar estampas do item
+        if (item.estampas && item.estampas.length > 0) {
+          for (const estampa of item.estampas) {
+            const { error: estampaError } = await supabase
+              .from("estampas")
+              .insert({
+                item_orcamento_id: itemData.id,
+                posicao: estampa.posicao,
+                tipo: estampa.tipo,
+                largura: estampa.largura,
+              })
+
+            if (estampaError) throw estampaError
+          }
+        }
+      }
+
+      setOrcamentoSalvo(orcamentoData.id)
+      setOrcamentoOriginal({ ...orcamento }) // Atualizar orçamento original
+      
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: true,
+        mensagem: "Orçamento salvo com sucesso!",
+      })
+
+      // Recarregar lista de orçamentos se disponível
+      if (recarregarOrcamentosRef.current) {
+        await recarregarOrcamentosRef.current()
+      }
+
+    } catch (error) {
+      console.error("Erro ao salvar orçamento:", error)
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: false,
+        mensagem: `Erro ao salvar orçamento: ${error instanceof Error ? error.message : "Tente novamente"}`,
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Função para atualizar orçamento existente
+  const atualizarOrcamentoExistente = async () => {
+    try {
+      setIsLoading(true)
+      
+      if (!orcamentoSalvo) {
+        await salvarNovoOrcamento()
+        return
+      }
+
+      if (!orcamento.cliente) {
+        setFeedbackSalvamento({
+          visivel: true,
+          sucesso: false,
+          mensagem: "Selecione um cliente antes de salvar",
+        })
+        return
+      }
+
+      // Atualizar dados do orçamento
+      const { error: orcamentoError } = await supabase
+        .from("orcamentos")
+        .update({
+          numero: orcamento.numero,
+          data: orcamento.data,
+          cliente_id: orcamento.cliente.id,
+          observacoes: orcamento.observacoes,
+          condicoes_pagamento: orcamento.condicoesPagamento,
+          prazo_entrega: orcamento.prazoEntrega,
+          validade_orcamento: orcamento.validadeOrcamento,
+          status: orcamento.status,
+          itens: {
+            metadados: {
+              valorFrete: orcamento.valorFrete,
+              nomeContato: orcamento.nomeContato,
+              telefoneContato: orcamento.telefoneContato,
+            },
+            items: orcamento.itens.map(item => ({
+              id: item.id,
+              produtoId: item.produtoId,
+              quantidade: item.quantidade,
+              valorUnitario: item.valorUnitario,
+              tecidoSelecionado: item.tecidoSelecionado,
+              corSelecionada: item.corSelecionada,
+              tamanhos: item.tamanhos,
+              estampas: item.estampas,
+              observacaoComercial: item.observacaoComercial,
+              observacaoTecnica: item.observacaoTecnica,
+              imagem: item.imagem,
+            }))
+          }
+        })
+        .eq("id", orcamentoSalvo)
+
+      if (orcamentoError) throw orcamentoError
+
+      // Remover itens existentes
+      await supabase
+        .from("itens_orcamento")
+        .delete()
+        .eq("orcamento_id", orcamentoSalvo)
+
+      // Inserir itens atualizados
+      for (const item of orcamento.itens) {
+        const { data: itemData, error: itemError } = await supabase
+          .from("itens_orcamento")
+          .insert({
+            orcamento_id: orcamentoSalvo,
+            produto_id: item.produtoId,
+            quantidade: item.quantidade,
+            valor_unitario: item.valorUnitario,
+            tecido_nome: item.tecidoSelecionado?.nome,
+            tecido_composicao: item.tecidoSelecionado?.composicao,
+            cor_selecionada: item.corSelecionada,
+            tamanhos: item.tamanhos,
+            observacao_comercial: item.observacaoComercial,
+            observacao_tecnica: item.observacaoTecnica,
+            imagem: item.imagem,
+          })
+          .select()
+          .single()
+
+        if (itemError) throw itemError
+
+        // Salvar estampas do item
+        if (item.estampas && item.estampas.length > 0) {
+          for (const estampa of item.estampas) {
+            const { error: estampaError } = await supabase
+              .from("estampas")
+              .insert({
+                item_orcamento_id: itemData.id,
+                posicao: estampa.posicao,
+                tipo: estampa.tipo,
+                largura: estampa.largura,
+              })
+
+            if (estampaError) throw estampaError
+          }
+        }
+      }
+
+      setOrcamentoOriginal({ ...orcamento }) // Atualizar orçamento original
+      
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: true,
+        mensagem: "Orçamento atualizado com sucesso!",
+      })
+
+      // Recarregar lista de orçamentos se disponível
+      if (recarregarOrcamentosRef.current) {
+        await recarregarOrcamentosRef.current()
+      }
+
+    } catch (error) {
+      console.error("Erro ao atualizar orçamento:", error)
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: false,
+        mensagem: `Erro ao atualizar orçamento: ${error instanceof Error ? error.message : "Tente novamente"}`,
       })
     } finally {
       setIsLoading(false)
@@ -719,19 +1062,23 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         if (!orcamentoSalvo && !orcamentoJaCarregado && orcamento.numero === "Carregando...") {
           const proximoNumero = await obterProximoNumeroOrcamento()
           console.log('Inicializando NOVO orçamento com número:', proximoNumero)
-          setOrcamento(prev => ({
-            ...prev,
+          const novoOrcamento = {
+            ...orcamento,
             numero: proximoNumero // Usar apenas o número base
-          }))
+          }
+          setOrcamento(novoOrcamento)
+          setOrcamentoOriginal(novoOrcamento) // Definir como original para evitar detecção de alterações
         }
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error)
         // Em caso de erro, usar um número padrão APENAS se for novo orçamento
         if (!orcamentoSalvo && !orcamentoJaCarregado && orcamento.numero === "Carregando...") {
-          setOrcamento(prev => ({
-            ...prev,
+          const orcamentoComNumero = {
+            ...orcamento,
             numero: "0140"
-          }))
+          }
+          setOrcamento(orcamentoComNumero)
+          setOrcamentoOriginal(orcamentoComNumero) // Definir como original para evitar detecção de alterações
         }
       }
     }
@@ -752,6 +1099,13 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         }
       }
     }
+
+    // Marcar inicialização como completa após um pequeno delay
+    const timer = setTimeout(() => {
+      setInicializacaoCompleta(true)
+    }, 500)
+
+    return () => clearTimeout(timer)
   }, [abaAtivaInicial, orcamentoJaCarregado])
 
   // Adicionar a função para carregar os dados da empresa
@@ -1146,8 +1500,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     setProdutos([...produtos, produto])
   }
 
-  // Função para salvar orçamento como uma nova versão
-  const salvarNovoOrcamento = async () => {
+  // Função para salvar orçamento (função original - vou remover e usar a nova)
+  const salvarOrcamentoOriginal = async () => {
     if (!orcamento.cliente) {
       setFeedbackSalvamento({
         visivel: true,
@@ -1301,6 +1655,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           id: novoOrcamentoId,
           numero: novoNumero,
         })
+        setOrcamentoOriginal({
+          ...orcamento,
+          id: novoOrcamentoId,
+          numero: novoNumero,
+        })
         setOrcamentoSalvo(novoOrcamentoId)
         setCriandoNovoOrcamento(false)
 
@@ -1323,8 +1682,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
-  // Função para atualizar orçamento existente
-  const atualizarOrcamentoExistente = async () => {
+  // Função para atualizar orçamento existente (função original - vou renomear)
+  const atualizarOrcamentoOriginal = async () => {
     if (!orcamento.cliente || !orcamentoSalvo) {
       setFeedbackSalvamento({
         visivel: true,
@@ -1647,6 +2006,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const carregarOrcamento = async (orcamentoId: string) => {
     try {
       setIsLoading(true)
+      setCarregandoOrcamento(true) // Sinalizar que está carregando orçamento
       console.log('Iniciando carregamento do orçamento ID:', orcamentoId)
 
       const { data, error } = await supabase
@@ -1907,6 +2267,23 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         telefoneContato: telefoneContato,
       })
 
+      // Definir como orçamento original para controle de alterações
+      setOrcamentoOriginal({
+        id: data.id,
+        numero: data.numero,
+        data: data.data,
+        cliente: clienteFormatado,
+        itens: itensFormatados,
+        observacoes: data.observacoes || "",
+        condicoesPagamento: data.condicoes_pagamento || "À vista",
+        prazoEntrega: data.prazo_entrega || "15 dias",
+        validadeOrcamento: data.validade_orcamento || "15 dias",
+        status: data.status || "proposta",
+        valorFrete: valorFrete,
+        nomeContato: nomeContato,
+        telefoneContato: telefoneContato,
+      })
+
       setOrcamentoSalvo(data.id)
       setCriandoNovoOrcamento(false)
       setOrcamentoJaCarregado(true) // Marcar que um orçamento foi carregado
@@ -1916,6 +2293,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       // Mudar para a aba de orçamento
       setAbaAtiva("orcamento")
+
+      // Ativar detecção de alterações após carregar
+      setTimeout(() => {
+        setCarregandoOrcamento(false) // Finalizar carregamento
+        setInicializacaoCompleta(true)
+      }, 1000) // Aumentado para 1 segundo
 
       // Mostrar feedback
       setFeedbackSalvamento({
@@ -1932,6 +2315,10 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       })
     } finally {
       setIsLoading(false)
+      // Garantir que a flag seja resetada mesmo em caso de erro
+      setTimeout(() => {
+        setCarregandoOrcamento(false)
+      }, 1100) // Pouco maior que o timeout principal
     }
   }
 
@@ -2126,17 +2513,65 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
+  // Função para trocar aba com verificação de alterações
+  const trocarAba = (novaAba: string) => {
+    if (temAlteracoes && abaAtiva === "orcamento" && novaAba !== "orcamento") {
+      // Se há alterações e estamos saindo da aba de orçamento, perguntar se quer salvar
+      abrirModalConfirmacao(() => {
+        setAbaAtiva(novaAba)
+      })
+    } else {
+      setAbaAtiva(novaAba)
+    }
+  }
+
+  // Função segura para criar novo orçamento com verificação de alterações
+  const criarNovoOrcamentoSeguro = () => {
+    if (temAlteracoes && abaAtiva === "orcamento") {
+      abrirModalConfirmacao(() => {
+        criarNovoOrcamento()
+      })
+    } else {
+      criarNovoOrcamento()
+    }
+  }
+
   // Substituir o return do componente por:
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-2rem)]">
       <AppSidebar
         abaAtiva={abaAtiva}
-        setAbaAtiva={setAbaAtiva}
+        setAbaAtiva={trocarAba}
         criandoNovoOrcamento={criandoNovoOrcamento}
-        criarNovoOrcamento={criarNovoOrcamento}
+        criarNovoOrcamento={criarNovoOrcamentoSeguro}
       />
       <SidebarInset className="bg-gray-50 overflow-auto flex-1 w-full">
         <div className="p-2 md:p-4 space-y-2 md:space-y-3">
+          {/* Alerta de alterações não salvas */}
+          {temAlteracoes && abaAtiva === "orcamento" && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-yellow-800 font-medium">
+                  Há alterações não salvas neste orçamento
+                </span>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                onClick={orcamentoSalvo ? atualizarOrcamentoExistente : salvarNovoOrcamento}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Save className="h-3 w-3 mr-1" />
+                )}
+                Salvar
+              </Button>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
             <div>
               <h1 className="text-lg md:text-xl font-bold text-primary">
@@ -2306,6 +2741,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                           atualizarItem={atualizarItem}
                           calcularTotal={calcularTotal}
                           handleClienteChange={handleClienteSelection}
+                          salvarNovoOrcamento={salvarNovoOrcamento}
+                          atualizarOrcamentoExistente={atualizarOrcamentoExistente}
+                          orcamentoSalvo={orcamentoSalvo}
+                          isLoading={isLoading}
+                          temAlteracoes={temAlteracoes}
                         />
                       </CardContent>
                     </Card>
@@ -2319,8 +2759,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                         onSelectOrcamento={carregarOrcamento}
                         onNovoOrcamento={() => {
                           setOrcamentoJaCarregado(false) // Resetar flag antes de criar novo
-                          criarNovoOrcamento()
-                          setAbaAtiva("orcamento")
+                          criarNovoOrcamentoSeguro()
                         }}
                         onDeleteOrcamento={excluirOrcamento}
                         onUpdateStatus={atualizarStatusOrcamento}
@@ -2338,8 +2777,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                         onSelectOrcamento={carregarOrcamento}
                         onNovoOrcamento={() => {
                           setOrcamentoJaCarregado(false)
-                          criarNovoOrcamento()
-                          setAbaAtiva("orcamento")
+                          criarNovoOrcamentoSeguro()
                         }}
                         onDeleteOrcamento={excluirOrcamento}
                         onUpdateStatus={atualizarStatusOrcamento}
@@ -2358,8 +2796,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                         onSelectOrcamento={carregarOrcamento}
                         onNovoOrcamento={() => {
                           setOrcamentoJaCarregado(false)
-                          criarNovoOrcamento()
-                          setAbaAtiva("orcamento")
+                          criarNovoOrcamentoSeguro()
                         }}
                         onDeleteOrcamento={excluirOrcamento}
                         onUpdateStatus={atualizarStatusOrcamento}
@@ -2482,6 +2919,52 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         setOrcamento={setOrcamento}
         setAbaAtiva={setAbaAtiva}
       />
+      
+      {/* Modal de confirmação para alterações não salvas */}
+      <Dialog open={modalConfirmacaoAberto} onOpenChange={setModalConfirmacaoAberto}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              Alterações não salvas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Você tem alterações não salvas neste orçamento. O que deseja fazer?
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={salvarEContinuar}
+                className="flex-1"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Salvar e continuar
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={descartarEContinuar}
+                className="flex-1"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Descartar alterações
+              </Button>
+            </div>
+            <Button 
+              variant="ghost" 
+              onClick={() => setModalConfirmacaoAberto(false)}
+              className="w-full mt-2"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

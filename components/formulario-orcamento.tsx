@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler } from "lucide-react"
+import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler, Save } from "lucide-react"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
@@ -38,6 +38,11 @@ interface FormularioOrcamentoProps {
   atualizarItem: (id: string, item: Partial<ItemOrcamento>) => void
   calcularTotal: () => number
   handleClienteChange: (clienteId: string) => void
+  salvarNovoOrcamento?: () => Promise<void>
+  atualizarOrcamentoExistente?: () => Promise<void>
+  orcamentoSalvo?: string | null
+  isLoading?: boolean
+  temAlteracoes?: boolean
 }
 
 // Update the tamanhosPadrao object to include all possible sizes
@@ -440,6 +445,11 @@ export default function FormularioOrcamento({
   atualizarItem,
   calcularTotal,
   handleClienteChange,
+  salvarNovoOrcamento,
+  atualizarOrcamentoExistente,
+  orcamentoSalvo,
+  isLoading: isLoadingExterno,
+  temAlteracoes,
 }: FormularioOrcamentoProps) {
   const [linhaAtiva, setLinhaAtiva] = useState<string | null>(null)
   const [editandoItem, setEditandoItem] = useState<string | null>(null)
@@ -458,6 +468,7 @@ export default function FormularioOrcamento({
   const [itemEmEdicao, setItemEmEdicao] = useState<ItemOrcamento | null>(null)
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const loading = isLoadingExterno ?? isLoading // Usar loading externo se disponível
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
   // Novo estado para controlar se o formulário de novo item está expandido
@@ -1946,6 +1957,25 @@ export default function FormularioOrcamento({
                 </table>
               </div>
             </div>
+            
+            {/* Botão de salvar */}
+            {(salvarNovoOrcamento || atualizarOrcamentoExistente) && (
+              <div className="mt-4 flex justify-end border-t pt-4">
+                <Button
+                  onClick={orcamentoSalvo ? atualizarOrcamentoExistente : salvarNovoOrcamento}
+                  disabled={loading || !orcamento.cliente}
+                  className="min-w-[120px]"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {orcamentoSalvo ? "Atualizar" : "Salvar"} Orçamento
+                </Button>
+              </div>
+            )}
+            
             </CardContent>
           </Card>
         </div>
