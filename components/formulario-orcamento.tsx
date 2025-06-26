@@ -1279,16 +1279,16 @@ export default function FormularioOrcamento({
 
             <div className="border rounded-md overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px]">
+                <table className="w-full min-w-[800px] table-fixed">
                   <thead className="bg-primary text-white">
                   <tr>
-                  <th className="p-1 md:p-2 w-[5%] rounded-tl-md"></th>
-                  <th className="text-left p-1 md:p-2 w-[30%] text-xs md:text-sm">Produto</th>
-                  <th className="text-center p-1 md:p-2 w-[15%] text-xs md:text-sm">Tamanhos</th>
-                  <th className="text-center p-1 md:p-2 w-[12%] text-xs md:text-sm">Valor Unit.</th>
-                  <th className="text-center p-1 md:p-2 w-[8%] text-xs md:text-sm">Qtd.</th>
-                  <th className="text-right p-1 md:p-2 w-[15%] text-xs md:text-sm">Total</th>
-                  <th className="p-1 md:p-2 w-[15%] rounded-tr-md text-center text-xs md:text-sm">Ações</th>
+                  <th className="p-1 md:p-2 w-[50px] rounded-tl-md"></th>
+                  <th className="text-left p-1 md:p-2 w-[250px] text-xs md:text-sm">Produto</th>
+                  <th className="text-center p-1 md:p-2 w-[150px] text-xs md:text-sm">Tamanhos</th>
+                  <th className="text-center p-1 md:p-2 w-[100px] text-xs md:text-sm">Valor Unit.</th>
+                  <th className="text-center p-1 md:p-2 w-[80px] text-xs md:text-sm">Qtd.</th>
+                  <th className="text-right p-1 md:p-2 w-[120px] text-xs md:text-sm">Total</th>
+                  <th className="p-1 md:p-2 w-[120px] rounded-tr-md text-center text-xs md:text-sm">Ações</th>
                   </tr>
                   </thead>
                   <tbody>
@@ -1697,6 +1697,13 @@ export default function FormularioOrcamento({
                             <Plus className="h-4 w-4 mr-2" />
                             Adicionar item...
                           </Button>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {linhaAtiva === "novo" && (
+                          <div className="text-center text-gray-500 text-sm">
+                            {novoItemExpandido && tipoTamanhoSelecionado ? "Ver abaixo" : "-"}
+                          </div>
                         )}
                       </td>
                       <td className="p-3">
