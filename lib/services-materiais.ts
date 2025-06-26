@@ -184,9 +184,6 @@ export const tipoTamanhoService = {
     try {
       const { error } = await supabase.from("tipos_tamanho").select("id").limit(1)
       tabelaExiste = !error
-      if (tabelaExiste) {
-        console.log("✅ Tabela tipos_tamanho encontrada e funcionando!")
-      }
       return tabelaExiste
     } catch (error) {
       tabelaExiste = false

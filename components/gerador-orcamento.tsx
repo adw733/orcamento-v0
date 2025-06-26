@@ -225,19 +225,14 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       let maiorNumero = 139 // Valor padrão antes do 0140
 
       if (todosOrcamentos && todosOrcamentos.length > 0) {
-        console.log("Orçamentos encontrados:", todosOrcamentos.length)
-        
         todosOrcamentos.forEach((orc) => {
           if (orc.numero) {
             // Extrair apenas os dígitos do início do número (formato "XXXX - ..." ou apenas "XXXX")
             const numeroStr = orc.numero.split(" - ")[0].replace(/\D/g, "")
             const numero = Number.parseInt(numeroStr, 10)
 
-            console.log(`Analisando número: ${orc.numero} -> ${numeroStr} -> ${numero}`)
-
             if (!isNaN(numero) && numero > maiorNumero) {
               maiorNumero = numero
-              console.log(`Novo maior número encontrado: ${maiorNumero}`)
             }
           }
         })
@@ -260,8 +255,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         )
         if (!novoNumeroExiste) break
       }
-      
-      console.log(`Próximo número a ser usado: ${proximoNumero}`)
       
       return proximoNumero
     } catch (error) {
@@ -467,21 +460,21 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
         if (itemError) throw itemError
 
-        // Salvar estampas do item
-        if (item.estampas && item.estampas.length > 0) {
-          for (const estampa of item.estampas) {
-            const { error: estampaError } = await supabase
-              .from("estampas")
-              .insert({
-                item_orcamento_id: itemData.id,
-                posicao: estampa.posicao,
-                tipo: estampa.tipo,
-                largura: estampa.largura,
-              })
+        // Salvar estampas do item (comentado temporariamente devido a erro 400)
+        // if (item.estampas && item.estampas.length > 0) {
+        //   for (const estampa of item.estampas) {
+        //     const { error: estampaError } = await supabase
+        //       .from("estampas")
+        //       .insert({
+        //         item_orcamento_id: itemData.id,
+        //         posicao: estampa.posicao,
+        //         tipo: estampa.tipo,
+        //         largura: estampa.largura,
+        //       })
 
-            if (estampaError) throw estampaError
-          }
-        }
+        //     if (estampaError) throw estampaError
+        //   }
+        // }
       }
 
       setOrcamentoSalvo(orcamentoData.id)
@@ -1087,8 +1080,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   // Inicializar o aplicativo - VERSÃO CORRIGIDA
   useEffect(() => {
-    console.log("Inicializando com aba ativa:", abaAtivaInicial)
-
     // Carregar dados iniciais
     const carregarDadosIniciais = async () => {
       try {
@@ -1100,7 +1091,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         // Não sobrescrever o número de orçamentos já carregados
         if (!orcamentoSalvo && !orcamentoJaCarregado && orcamento.numero === "Carregando...") {
           const proximoNumero = await obterProximoNumeroOrcamento()
-          console.log('Inicializando NOVO orçamento com número:', proximoNumero)
           const novoOrcamento = {
             ...orcamento,
             numero: proximoNumero // Usar apenas o número base
@@ -1128,11 +1118,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     if (typeof window !== "undefined") {
       const hash = window.location.hash ? window.location.hash.substring(1) : ""
       if (hash) {
-        console.log("Hash encontrado na URL:", hash)
         setAbaAtiva(hash)
       } else {
         // Se não houver hash, usar o valor inicial
-        console.log("Nenhum hash encontrado, usando valor inicial:", abaAtivaInicial)
         if (abaAtivaInicial && abaAtivaInicial !== "orcamento") {
           window.location.hash = abaAtivaInicial
         }
