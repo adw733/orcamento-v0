@@ -2025,6 +2025,18 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         }
       } catch (error) {
         console.error("Erro ao atualizar item:", error)
+        
+        // Log mais detalhado do erro
+        if (error && typeof error === 'object') {
+          console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
+        }
+        
+        // Mostrar feedback de erro para o usuário
+        setFeedbackSalvamento({
+          visivel: true,
+          sucesso: false,
+          mensagem: `Erro ao atualizar item: ${error instanceof Error ? error.message : "Tente novamente"}`,
+        })
       } finally {
         setIsLoading(false)
       }
