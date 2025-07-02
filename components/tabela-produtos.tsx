@@ -66,6 +66,7 @@ export default function TabelaProdutos() {
   const [filtroDialogAberto, setFiltroDialogAberto] = useState(false)
   const [produtosSelecionados, setProdutosSelecionados] = useState<Set<string>>(new Set())
   const [clientesSelecionados, setClientesSelecionados] = useState<Set<string>>(new Set())
+  const [contatosSelecionados, setContatosSelecionados] = useState<Set<string>>(new Set())
   const [coresSelecionadas, setCoresSelecionadas] = useState<Set<string>>(new Set())
   const [tamanhosSelecionados, setTamanhosSelecionados] = useState<Set<string>>(new Set())
   const [filtrosAtivos, setFiltrosAtivos] = useState(false)
@@ -117,13 +118,14 @@ export default function TabelaProdutos() {
   // Atualizar filtros quando os produtos carregarem
   useEffect(() => {
     if (produtos.length > 0) {
-      const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+      const { produtosUnicos, clientesUnicos, contatosUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
       
       // Marcar todos os itens por padrão na primeira carga
       if (produtosSelecionados.size === 0 && clientesSelecionados.size === 0 && 
-          coresSelecionadas.size === 0 && tamanhosSelecionados.size === 0) {
+          contatosSelecionados.size === 0 && coresSelecionadas.size === 0 && tamanhosSelecionados.size === 0) {
         setProdutosSelecionados(new Set(produtosUnicos))
         setClientesSelecionados(new Set(clientesUnicos))
+        setContatosSelecionados(new Set(contatosUnicos))
         setCoresSelecionadas(new Set(coresUnicas))
         setTamanhosSelecionados(new Set(tamanhosUnicos))
       }
@@ -132,7 +134,7 @@ export default function TabelaProdutos() {
 
   useEffect(() => {
     filtrarProdutos()
-  }, [produtos, searchTerm, statusFilter, ordenacao, modoVisualizacao, produtosSelecionados, clientesSelecionados, coresSelecionadas, tamanhosSelecionados])
+  }, [produtos, searchTerm, statusFilter, ordenacao, modoVisualizacao, produtosSelecionados, clientesSelecionados, contatosSelecionados, coresSelecionadas, tamanhosSelecionados])
 
   const carregarProdutos = async () => {
     try {
@@ -297,6 +299,7 @@ export default function TabelaProdutos() {
         (produto) =>
           produto.orcamentoNumero.toLowerCase().includes(termLower) ||
           produto.clienteNome.toLowerCase().includes(termLower) ||
+          produto.nomeContato.toLowerCase().includes(termLower) ||
           produto.produtoNome.toLowerCase().includes(termLower) ||
           produto.cor.toLowerCase().includes(termLower) ||
           produto.tamanho.toLowerCase().includes(termLower) ||
@@ -315,7 +318,7 @@ export default function TabelaProdutos() {
     }
 
     // Aplicar filtros avançados apenas se nem todos os itens estão selecionados
-    const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+    const { produtosUnicos, clientesUnicos, contatosUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
     
     if (produtosSelecionados.size > 0 && produtosSelecionados.size < produtosUnicos.length) {
       resultado = resultado.filter(produto => produtosSelecionados.has(produto.produtoNome))
@@ -323,6 +326,10 @@ export default function TabelaProdutos() {
     
     if (clientesSelecionados.size > 0 && clientesSelecionados.size < clientesUnicos.length) {
       resultado = resultado.filter(produto => clientesSelecionados.has(produto.clienteNome))
+    }
+    
+    if (contatosSelecionados.size > 0 && contatosSelecionados.size < contatosUnicos.length) {
+      resultado = resultado.filter(produto => contatosSelecionados.has(produto.nomeContato))
     }
     
     if (coresSelecionadas.size > 0 && coresSelecionadas.size < coresUnicas.length) {
@@ -435,19 +442,21 @@ export default function TabelaProdutos() {
   const obterOpcoesFiltro = () => {
     const produtosUnicos = [...new Set(produtos.map(p => p.produtoNome))].sort()
     const clientesUnicos = [...new Set(produtos.map(p => p.clienteNome))].sort()
+    const contatosUnicos = [...new Set(produtos.map(p => p.nomeContato).filter(contato => contato && contato.trim() !== ''))].sort()
     const coresUnicas = [...new Set(produtos.map(p => p.cor))].sort()
     const tamanhosUnicos = [...new Set(produtos.map(p => p.tamanho))].sort((a, b) => ordenarTamanhos(a, b))
     
-    return { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos }
+    return { produtosUnicos, clientesUnicos, contatosUnicos, coresUnicas, tamanhosUnicos }
   }
 
   // Função para aplicar filtros selecionados
   const aplicarFiltros = () => {
-    const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+    const { produtosUnicos, clientesUnicos, contatosUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
     
     // Verificar se há filtros ativos (nem todos estão selecionados)
     const temFiltros = produtosSelecionados.size < produtosUnicos.length || 
                      clientesSelecionados.size < clientesUnicos.length || 
+                     contatosSelecionados.size < contatosUnicos.length ||
                      coresSelecionadas.size < coresUnicas.length || 
                      tamanhosSelecionados.size < tamanhosUnicos.length
     
@@ -457,9 +466,10 @@ export default function TabelaProdutos() {
 
   // Função para limpar filtros (marcar todos)
   const limparFiltros = () => {
-    const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+    const { produtosUnicos, clientesUnicos, contatosUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
     setProdutosSelecionados(new Set(produtosUnicos))
     setClientesSelecionados(new Set(clientesUnicos))
+    setContatosSelecionados(new Set(contatosUnicos))
     setCoresSelecionadas(new Set(coresUnicas))
     setTamanhosSelecionados(new Set(tamanhosUnicos))
     setFiltrosAtivos(false)
@@ -1109,7 +1119,7 @@ export default function TabelaProdutos() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Buscar por número, cliente, produto, cor, observação..."
+            placeholder="Buscar por número, cliente, contato, produto, cor, observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 w-full"
@@ -1157,10 +1167,10 @@ export default function TabelaProdutos() {
               </DialogHeader>
               
               {(() => {
-                const { produtosUnicos, clientesUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
+                const { produtosUnicos, clientesUnicos, contatosUnicos, coresUnicas, tamanhosUnicos } = obterOpcoesFiltro()
                 
                 return (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Filtro de Produtos */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -1239,6 +1249,48 @@ export default function TabelaProdutos() {
                               className="text-xs cursor-pointer flex-1"
                             >
                               {cliente}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Filtro de Contatos */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Contatos</Label>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setContatosSelecionados(new Set(contatosUnicos))}
+                            className="text-xs h-6 px-2"
+                          >
+                            Todos
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setContatosSelecionados(new Set())}
+                            className="text-xs h-6 px-2"
+                          >
+                            Nenhum
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                        {contatosUnicos.map(contato => (
+                          <div key={contato} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`contato-${contato}`}
+                              checked={contatosSelecionados.has(contato)}
+                              onCheckedChange={() => alternarSelecao(contato, contatosSelecionados, setContatosSelecionados)}
+                            />
+                            <Label 
+                              htmlFor={`contato-${contato}`} 
+                              className="text-xs cursor-pointer flex-1"
+                            >
+                              {contato}
                             </Label>
                           </div>
                         ))}
