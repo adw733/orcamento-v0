@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler, Save } from "lucide-react"
+import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler, Save, Search } from "lucide-react"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
@@ -18,6 +18,126 @@ import { Separator } from "@/components/ui/separator"
 
 // Importar serviços de materiais
 import { type TipoTamanho, tipoTamanhoService } from "@/lib/services-materiais"
+
+// Componente SearchableSelect para dropdown com pesquisa
+interface SearchableSelectProps {
+  items: { id: string; nome: string }[]
+  value: string
+  onValueChange: (value: string) => void
+  placeholder?: string
+  searchPlaceholder?: string
+  disabled?: boolean
+  className?: string
+}
+
+const SearchableSelect = ({ 
+  items, 
+  value, 
+  onValueChange, 
+  placeholder = "Selecione...", 
+  searchPlaceholder = "Digite para pesquisar...",
+  disabled = false,
+  className = ""
+}: SearchableSelectProps) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Filtrar itens baseado no termo de pesquisa
+  const filteredItems = items.filter(item =>
+    item.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Fechar dropdown quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+        setSearchTerm("")
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Focar no campo de pesquisa quando abrir
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 100)
+    }
+  }, [isOpen])
+
+  const selectedItem = items.find(item => item.id === value)
+
+  const handleSelect = (itemId: string) => {
+    onValueChange(itemId)
+    setIsOpen(false)
+    setSearchTerm("")
+  }
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full h-9 px-3 py-2 text-left bg-white border border-gray-300 rounded-md focus:border-primary focus:ring-1 focus:ring-primary flex items-center justify-between ${
+          disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:border-gray-400'
+        }`}
+      >
+        <span className={`truncate ${selectedItem ? 'text-black' : 'text-gray-500'}`}>
+          {selectedItem ? selectedItem.nome : placeholder}
+        </span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+          {/* Campo de pesquisa */}
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          {/* Lista de itens */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredItems.length === 0 ? (
+              <div className="p-3 text-sm text-gray-500 text-center">
+                {searchTerm ? 'Nenhum produto encontrado' : 'Nenhum produto disponível'}
+              </div>
+            ) : (
+              filteredItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleSelect(item.id)}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-primary/10 focus:bg-primary/10 focus:outline-none ${
+                    value === item.id ? 'bg-primary/20 font-medium' : ''
+                  }`}
+                >
+                  {item.nome}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -1675,18 +1795,15 @@ export default function FormularioOrcamento({
                       <td className="p-3"></td>
                       <td className="p-3" onClick={() => setLinhaAtiva("novo")}>
                         {linhaAtiva === "novo" ? (
-                          <Select value={novoItem.produtoId || ""} onValueChange={handleProdutoChange}>
-                            <SelectTrigger className="h-9 border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary">
-                              <SelectValue placeholder="Selecione um produto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {produtos.map((produto) => (
-                                <SelectItem key={produto.id} value={produto.id}>
-                                  {produto.nome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SearchableSelect
+                            items={produtos}
+                            value={novoItem.produtoId || ""}
+                            onValueChange={handleProdutoChange}
+                            placeholder="Selecione um produto"
+                            searchPlaceholder="Digite para pesquisar produtos..."
+                            disabled={isLoading}
+                            className="w-full"
+                          />
                         ) : (
                           <Button
                             variant="ghost"
