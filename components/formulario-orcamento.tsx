@@ -41,15 +41,39 @@ const SearchableSelect = ({
 }: SearchableSelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Função para calcular posição do dropdown
+  const updateDropdownPosition = () => {
+    if (dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const dropdownMaxHeight = viewportHeight * 0.7 // 70vh em pixels
+      
+      let top = rect.bottom + window.scrollY + 4
+      
+      // Verificar se o dropdown vai sair da tela por baixo
+      if (rect.bottom + dropdownMaxHeight > viewportHeight) {
+        // Posicionar acima do elemento se não caber embaixo
+        top = rect.top + window.scrollY - dropdownMaxHeight - 4
+      }
+      
+      setDropdownPosition({
+        top: Math.max(10, top), // Mínimo 10px do topo
+        left: rect.left + window.scrollX,
+        width: rect.width
+      })
+    }
+  }
 
   // Filtrar itens baseado no termo de pesquisa
   const filteredItems = items.filter(item =>
     item.nome.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Fechar dropdown quando clicar fora
+  // Fechar dropdown quando clicar fora e atualizar posição no scroll/resize
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -58,9 +82,28 @@ const SearchableSelect = ({
       }
     }
 
+    const handleScroll = () => {
+      if (isOpen) {
+        updateDropdownPosition()
+      }
+    }
+
+    const handleResize = () => {
+      if (isOpen) {
+        updateDropdownPosition()
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleResize)
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isOpen])
 
   // Focar no campo de pesquisa quando abrir
   useEffect(() => {
@@ -70,6 +113,15 @@ const SearchableSelect = ({
       }, 100)
     }
   }, [isOpen])
+
+  const handleToggle = () => {
+    if (!disabled) {
+      if (!isOpen) {
+        updateDropdownPosition()
+      }
+      setIsOpen(!isOpen)
+    }
+  }
 
   const selectedItem = items.find(item => item.id === value)
 
@@ -83,7 +135,7 @@ const SearchableSelect = ({
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleToggle}
         disabled={disabled}
         className={`w-full h-9 px-3 py-2 text-left bg-white border border-gray-300 rounded-md focus:border-primary focus:ring-1 focus:ring-primary flex items-center justify-between ${
           disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:border-gray-400'
@@ -96,7 +148,15 @@ const SearchableSelect = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+        <div 
+          className="fixed z-[99999] bg-white border border-gray-300 rounded-md shadow-2xl max-h-[70vh] overflow-hidden" 
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+            minWidth: '300px'
+          }}
+        >
           {/* Campo de pesquisa */}
           <div className="p-2 border-b border-gray-200">
             <div className="relative">
@@ -113,7 +173,7 @@ const SearchableSelect = ({
           </div>
 
           {/* Lista de itens */}
-          <div className="max-h-48 overflow-y-auto">
+          <div className="max-h-[65vh] overflow-y-auto">
             {filteredItems.length === 0 ? (
               <div className="p-3 text-sm text-gray-500 text-center">
                 {searchTerm ? 'Nenhum produto encontrado' : 'Nenhum produto disponível'}
@@ -1156,8 +1216,8 @@ export default function FormularioOrcamento({
         </Card>
       )}
 
-      {/* Grid principal com duas colunas - esquerda para dados do orçamento e cliente (1/3), direita para itens (2/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {/* Grid principal - mudança para mais espaço aos itens */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 min-h-screen">
         
         {/* Coluna da esquerda - Dados do orçamento, cliente e condições */}
         <div className="lg:col-span-1 space-y-3">
@@ -1380,9 +1440,9 @@ export default function FormularioOrcamento({
           </Card>
         </div>
 
-        {/* Coluna da direita - Itens do orçamento */}
-        <div className="lg:col-span-2">
-          <Card className="border-primary/20 shadow-sm">
+        {/* Coluna da direita - Itens do orçamento - Agora ocupa 3/4 da tela */}
+        <div className="lg:col-span-3">
+          <Card className="border-primary/20 shadow-sm min-h-[85vh]">
             <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b py-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1397,8 +1457,8 @@ export default function FormularioOrcamento({
             </CardHeader>
             <CardContent className="p-0">
 
-            <div className="border rounded-md overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
+            <div className="border rounded-md overflow-hidden shadow-sm min-h-[75vh]">
+              <div className="overflow-x-auto h-full max-h-[75vh]">
                 <table className="w-full min-w-[800px] table-fixed">
                   <thead className="bg-primary text-white">
                   <tr>
@@ -1411,7 +1471,7 @@ export default function FormularioOrcamento({
                   <th className="p-1 md:p-2 w-[120px] rounded-tr-md text-center text-xs md:text-sm">Ações</th>
                   </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="min-h-[50vh]">
                     {orcamento.itens.map((item, index) => (
                       <React.Fragment key={item.id}>
                         {dragOverItemId === item.id && (
