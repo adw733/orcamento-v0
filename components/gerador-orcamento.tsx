@@ -599,6 +599,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   posicao: estampa.posicao || null,
                   tipo: estampa.tipo || null,
                   largura: estampa.largura || null,
+                  comprimento: estampa.comprimento || null,
                 })
 
               if (estampaError) {
@@ -855,6 +856,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     posicao: estampa.posicao || undefined,
                     tipo: estampa.tipo || undefined,
                     largura: estampa.largura || undefined,
+                    comprimento: estampa.comprimento || undefined,
                   }))
                 : []
 
@@ -1668,6 +1670,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao,
               tipo: estampa.tipo,
               largura: estampa.largura,
+              comprimento: estampa.comprimento,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -1912,6 +1915,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao || null,
               tipo: estampa.tipo || null,
               largura: estampa.largura || null,
+              comprimento: estampa.comprimento || null,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -2013,6 +2017,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao,
               tipo: estampa.tipo,
               largura: estampa.largura,
+              comprimento: estampa.comprimento,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -2135,6 +2140,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     posicao: estampa.posicao || undefined,
                     tipo: estampa.tipo || undefined,
                     largura: estampa.largura || undefined,
+                    comprimento: estampa.comprimento || undefined,
                   }))
                 : []
 

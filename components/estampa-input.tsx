@@ -32,6 +32,7 @@ export const EstampaInput = ({ estampas = [], onChange }: EstampaInputProps) => 
       posicao: undefined,
       tipo: undefined,
       largura: undefined,
+      comprimento: undefined,
     }
     onChange([...estampas, novaEstampa])
   }
@@ -108,13 +109,22 @@ export const EstampaInput = ({ estampas = [], onChange }: EstampaInputProps) => 
               </Select>
             </div>
 
-            <div>
+            <div className="flex gap-1">
               <Input
                 type="number"
                 value={estampa.largura || ""}
                 onChange={(e) => atualizarEstampa(estampa.id!, "largura", Number(e.target.value))}
                 className="h-6 text-xs border-gray-300 focus:border-primary"
-                placeholder="Largura (cm)"
+                placeholder="Larg. (cm)"
+                min="0"
+                step="0.5"
+              />
+              <Input
+                type="number"
+                value={estampa.comprimento || ""}
+                onChange={(e) => atualizarEstampa(estampa.id!, "comprimento", Number(e.target.value))}
+                className="h-6 text-xs border-gray-300 focus:border-primary"
+                placeholder="Comp. (cm)"
                 min="0"
                 step="0.5"
               />

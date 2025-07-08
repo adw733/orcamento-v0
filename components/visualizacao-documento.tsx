@@ -1289,6 +1289,7 @@ export default function VisualizacaoDocumento({
                                   <div className="arte-detalhes">
                                     {estampa.tipo}
                                     {estampa.largura ? `, ${estampa.largura} cm` : ""}
+                                    {estampa.comprimento ? ` x ${estampa.comprimento} cm` : ""}
                                   </div>
                                 </div>
                               </div>

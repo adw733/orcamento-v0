@@ -21,6 +21,7 @@ export type Estampa = {
   posicao?: string
   tipo?: string
   largura?: number
+  comprimento?: number
 }
 
 // Remover o campo contato da interface Cliente
