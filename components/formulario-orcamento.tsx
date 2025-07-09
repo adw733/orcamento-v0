@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler, Save, Search } from "lucide-react"
+import { Plus, Trash2, Edit, Check, X, ImageIcon, DollarSign, Loader2, ChevronUp, ChevronDown, User, Building2, FileText, CreditCard, Calendar, Hash, Palette, Shirt, Ruler, Save, Search, Copy } from "lucide-react"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
@@ -215,6 +215,7 @@ interface FormularioOrcamentoProps {
   atualizarOrcamento: (orcamento: Partial<Orcamento>) => void
   adicionarItem: (item: ItemOrcamento) => void
   removerItem: (id: string) => void
+  duplicarItem?: (id: string) => void
   atualizarItem: (id: string, item: Partial<ItemOrcamento>) => void
   calcularTotal: () => number
   handleClienteChange: (clienteId: string) => void
@@ -626,6 +627,7 @@ export default function FormularioOrcamento({
   atualizarOrcamento,
   adicionarItem,
   removerItem,
+  duplicarItem,
   atualizarItem,
   calcularTotal,
   handleClienteChange,
@@ -1651,6 +1653,18 @@ export default function FormularioOrcamento({
                                   >
                                     <Edit className="h-3 w-3" />
                                   </Button>
+                                  {duplicarItem && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      onClick={() => duplicarItem(item.id)}
+                                      disabled={isLoading}
+                                      title="Duplicar item"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="icon"

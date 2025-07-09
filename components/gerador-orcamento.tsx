@@ -1670,7 +1670,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao,
               tipo: estampa.tipo,
               largura: estampa.largura,
-              comprimento: estampa.comprimento,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -1915,7 +1914,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao || null,
               tipo: estampa.tipo || null,
               largura: estampa.largura || null,
-              comprimento: estampa.comprimento || null,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -1971,6 +1969,115 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
+  const duplicarItem = async (id: string) => {
+    const itemOriginal = orcamento.itens.find((item) => item.id === id)
+    if (!itemOriginal) {
+      console.error("Item não encontrado para duplicação")
+      return
+    }
+
+    try {
+      // Criar uma cópia do item com novo ID
+      const itemDuplicado: ItemOrcamento = {
+        ...itemOriginal,
+        id: generateUUID(), // Novo ID único
+        // Duplicar estampas com novos IDs se existirem
+        estampas: itemOriginal.estampas?.map((estampa) => ({
+          ...estampa,
+          id: generateUUID(), // Novo ID único para cada estampa
+        })) || [],
+      }
+
+      // Adicionar o item duplicado à lista
+      const itensAtualizados = [...orcamento.itens, itemDuplicado]
+      setOrcamento({
+        ...orcamento,
+        itens: itensAtualizados,
+      })
+
+      // Salvar no Supabase se houver orçamento salvo
+      if (orcamentoSalvo) {
+        setIsLoading(true)
+
+        // Inserir o item duplicado no banco de dados
+        const { data: itemInserido, error: itemError } = await supabase
+          .from("itens_orcamento")
+          .insert({
+            id: itemDuplicado.id,
+            orcamento_id: orcamentoSalvo,
+            produto_id: itemDuplicado.produtoId,
+            quantidade: itemDuplicado.quantidade,
+            valor_unitario: itemDuplicado.valorUnitario,
+            tecido_nome: itemDuplicado.tecidoSelecionado?.nome,
+            tecido_composicao: itemDuplicado.tecidoSelecionado?.composicao,
+            cor_selecionada: itemDuplicado.corSelecionada,
+            tamanhos: itemDuplicado.tamanhos,
+            imagem: itemDuplicado.imagem,
+            observacao_comercial: itemDuplicado.observacaoComercial,
+            observacao_tecnica: itemDuplicado.observacaoTecnica,
+          })
+          .select()
+
+        if (itemError) throw itemError
+
+        // Inserir as estampas duplicadas se existirem
+        if (itemDuplicado.estampas && itemDuplicado.estampas.length > 0) {
+          try {
+            const estampasValidas = itemDuplicado.estampas.filter(estampa => 
+              estampa.id && 
+              (estampa.posicao || estampa.tipo || estampa.largura)
+            )
+
+            if (estampasValidas.length > 0) {
+              const estampasParaInserir = estampasValidas.map((estampa) => ({
+                id: estampa.id,
+                item_orcamento_id: itemDuplicado.id,
+                posicao: estampa.posicao || null,
+                tipo: estampa.tipo || null,
+                largura: estampa.largura ? Number(estampa.largura) : null,
+              }))
+
+              const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
+
+              if (estampasError) {
+                console.error("Erro ao inserir estampas duplicadas:", estampasError)
+                // Não interromper o processo por causa das estampas
+              }
+            }
+          } catch (estampaErr) {
+            console.error("Erro ao processar estampas duplicadas:", estampaErr)
+            // Continue mesmo se as estampas falharem
+          }
+        }
+
+        // Mostrar feedback de sucesso
+        setFeedbackSalvamento({
+          visivel: true,
+          sucesso: true,
+          mensagem: "Item duplicado com sucesso!",
+        })
+      } else {
+        // Mostrar feedback para item duplicado em orçamento não salvo
+        setFeedbackSalvamento({
+          visivel: true,
+          sucesso: true,
+          mensagem: "Item duplicado! Salve o orçamento para persistir as alterações.",
+        })
+      }
+    } catch (error) {
+      console.error("Erro ao duplicar item:", error)
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: false,
+        mensagem: `Erro ao duplicar item: ${error instanceof Error ? error.message : "Tente novamente"}`,
+      })
+    } finally {
+      if (orcamentoSalvo) {
+        setIsLoading(false)
+      }
+    }
+  }
+
   // Update the atualizarItem function to include both observation fields
   const atualizarItem = async (id: string, novoItem: Partial<ItemOrcamento>) => {
     const itensAtualizados = orcamento.itens.map((item) => (item.id === id ? { ...item, ...novoItem } : item))
@@ -2017,7 +2124,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao,
               tipo: estampa.tipo,
               largura: estampa.largura,
-              comprimento: estampa.comprimento,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -2140,7 +2246,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     posicao: estampa.posicao || undefined,
                     tipo: estampa.tipo || undefined,
                     largura: estampa.largura || undefined,
-                    comprimento: estampa.comprimento || undefined,
                   }))
                 : []
 
@@ -2791,6 +2896,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                           atualizarOrcamento={atualizarOrcamento}
                           adicionarItem={adicionarItem}
                           removerItem={removerItem}
+                          duplicarItem={duplicarItem}
                           atualizarItem={atualizarItem}
                           calcularTotal={calcularTotal}
                           handleClienteChange={handleClienteSelection}
@@ -2940,6 +3046,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                           atualizarOrcamento={atualizarOrcamento}
                           adicionarItem={adicionarItem}
                           removerItem={removerItem}
+                          duplicarItem={duplicarItem}
                           atualizarItem={atualizarItem}
                           calcularTotal={calcularTotal}
                           handleClienteSelection={handleClienteSelection}
