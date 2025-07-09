@@ -709,17 +709,19 @@ export default function TabelaProdutos() {
           page-break-after: auto;
         }
         th, td {
-          border: 0.5pt solid #ddd;
+          border: none;
           padding: 2mm 1mm;
           text-align: left;
           font-size: 8pt;
           overflow: hidden;
           white-space: nowrap;
           text-overflow: ellipsis;
+          border-bottom: 0.5pt solid #ccc;
         }
         th {
           background-color: #f0f0f0;
           font-weight: bold;
+          border-bottom: 2pt solid #666;
         }
         .coluna-produto {
           width: 25%;
@@ -741,13 +743,9 @@ export default function TabelaProdutos() {
           width: 35%; /* Aproximadamente 5cm */
         }
         .separador-grupo {
-          border-top: 4pt solid #666;
-          height: 4pt;
+          display: none;
         }
-        .separador-item {
-          border-top: 2pt solid #999;
-          height: 2pt;
-        }
+
         .cabecalho-grupo {
           background-color: #f5f5f5;
           font-weight: bold;
@@ -893,14 +891,12 @@ export default function TabelaProdutos() {
           // Se for um novo orçamento no modo produto, adicionar uma linha separadora antes
           if (isNovoOrcamentoNoProduto) {
             const separatorRow = document.createElement("tr")
-            separatorRow.className = "separador-item"
             const separatorCell = document.createElement("td")
             separatorCell.colSpan = modoVisualizacao === "orcamento" ? 5 : 6
             separatorCell.style.padding = "0"
-            separatorCell.style.height = "6px"
-            separatorCell.style.backgroundColor = "#f0f0f0"
+            separatorCell.style.height = "2px"
             separatorCell.style.borderTop = "2pt solid #666"
-            separatorCell.style.borderBottom = "1pt solid #999"
+            separatorCell.style.borderBottom = "none"
             separatorRow.appendChild(separatorCell)
             tbody.appendChild(separatorRow)
           }
@@ -989,6 +985,7 @@ export default function TabelaProdutos() {
         const totalRow = document.createElement("tr")
         totalRow.style.fontWeight = "bold"
         totalRow.style.backgroundColor = "#f0f0f0"
+        totalRow.style.borderTop = "2pt solid #666"
 
         if (modoVisualizacao === "orcamento") {
           const totalCell1 = document.createElement("td")
@@ -1613,17 +1610,8 @@ export default function TabelaProdutos() {
                       {/* Separador entre orçamentos diferentes ou produtos diferentes, dependendo do modo */}
                       {isNovoOrcamento(index) && index > 0 && (
                         <TableRow key={`separator-orcamento-${produto.id}-${index}`}>
-                          <TableCell colSpan={8} className="p-0 h-2 bg-gray-100">
-                            <div className="border-t-2 border-gray-200"></div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-
-                      {/* Separador entre produtos diferentes do mesmo orçamento ou orçamentos diferentes do mesmo produto */}
-                      {isNovoProduto(index) && index > 0 && !isNovoOrcamento(index) && (
-                        <TableRow key={`separator-produto-${produto.id}-${index}`}>
-                          <TableCell colSpan={8} className="p-0 h-0.5">
-                            <div className="border-t-2 border-gray-300"></div>
+                          <TableCell colSpan={8} className="p-0 h-1">
+                            <div className="border-t-2 border-gray-600"></div>
                           </TableCell>
                         </TableRow>
                       )}
@@ -1631,9 +1619,7 @@ export default function TabelaProdutos() {
                       {/* Linha do produto */}
                       <TableRow
                         key={produto.id}
-                        className={`border-t hover:bg-muted/50 ${
-                          isNovoOrcamento(index) ? "border-t-2 border-t-primary/20" : "border-t-gray-100"
-                        }`}
+                        className="hover:bg-muted/50 border-b border-gray-200"
                       >
                         {modoVisualizacao === "orcamento" ? (
                           // Células para modo orçamento (original)
