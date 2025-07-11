@@ -2094,44 +2094,96 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         const itemAtualizado = itensAtualizados.find((item) => item.id === id)
 
         if (itemAtualizado) {
-          // Atualizar o item
-          const { error } = await supabase
+          // Primeiro, verificar se o item existe no banco
+          const { data: itemExiste, error: checkError } = await supabase
             .from("itens_orcamento")
-            .update({
-              quantidade: itemAtualizado.quantidade,
-              valor_unitario: itemAtualizado.valorUnitario,
-              tecido_nome: itemAtualizado.tecidoSelecionado?.nome,
-              tecido_composicao: itemAtualizado.tecidoSelecionado?.composicao,
-              cor_selecionada: itemAtualizado.corSelecionada,
-              tamanhos: itemAtualizado.tamanhos,
-              imagem: itemAtualizado.imagem,
-              observacao_comercial: itemAtualizado.observacaoComercial,
-              observacao_tecnica: itemAtualizado.observacaoTecnica,
-            })
+            .select("id")
             .eq("id", id)
+            .maybeSingle()
 
-          if (error) throw error
+          if (checkError) {
+            console.error("Erro ao verificar item no banco:", checkError)
+            throw new Error(`Erro ao verificar item: ${checkError.message}`)
+          }
+
+          if (!itemExiste) {
+            // Se o item não existe, inserir como novo
+            console.log("Item não encontrado no banco, inserindo como novo:", id)
+            const { error: insertError } = await supabase
+              .from("itens_orcamento")
+              .insert({
+                id: id,
+                orcamento_id: orcamento.id,
+                codigo: itemAtualizado.codigo,
+                descricao: itemAtualizado.descricao,
+                quantidade: itemAtualizado.quantidade,
+                valor_unitario: itemAtualizado.valorUnitario,
+                tecido_nome: itemAtualizado.tecidoSelecionado?.nome,
+                tecido_composicao: itemAtualizado.tecidoSelecionado?.composicao,
+                cor_selecionada: itemAtualizado.corSelecionada,
+                tamanhos: itemAtualizado.tamanhos,
+                imagem: itemAtualizado.imagem,
+                observacao_comercial: itemAtualizado.observacaoComercial,
+                observacao_tecnica: itemAtualizado.observacaoTecnica,
+              })
+
+            if (insertError) throw insertError
+          } else {
+            // Se o item existe, atualizar
+            const { error } = await supabase
+              .from("itens_orcamento")
+              .update({
+                quantidade: itemAtualizado.quantidade,
+                valor_unitario: itemAtualizado.valorUnitario,
+                tecido_nome: itemAtualizado.tecidoSelecionado?.nome,
+                tecido_composicao: itemAtualizado.tecidoSelecionado?.composicao,
+                cor_selecionada: itemAtualizado.corSelecionada,
+                tamanhos: itemAtualizado.tamanhos,
+                imagem: itemAtualizado.imagem,
+                observacao_comercial: itemAtualizado.observacaoComercial,
+                observacao_tecnica: itemAtualizado.observacaoTecnica,
+              })
+              .eq("id", id)
+
+            if (error) throw error
+          }
 
           // Atualizar as estampas do item
           if (itemAtualizado.estampas && itemAtualizado.estampas.length > 0) {
-            // Primeiro, excluir todas as estampas existentes
-            await supabase.from("estampas").delete().eq("item_orcamento_id", id)
+            try {
+              // Primeiro, excluir todas as estampas existentes
+              await supabase.from("estampas").delete().eq("item_orcamento_id", id)
 
-            // Em seguida, inserir as novas estampas com novos IDs
-            const estampasParaInserir = itemAtualizado.estampas.map((estampa) => ({
-              id: generateUUID(), // Sempre gerar um novo ID para evitar conflitos
-              item_orcamento_id: id,
-              posicao: estampa.posicao,
-              tipo: estampa.tipo,
-              largura: estampa.largura,
-            }))
+              // Em seguida, inserir as novas estampas com novos IDs
+              const estampasParaInserir = itemAtualizado.estampas.map((estampa) => ({
+                id: generateUUID(), // Sempre gerar um novo ID para evitar conflitos
+                item_orcamento_id: id,
+                posicao: estampa.posicao,
+                tipo: estampa.tipo,
+                largura: estampa.largura,
+                comprimento: estampa.comprimento,
+              }))
 
-            const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
+              const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
 
-            if (estampasError) throw estampasError
+              if (estampasError) {
+                console.error("Erro ao inserir estampas:", estampasError)
+                console.error("Estampas que tentaram ser inseridas:", estampasParaInserir)
+                console.error("ID do item:", id)
+                // Não lançar o erro para não interromper a atualização do item
+                // throw estampasError
+              }
+            } catch (estampaErr) {
+              console.error("Erro ao processar estampas:", estampaErr)
+              // Continuar mesmo se as estampas falharem
+            }
           } else {
             // Se não houver estampas, excluir todas as existentes
-            await supabase.from("estampas").delete().eq("item_orcamento_id", id)
+            try {
+              await supabase.from("estampas").delete().eq("item_orcamento_id", id)
+            } catch (deleteErr) {
+              console.error("Erro ao deletar estampas:", deleteErr)
+            }
           }
         }
       } catch (error) {

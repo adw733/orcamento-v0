@@ -1719,8 +1719,8 @@ export default function FormularioOrcamento({
                                             <SelectValue placeholder="Selecione a cor" />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            {produtoSelecionado.cores.map((cor) => (
-                                              <SelectItem key={cor} value={cor}>
+                                            {produtoSelecionado.cores.map((cor, index) => (
+                                              <SelectItem key={`${cor}-${index}`} value={cor}>
                                                 {cor}
                                               </SelectItem>
                                             ))}
@@ -1993,8 +1993,8 @@ export default function FormularioOrcamento({
                                         <SelectValue placeholder="Selecione a cor" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {produtoSelecionado.cores.map((cor) => (
-                                          <SelectItem key={cor} value={cor}>
+                                        {produtoSelecionado.cores.map((cor, index) => (
+                                          <SelectItem key={`${cor}-${index}`} value={cor}>
                                             {cor}
                                           </SelectItem>
                                         ))}
