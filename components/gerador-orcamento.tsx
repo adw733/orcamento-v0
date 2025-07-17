@@ -93,6 +93,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const documentoRef = useRef<HTMLDivElement>(null)
   const orcamentoRef = useRef<HTMLDivElement>(null)
   const fichasTecnicasRef = useRef<HTMLDivElement[]>([])
+  
+  // Estado para controlar o loading do PDF profissional
+  const [gerandoPDFProfissional, setGerandoPDFProfissional] = useState(false)
 
   const recarregarOrcamentosRef = useRef<(() => Promise<void>) | null>(null)
   // Adicionar após a declaração de recarregarOrcamentosRef
@@ -260,6 +263,205 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     } catch (error) {
       console.error("Erro ao obter próximo número de orçamento:", error)
       return "0140"
+    }
+  }
+
+  // Função para exportar PDF usando html2canvas (mais fiel à visualização)
+  const exportarPDFCanvas = async () => {
+    if (!documentoRef.current || !orcamento.numero) {
+      console.error('Referência do documento não encontrada ou orçamento sem número')
+      return
+    }
+
+    try {
+      setGerandoPDFProfissional(true)
+
+      // Importar as bibliotecas dinamicamente
+      const html2canvas = (await import('html2canvas')).default
+      const jsPDF = (await import('jspdf')).jsPDF
+
+      const elemento = documentoRef.current
+
+      // Configurar html2canvas para capturar com largura A4
+      const canvas = await html2canvas(elemento, {
+        scale: 2, // Alta resolução
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        width: elemento.scrollWidth,
+        height: elemento.scrollHeight,
+        logging: false
+      })
+
+      // Converter canvas para imagem
+      const imgData = canvas.toDataURL('image/png', 1.0)
+
+      // Dimensões A4 em mm: 210 x 297
+      // Converter para pontos (1mm = 2.834645669 pt)
+      const a4Width = 210 * 2.834645669  // 595.28 pt
+      const a4Height = 297 * 2.834645669 // 841.89 pt
+      
+      // Margens em pontos (10mm = 28.35pt de cada lado)
+      const margin = 28.35
+      const usableWidth = a4Width - (margin * 2)
+      const usableHeight = a4Height - (margin * 2)
+
+      // Calcular dimensões da imagem mantendo proporção
+      const imgWidthPx = canvas.width
+      const imgHeightPx = canvas.height
+      
+      // Calcular escala para ajustar à largura utilizável
+      const scaleToFit = usableWidth / imgWidthPx
+      const finalWidth = imgWidthPx * scaleToFit
+      const finalHeight = imgHeightPx * scaleToFit
+
+      // Criar PDF
+      const pdf = new jsPDF('portrait', 'pt', 'a4')
+      
+      // Se a altura da imagem for maior que uma página
+      if (finalHeight > usableHeight) {
+        let yPosition = 0
+        let pageNumber = 1
+        
+        while (yPosition < finalHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage()
+          }
+          
+          // Calcular quanto da imagem cabe nesta página
+          const remainingHeight = finalHeight - yPosition
+          const heightForThisPage = Math.min(usableHeight, remainingHeight)
+          
+          // Criar um canvas temporário para esta seção
+          const pageCanvas = document.createElement('canvas')
+          const pageCtx = pageCanvas.getContext('2d')
+          
+          // Configurar dimensões do canvas da página
+          const scaleFactor = 2 // Mesma escala do html2canvas
+          pageCanvas.width = finalWidth * scaleFactor
+          pageCanvas.height = heightForThisPage * scaleFactor
+          
+          // Desenhar a seção correspondente da imagem original
+          pageCtx.drawImage(
+            canvas,
+            0, 
+            (yPosition / scaleToFit) * scaleFactor, // posição Y na imagem original
+            imgWidthPx * scaleFactor, 
+            (heightForThisPage / scaleToFit) * scaleFactor, // altura na imagem original
+            0, 
+            0, 
+            pageCanvas.width, 
+            pageCanvas.height
+          )
+          
+          // Converter para imagem e adicionar ao PDF
+          const pageImgData = pageCanvas.toDataURL('image/png', 1.0)
+          pdf.addImage(
+            pageImgData,
+            'PNG',
+            margin,
+            margin,
+            finalWidth,
+            heightForThisPage
+          )
+          
+          yPosition += usableHeight
+          pageNumber++
+        }
+      } else {
+        // Imagem cabe em uma página - centralizar verticalmente
+        const yOffset = margin + (usableHeight - finalHeight) / 2
+        pdf.addImage(
+          imgData,
+          'PNG',
+          margin,
+          yOffset,
+          finalWidth,
+          finalHeight
+        )
+      }
+
+      // Baixar o PDF
+      pdf.save(`orcamento-${orcamento.numero}.pdf`)
+
+      // Mostrar feedback de sucesso
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: true,
+        mensagem: `PDF A4 gerado com sucesso! Arquivo: orcamento-${orcamento.numero}.pdf`,
+      })
+
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: false,
+        mensagem: `Erro ao gerar PDF: ${error instanceof Error ? error.message : 'Tente novamente'}`,
+      })
+    } finally {
+      setGerandoPDFProfissional(false)
+    }
+  }
+
+  // Função para exportar PDF profissional usando Puppeteer
+  const exportarPDFProfissional = async () => {
+    if (!documentoRef.current || !orcamento.numero) {
+      console.error('Referência do documento não encontrada ou orçamento sem número')
+      return
+    }
+
+    try {
+      setGerandoPDFProfissional(true)
+
+      // Capturar o HTML do documento atual
+      const elemento = documentoRef.current
+      const htmlContent = elemento.innerHTML
+
+      // Fazer a requisição para a API
+      const response = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          htmlContent,
+          orcamentoNumero: orcamento.numero
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao gerar PDF')
+      }
+
+      // Converter response para blob e fazer download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `orcamento-${orcamento.numero}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      // Mostrar feedback de sucesso
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: true,
+        mensagem: `PDF profissional gerado com sucesso! Arquivo: orcamento-${orcamento.numero}.pdf`,
+      })
+
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error)
+      setFeedbackSalvamento({
+        visivel: true,
+        sucesso: false,
+        mensagem: `Erro ao gerar PDF profissional: ${error instanceof Error ? error.message : 'Tente novamente'}`,
+      })
+    } finally {
+      setGerandoPDFProfissional(false)
     }
   }
 
@@ -2922,10 +3124,24 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
-                              <DialogHeader className="p-4 border-b">
+                              <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0">
                                 <DialogTitle className="text-primary">
                                   Visualização do Documento - {orcamento.numero}
                                 </DialogTitle>
+                                <Button
+                                  onClick={exportarPDFCanvas}
+                                  disabled={gerandoPDFProfissional || !orcamento.numero}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs"
+                                >
+                                  {gerandoPDFProfissional ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <FileDown className="h-3 w-3 mr-1" />
+                                  )}
+                                  {gerandoPDFProfissional ? 'Gerando...' : 'Exportar PDF Pro'}
+                                </Button>
                               </DialogHeader>
                               <div className="flex-1 overflow-auto p-2 md:p-4 bg-gray-50">
                                 <div className="max-w-[210mm] mx-auto bg-white shadow-lg">
@@ -3106,7 +3322,24 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       </CardContent>
                     </Card>
                     <div className="border rounded-lg overflow-hidden bg-white shadow-sm border-gray-200">
-                      <div className="p-2 md:p-3 h-[calc(100vh-200px)] overflow-auto">
+                      <div className="flex items-center justify-between p-2 border-b bg-gray-50">
+                        <h3 className="text-sm font-medium text-gray-700">Visualização do Orçamento</h3>
+                        <Button
+                          onClick={exportarPDFCanvas}
+                          disabled={gerandoPDFProfissional || !orcamento.numero}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {gerandoPDFProfissional ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <FileDown className="h-3 w-3 mr-1" />
+                          )}
+                          {gerandoPDFProfissional ? 'Gerando...' : 'Exportar PDF Pro'}
+                        </Button>
+                      </div>
+                      <div className="p-2 md:p-3 h-[calc(100vh-250px)] overflow-auto">
                         <div ref={documentoRef}>
                           <VisualizacaoDocumento
                             orcamento={orcamento}
