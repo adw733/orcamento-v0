@@ -402,6 +402,17 @@ export default function VisualizacaoDocumento({
       max-width: 60px;
     }
 
+    /* Estilo para a coluna TOTAL */
+    .tamanhos-table th:last-child, .tamanhos-table td:last-child {
+      background-color: #f3f4f6 !important;
+      font-weight: bold !important;
+      color: #0369a1 !important;
+      text-align: center !important;
+      width: 80px; /* Largura fixa para a coluna "TOTAL" */
+      min-width: 80px;
+      max-width: 80px;
+    }
+
     .pdf-observacoes-comercial, .pdf-observacoes-tecnica {
       min-height: 40px;
       max-height: 80px;
@@ -568,6 +579,14 @@ export default function VisualizacaoDocumento({
     background-color: #f3f4f6;
     color: #0f4c81;
     text-align: left;
+  }
+
+  /* Estilo para a coluna TOTAL */
+  .tamanhos-table th:last-child, .tamanhos-table td:last-child {
+    background-color: #f3f4f6;
+    font-weight: bold;
+    color: #0369a1;
+    text-align: center;
   }
 
   /* Estilos para os cards de especificações */
@@ -786,6 +805,14 @@ export default function VisualizacaoDocumento({
 
 .tamanhos-table th, .tamanhos-table td {
   padding: 4px 6px; /* Reduzido de 6px 8px */
+}
+
+/* Estilo para a coluna TOTAL na impressão */
+.tamanhos-table th:last-child, .tamanhos-table td:last-child {
+  background-color: #f3f4f6 !important;
+  font-weight: bold !important;
+  color: #0369a1 !important;
+  text-align: center !important;
 }
 
 /* Garantir que observações não ultrapassem o espaço */
@@ -1314,12 +1341,16 @@ export default function VisualizacaoDocumento({
                               {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, _]) => (
                                 <th key={`header-${tamanho}`}>{tamanho}</th>
                               ))}
+                              <th style={{ backgroundColor: "#f3f4f6", fontWeight: "bold", color: "#0369a1" }}>TOTAL</th>
                             </tr>
                             <tr>
                               <td>Qtd.</td>
                               {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, quantidade]) => (
                                 <td key={`qty-${tamanho}`}>{quantidade}</td>
                               ))}
+                              <td style={{ backgroundColor: "#f3f4f6", fontWeight: "bold", color: "#0369a1", textAlign: "center" }}>
+                                {Object.values(item.tamanhos || {}).reduce((total, qty) => total + qty, 0)}
+                              </td>
                             </tr>
                           </tbody>
                         </table>

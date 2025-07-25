@@ -21,6 +21,7 @@ export type Estampa = {
   posicao?: string
   tipo?: string
   largura?: number
+  comprimento?: number
 }
 
 // Remover o campo contato da interface Cliente
@@ -32,6 +33,7 @@ export type Cliente = {
   endereco: string
   telefone: string
   email: string
+  contato?: string
 }
 
 // Modificar a interface Produto para incluir categoria
