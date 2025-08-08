@@ -1,7 +1,9 @@
 "use client"
 
 import type { Orcamento, DadosEmpresa } from "@/types/types"
-import { useState } from "react"
+import { useState, useRef } from "react"
+import html2canvas from "html2canvas"
+import jsPDF from "jspdf"
 
 interface VisualizacaoDocumentoProps {
   orcamento: Orcamento
@@ -17,6 +19,133 @@ export default function VisualizacaoDocumento({
   modoExportacao = "completo", // Valor padrão é mostrar tudo
 }: VisualizacaoDocumentoProps) {
   const [exportandoPDF, setExportandoPDF] = useState(false)
+  const [progressoPDF, setProgressoPDF] = useState(0)
+  const pdfContainerRef = useRef<HTMLDivElement>(null)
+
+  // Função para gerar PDF Pro usando html2canvas + jsPDF
+  const gerarPDFPro = async () => {
+    if (!pdfContainerRef.current) return
+
+    setExportandoPDF(true)
+    
+    try {
+      const container = pdfContainerRef.current
+      
+      // Aguardar um pouco para garantir que todos os elementos estejam renderizados
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Criar PDF
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = 210 // A4 width in mm
+      const pageHeight = 297 // A4 height in mm
+      const margin = 10 // Margem em mm
+      const contentWidth = pageWidth - (margin * 2)
+      
+      // Função para capturar seção
+      const captureSection = async (element: HTMLElement, sectionName: string) => {
+        try {
+          console.log(`Capturando seção: ${sectionName}`)
+          
+          const canvas = await html2canvas(element, {
+            scale: 3, // Resolução ultra alta
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: element.scrollWidth,
+            height: element.scrollHeight,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight,
+            foreignObjectRendering: false,
+            removeContainer: false,
+            logging: false,
+            imageTimeout: 30000,
+            onclone: (clonedDoc) => {
+              const clonedElement = clonedDoc.querySelector(element.className) as HTMLElement
+              if (clonedElement) {
+                clonedElement.style.transform = 'none'
+                clonedElement.style.position = 'static'
+                clonedElement.style.width = '100%'
+                clonedElement.style.height = 'auto'
+                clonedElement.style.margin = '0'
+                clonedElement.style.padding = '0'
+              }
+              
+              // Garantir que todas as imagens sejam carregadas
+              const images = clonedDoc.querySelectorAll('img')
+              images.forEach(img => {
+                img.style.maxWidth = '100%'
+                img.style.height = 'auto'
+                // Forçar carregamento de imagens
+                if (img.complete === false) {
+                  img.crossOrigin = 'anonymous'
+                }
+              })
+            }
+          })
+          
+          console.log(`Seção ${sectionName} capturada com sucesso`)
+          return canvas
+          
+        } catch (error) {
+          console.error(`Erro ao capturar seção ${sectionName}:`, error)
+          throw error
+        }
+      }
+      
+      // Capturar seções separadamente
+      const sections = container.querySelectorAll('.orcamento-principal, .ficha-tecnica')
+      const totalSections = sections.length
+      
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i] as HTMLElement
+        
+        // Atualizar progresso
+        setProgressoPDF(((i + 1) / totalSections) * 100)
+        
+        // Aguardar um pouco entre capturas
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+        
+        const canvas = await captureSection(section, i === 0 ? 'Orçamento Principal' : `Ficha Técnica ${i}`)
+        
+        // Calcular dimensões
+        const imgHeight = (canvas.height * contentWidth) / canvas.width
+        let heightLeft = imgHeight
+        let position = 0
+        
+        // Adicionar primeira página da seção
+        if (i > 0) {
+          pdf.addPage()
+        }
+        
+        pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', margin, margin + position, contentWidth, imgHeight)
+        heightLeft -= (pageHeight - (margin * 2))
+        
+        // Adicionar páginas adicionais se necessário
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight
+          pdf.addPage()
+          pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', margin, margin + position, contentWidth, imgHeight)
+          heightLeft -= (pageHeight - (margin * 2))
+        }
+      }
+
+      // Salvar PDF
+      const fileName = `orcamento-${orcamento.numero.split(" - ")[0]}-pro.pdf`
+      pdf.save(fileName)
+
+    } catch (error) {
+      console.error('Erro ao gerar PDF Pro:', error)
+      alert('Erro ao gerar PDF. Tente novamente.')
+    } finally {
+      setExportandoPDF(false)
+      setProgressoPDF(0)
+    }
+  }
+
   // Função para formatar a data considerando o fuso horário
   const formatarDataComFusoHorario = (dataString: string): string => {
     // Adicionar o horário para evitar problemas de fuso horário
@@ -833,9 +962,48 @@ export default function VisualizacaoDocumento({
 `
 
   return (
-    <div className="flex flex-col gap-8 p-4 font-sans text-gray-800 pdf-container" style={{ margin: "10mm" }}>
+    <div className="flex flex-col gap-8 p-4 font-sans text-gray-800 pdf-container" style={{ margin: "10mm" }} ref={pdfContainerRef}>
       <style>{pdfStyles}</style>
       <style>{imageStyles}</style>
+      
+      {/* Botão Exportar PDF Pro */}
+      <div className="flex flex-col items-center mb-4 gap-3">
+        <button
+          onClick={gerarPDFPro}
+          disabled={exportandoPDF}
+          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {exportandoPDF ? (
+            <>
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Gerando PDF Pro... {Math.round(progressoPDF)}%
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10,9 9,9 8,9"></polyline>
+              </svg>
+              Exportar PDF Pro
+            </>
+          )}
+        </button>
+        
+        {exportandoPDF && (
+          <div className="w-64 bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-green-600 h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progressoPDF}%` }}
+            ></div>
+          </div>
+        )}
+      </div>
 
       {/* Orçamento - Renderizar apenas se for modo completo ou modo orçamento */}
       {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
