@@ -149,7 +149,7 @@ export default function TabelaProdutos() {
 
       if (orcamentosError) {
         console.error("Erro ao carregar orçamentos:", orcamentosError)
-        setError(`Erro ao carregar orçamentos: ${orcamentosError.message}`)
+        setError(`Erro ao carregar orçamentos: ${orcamentosError.message || String(orcamentosError)}`)
         return
       }
 
@@ -282,7 +282,7 @@ export default function TabelaProdutos() {
       setProdutosFiltrados(todosProdutos)
     } catch (error) {
       console.error("Erro ao carregar produtos:", error)
-      setError(`Erro ao carregar produtos: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      setError(`Erro ao carregar produtos: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setIsLoading(false)
     }
@@ -391,7 +391,7 @@ export default function TabelaProdutos() {
               ? a.orcamentoNumero.localeCompare(b.orcamentoNumero)
               : b.orcamentoNumero.localeCompare(a.orcamentoNumero)
 
-          // Se forem do mesmo orçamento, ordenar primeiro por nome do produto e depois por tamanho
+          // Se forem do mesmo orçamento, ordenar primeiro por nome do produto, depois por ordem do item e depois por tamanho
           if (comparacaoOrcamento === 0) {
             // Comparar nomes de produtos primeiro (ordem alfabética)
             const comparacaoProduto = a.produtoNome.localeCompare(b.produtoNome)
@@ -401,7 +401,13 @@ export default function TabelaProdutos() {
               return comparacaoProduto
             }
 
-            // Se os produtos forem iguais, ordenar por tamanho
+            // Se os produtos forem iguais, ordenar por ordem do item (sequência no orçamento)
+            const comparacaoOrdemItem = a.ordemItem - b.ordemItem
+            if (comparacaoOrdemItem !== 0) {
+              return comparacaoOrdemItem
+            }
+
+            // Se a ordem do item for igual, ordenar por tamanho
             return ordenarTamanhos(a.tamanho, b.tamanho)
           }
 
@@ -430,8 +436,17 @@ export default function TabelaProdutos() {
           return comparacaoOrcamento
         }
 
-        // Se os orçamentos forem iguais, ordenar por tamanho
-        return ordenarTamanhos(a.tamanho, b.tamanho)
+        // Se os orçamentos forem iguais, ordenar por ordem do item e depois por tamanho
+        if (comparacaoOrcamento === 0) {
+          // Ordenar por ordem do item (sequência no orçamento)
+          const comparacaoOrdemItem = a.ordemItem - b.ordemItem
+          if (comparacaoOrdemItem !== 0) {
+            return comparacaoOrdemItem
+          }
+        }
+
+        // Se os orçamentos forem diferentes ou ordem do item igual, ordenar por tamanho
+        return comparacaoOrcamento === 0 ? ordenarTamanhos(a.tamanho, b.tamanho) : comparacaoOrcamento
       })
     }
 
