@@ -391,23 +391,12 @@ export default function TabelaProdutos() {
               ? a.orcamentoNumero.localeCompare(b.orcamentoNumero)
               : b.orcamentoNumero.localeCompare(a.orcamentoNumero)
 
-          // Se forem do mesmo orçamento, ordenar primeiro por nome do produto, depois por ordem do item e depois por tamanho
+          // Se forem do mesmo orçamento: 1) produto, 2) ordem do item (sequência), 3) tamanho
           if (comparacaoOrcamento === 0) {
-            // Comparar nomes de produtos primeiro (ordem alfabética)
             const comparacaoProduto = a.produtoNome.localeCompare(b.produtoNome)
-
-            // Se os produtos forem diferentes, retornar a comparação de produtos
-            if (comparacaoProduto !== 0) {
-              return comparacaoProduto
-            }
-
-            // Se os produtos forem iguais, ordenar por ordem do item (sequência no orçamento)
-            const comparacaoOrdemItem = a.ordemItem - b.ordemItem
-            if (comparacaoOrdemItem !== 0) {
-              return comparacaoOrdemItem
-            }
-
-            // Se a ordem do item for igual, ordenar por tamanho
+            if (comparacaoProduto !== 0) return comparacaoProduto
+            const comparacaoOrdemItem = (a.ordemItem ?? 0) - (b.ordemItem ?? 0)
+            if (comparacaoOrdemItem !== 0) return comparacaoOrdemItem
             return ordenarTamanhos(a.tamanho, b.tamanho)
           }
 
@@ -879,10 +868,10 @@ export default function TabelaProdutos() {
         const produtosOrdenados = [...produtosDoGrupo]
 
         if (modoVisualizacao === "orcamento") {
-          // Ordenar por nome do produto e depois por tamanho
+          // Respeitar a sequência original (ordemItem) e, dentro do item, ordenar tamanhos
           produtosOrdenados.sort((a, b) => {
-            const comparacaoProduto = a.produtoNome.localeCompare(b.produtoNome)
-            if (comparacaoProduto !== 0) return comparacaoProduto
+            const comparacaoOrdemItem = (a.ordemItem ?? 0) - (b.ordemItem ?? 0)
+            if (comparacaoOrdemItem !== 0) return comparacaoOrdemItem
             return ordenarTamanhos(a.tamanho, b.tamanho)
           })
         } else {

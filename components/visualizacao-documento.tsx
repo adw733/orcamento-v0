@@ -1129,7 +1129,7 @@ export default function VisualizacaoDocumento({
                 <tbody>
                   {orcamento.itens.length > 0 ? (
                     orcamento.itens.map((item, index) => (
-                      <tr key={item.id} className="border-b" style={{ height: "auto", minHeight: "50px" }}>
+                      <tr key={`${item.id}-${index}`} className="border-b" style={{ height: "auto", minHeight: "50px" }}>
                         <td className="p-2" style={{ verticalAlign: "top", width: "32%", lineHeight: "1.2" }}>
                           <div>
                             <p className="font-medium text-xs leading-tight mb-1" style={{ fontSize: "0.75rem", lineHeight: "1.2", marginBottom: "3px" }}>
@@ -1265,10 +1265,11 @@ export default function VisualizacaoDocumento({
 
       {/* Ficha Técnica - Renderizar apenas se for modo completo ou modo ficha */}
       {(modoExportacao === "completo" || modoExportacao === "ficha") &&
-        orcamento.itens.map((item, index) => (
+        orcamento.itens
+          .map((item, index) => (
           <div
-            key={`ficha-${item.id}`}
-            id={`ficha-${item.id}`}
+            key={`ficha-${item.id}-${index}`}
+            id={`ficha-${item.id}-${index}`}
             className={`border border-gray-300 rounded-md overflow-hidden shadow-sm ${
               index > 0 || modoExportacao === "completo" ? "mt-8" : ""
             } ${modoExportacao === "completo" ? "page-break-before" : ""} ficha-tecnica pdf-section`}
