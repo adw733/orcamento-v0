@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Sistema de Controle de Versões Unificado - Orçamento v0
+Sistema de Controle de Versões Unificado - Orçamento v0.1
 Layout vertical com tabelas empilhadas e ordenação por clique
 """
 
@@ -19,16 +19,15 @@ import time
 class VersionControlUnified:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("🚀 Sistema Controle de Versões - Orçamento v0")
+        self.root.title("🚀 Sistema Controle de Versões - Orçamento v0.1")
         self.root.geometry("1400x900")
         try:
             self.root.state('zoomed')
         except:
             pass
         
-        # Limpa o log de debug anterior ao iniciar
-        if os.path.exists("debug.log"):
-            os.remove("debug.log")
+        # Variável para controlar o log de debug
+        self.is_debug_logging_enabled = tk.BooleanVar(value=False)
 
         # Define um caminho inicial, conforme solicitado.
         self.project_path = r"C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2"
@@ -57,6 +56,7 @@ class VersionControlUnified:
         config_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Configurações", menu=config_menu)
         config_menu.add_command(label="Definir Usuário do Repositório", command=self.configure_git_user)
+        config_menu.add_checkbutton(label="Habilitar Log de Debug", onvalue=True, offvalue=False, variable=self.is_debug_logging_enabled)
 
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Ajuda", menu=help_menu)
@@ -387,23 +387,26 @@ class VersionControlUnified:
             else:
                 full_command = command
 
-            with open("debug.log", "a", encoding='utf-8') as f:
-                f.write(f"\n{'='*20} {datetime.datetime.now()} {'='*20}\n")
-                f.write(f"CWD: {self.project_path}\n")
-                f.write(f"COMMAND: {full_command}\n")
+            if self.is_debug_logging_enabled.get():
+                with open("debug.log", "a", encoding='utf-8') as f:
+                    f.write(f"\n{'='*20} {datetime.datetime.now()} {'='*20}\n")
+                    f.write(f"CWD: {self.project_path}\n")
+                    f.write(f"COMMAND: {full_command}\n")
 
             result = subprocess.run(full_command, shell=True, capture_output=True, text=True, 
                                     encoding='utf-8', errors='ignore', cwd=self.project_path)
             
-            with open("debug.log", "a", encoding='utf-8') as f:
-                f.write(f"RETURN CODE: {result.returncode}\n")
-                f.write(f"STDOUT:\n{result.stdout}\n")
-                f.write(f"STDERR:\n{result.stderr}\n")
+            if self.is_debug_logging_enabled.get():
+                with open("debug.log", "a", encoding='utf-8') as f:
+                    f.write(f"RETURN CODE: {result.returncode}\n")
+                    f.write(f"STDOUT:\n{result.stdout}\n")
+                    f.write(f"STDERR:\n{result.stderr}\n")
 
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
-            with open("debug.log", "a", encoding='utf-8') as f:
-                f.write(f"EXCEPTION: {e}\n")
+            if self.is_debug_logging_enabled.get():
+                with open("debug.log", "a", encoding='utf-8') as f:
+                    f.write(f"EXCEPTION: {e}\n")
             return False, "", str(e)
 
     def refresh_all(self):
@@ -843,7 +846,7 @@ class VersionControlUnified:
             with open("debug.log", "r", encoding='utf-8', errors='ignore') as f:
                 log_text.insert(tk.END, f.read())
         except FileNotFoundError:
-            log_text.insert(tk.END, "Arquivo de log não encontrado.")
+            log_text.insert(tk.END, "Arquivo de log não encontrado ou log desabilitado.")
         log_text.config(state=tk.DISABLED)
 
     # ... O restante do código permanece o mesmo ...

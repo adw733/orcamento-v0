@@ -2037,19 +2037,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const atualizarOrcamento = (novoOrcamento: Partial<Orcamento>) => {
     const orcamentoAtualizado = { ...orcamento, ...novoOrcamento }
     setOrcamento(orcamentoAtualizado)
-
-    // Mostrar mensagem de alteração pendente apenas se há orçamento salvo
-    if (orcamentoSalvo) {
-      setMensagemAlteracoes({
-        visivel: true,
-        mensagem: "Alterações pendentes. Clique em 'Salvar' para confirmar."
-      })
-      
-      // Ocultar a mensagem após 3 segundos
-      setTimeout(() => {
-        setMensagemAlteracoes({ visivel: false, mensagem: '' })
-      }, 3000)
-    }
   }
 
   const adicionarItem = async (item: ItemOrcamento) => {
@@ -2068,19 +2055,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       itens: itensAtualizados,
       numero: novoNumero,
     })
-
-    // Mostrar mensagem de alteração pendente apenas se há orçamento salvo
-    if (orcamentoSalvo) {
-      setMensagemAlteracoes({
-        visivel: true,
-        mensagem: "Item adicionado. Clique em 'Salvar' para confirmar."
-      })
-      
-      // Ocultar a mensagem após 3 segundos
-      setTimeout(() => {
-        setMensagemAlteracoes({ visivel: false, mensagem: '' })
-      }, 3000)
-    }
   }
 
   const removerItem = (id: string) => {
@@ -2089,19 +2063,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       ...orcamento,
       itens: itensAtualizados,
     })
-
-    // Mostrar mensagem de alteração pendente apenas se há orçamento salvo
-    if (orcamentoSalvo) {
-      setMensagemAlteracoes({
-        visivel: true,
-        mensagem: "Item removido. Clique em 'Salvar' para confirmar."
-      })
-      
-      // Ocultar a mensagem após 3 segundos
-      setTimeout(() => {
-        setMensagemAlteracoes({ visivel: false, mensagem: '' })
-      }, 3000)
-    }
   }
 
   const duplicarItem = async (id: string) => {
