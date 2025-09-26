@@ -2948,6 +2948,40 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
+  // Mapeamento de abas para filtros de status
+  const statusMap: { [key: string]: string | undefined } = {
+    "orcamentos": "todos",
+    "orcamentos-finalizados": "1",
+    "orcamentos-entregues": "2",
+    "orcamentos-cobranca": "3",
+    "orcamentos-execucao": "4",
+    "orcamentos-propostas": "5",
+    "orcamentos-recusados": "6",
+  };
+
+  const isOrcamentosList = Object.keys(statusMap).includes(abaAtiva);
+
+  // Títulos para as abas
+  const titulosAbas: { [key: string]: { title: string; subtitle: string } } = {
+    orcamento: { title: "Gerador de Orçamento", subtitle: "Crie orçamentos profissionais para uniformes industriais" },
+    orcamentos: { title: "Todos os Orçamentos", subtitle: "Visualize e gerencie todos os seus orçamentos" },
+    "orcamentos-propostas": { title: "Propostas", subtitle: "Visualize e gerencie suas propostas comerciais" },
+    "orcamentos-execucao": { title: "Orçamentos em Execução", subtitle: "Acompanhe os orçamentos que estão em produção" },
+    "orcamentos-finalizados": { title: "Orçamentos Finalizados", subtitle: "Consulte o histórico de orçamentos finalizados" },
+    "orcamentos-entregues": { title: "Orçamentos Entregues", subtitle: "Acompanhe os orçamentos que já foram entregues" },
+    "orcamentos-cobranca": { title: "Orçamentos em Cobrança", subtitle: "Gerencie os orçamentos pendentes de pagamento" },
+    "orcamentos-recusados": { title: "Orçamentos Recusados", subtitle: "Analise os orçamentos que foram recusados" },
+    clientes: { title: "Gerenciador de Clientes", subtitle: "Gerencie seus clientes" },
+    produtos: { title: "Gerenciador de Produtos", subtitle: "Gerencie seus produtos" },
+    categorias: { title: "Gerenciador de Categorias", subtitle: "Gerencie as categorias de produtos" },
+    materiais: { title: "Gerenciador de Materiais", subtitle: "Gerencie os materiais disponíveis" },
+    empresa: { title: "Gerenciador de Empresa", subtitle: "Gerencie os dados da sua empresa" },
+    lixeira: { title: "Lixeira de Orçamentos", subtitle: "Gerencie orçamentos excluídos e restaure-os se necessário" },
+    "produtos-tabela": { title: "Tabela de Produtos", subtitle: "Visualize e edite seus produtos em formato de tabela" },
+  };
+
+  const { title, subtitle } = titulosAbas[abaAtiva] || titulosAbas.orcamento;
+
   // Substituir o return do componente por:
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-2rem)]">
@@ -2986,56 +3020,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           )}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-primary">
-                {abaAtiva === "orcamento"
-                  ? "Gerador de Orçamento"
-                  : abaAtiva === "orcamentos"
-                    ? "Orçamentos Salvos"
-                    : abaAtiva === "orcamentos-execucao"
-                      ? "Orçamentos em Execução"
-                      : abaAtiva === "propostas"
-                        ? "Propostas"
-                        : abaAtiva === "clientes"
-                          ? "Gerenciador de Clientes"
-                          : abaAtiva === "produtos"
-                            ? "Gerenciador de Produtos"
-                            : abaAtiva === "categorias"
-                              ? "Gerenciador de Categorias"
-                              : abaAtiva === "materiais"
-                                ? "Gerenciador de Materiais"
-                                : abaAtiva === "empresa"
-                                  ? "Gerenciador de Empresa"
-                                  : abaAtiva === "lixeira"
-                                    ? "Lixeira de Orçamentos"
-                                    : abaAtiva === "produtos-tabela"
-                                      ? "Tabela de Produtos"
-                                      : "Gerador de Orçamento"}
-              </h1>
-              <p className="text-gray-500 mt-0.5 text-xs md:text-sm">
-                {abaAtiva === "orcamento"
-                  ? "Crie orçamentos profissionais para uniformes industriais"
-                  : abaAtiva === "orcamentos"
-                    ? "Visualize e gerencie seus orçamentos salvos"
-                    : abaAtiva === "orcamentos-execucao"
-                      ? "Gerencie orçamentos aprovados que estão em execução"
-                      : abaAtiva === "propostas"
-                        ? "Visualize e gerencie suas propostas comerciais"
-                        : abaAtiva === "clientes"
-                          ? "Gerencie seus clientes"
-                          : abaAtiva === "produtos"
-                            ? "Gerencie seus produtos"
-                            : abaAtiva === "categorias"
-                              ? "Gerencie as categorias de produtos"
-                              : abaAtiva === "materiais"
-                                ? "Gerencie os materiais disponíveis"
-                                : abaAtiva === "empresa"
-                                  ? "Gerencie os dados da sua empresa"
-                                  : abaAtiva === "lixeira"
-                                    ? "Gerencie orçamentos excluídos e restaure-os se necessário"
-                                    : abaAtiva === "produtos-tabela"
-                                      ? "Visualize e edite seus produtos em formato de tabela"
-                                      : "Crie orçamentos profissionais para uniformes industriais"}
-              </p>
+              <h1 className="text-lg md:text-xl font-bold text-primary">{title}</h1>
+              <p className="text-gray-500 mt-0.5 text-xs md:text-sm">{subtitle}</p>
             </div>
             <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
               {abaAtiva === "orcamento" && (
@@ -3104,6 +3090,27 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
           {/* Conteúdo principal baseado na aba ativa */}
           {(() => {
+            if (isOrcamentosList) {
+              return (
+                <Card className="shadow-sm border border-gray-200">
+                  <CardContent className="p-3 md:p-4">
+                    <ListaOrcamentos
+                      onSelectOrcamento={carregarOrcamento}
+                      onNovoOrcamento={() => {
+                        setOrcamentoJaCarregado(false)
+                        criarNovoOrcamentoSeguro()
+                      }}
+                      onDeleteOrcamento={excluirOrcamento}
+                      onUpdateStatus={atualizarStatusOrcamento}
+                      onExportOrcamento={exportarOrcamento}
+                      reloadRef={recarregarOrcamentosRef}
+                      filtroStatus={statusMap[abaAtiva]}
+                    />
+                  </CardContent>
+                </Card>
+              )
+            }
+
             switch (abaAtiva) {
               case "orcamento":
                 return (
@@ -3177,62 +3184,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       </CardContent>
                     </Card>
                   </div>
-                )
-              case "orcamentos":
-                return (
-                  <Card className="shadow-sm border border-gray-200">
-                    <CardContent className="p-3 md:p-4">
-                      <ListaOrcamentos
-                        onSelectOrcamento={carregarOrcamento}
-                        onNovoOrcamento={() => {
-                          setOrcamentoJaCarregado(false) // Resetar flag antes de criar novo
-                          criarNovoOrcamentoSeguro()
-                        }}
-                        onDeleteOrcamento={excluirOrcamento}
-                        onUpdateStatus={atualizarStatusOrcamento}
-                        onExportOrcamento={exportarOrcamento}
-                        reloadRef={recarregarOrcamentosRef}
-                      />
-                    </CardContent>
-                  </Card>
-                )
-              case "orcamentos-execucao":
-                return (
-                  <Card className="shadow-sm border border-gray-200">
-                    <CardContent className="p-3 md:p-4">
-                      <ListaOrcamentos
-                        onSelectOrcamento={carregarOrcamento}
-                        onNovoOrcamento={() => {
-                          setOrcamentoJaCarregado(false)
-                          criarNovoOrcamentoSeguro()
-                        }}
-                        onDeleteOrcamento={excluirOrcamento}
-                        onUpdateStatus={atualizarStatusOrcamento}
-                        onExportOrcamento={exportarOrcamento}
-                        reloadRef={recarregarOrcamentosRef}
-                        filtroStatus="4" // Status "Em Execução"
-                      />
-                    </CardContent>
-                  </Card>
-                )
-              case "propostas":
-                return (
-                  <Card className="shadow-sm border border-gray-200">
-                    <CardContent className="p-3 md:p-4">
-                      <ListaOrcamentos
-                        onSelectOrcamento={carregarOrcamento}
-                        onNovoOrcamento={() => {
-                          setOrcamentoJaCarregado(false)
-                          criarNovoOrcamentoSeguro()
-                        }}
-                        onDeleteOrcamento={excluirOrcamento}
-                        onUpdateStatus={atualizarStatusOrcamento}
-                        onExportOrcamento={exportarOrcamento}
-                        reloadRef={recarregarOrcamentosRef}
-                        filtroStatus="5" // Status "Proposta"
-                      />
-                    </CardContent>
-                  </Card>
                 )
               case "produtos-tabela":
                 return (

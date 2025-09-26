@@ -21,6 +21,10 @@ import {
   Monitor,
   Search,
   Ruler,
+  ThumbsDown,
+  CheckCircle2,
+  Truck,
+  CircleDollarSign,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
@@ -76,9 +80,13 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       icon: FileText,
       items: [
         { id: "orcamento", label: "Edição Orçamento", icon: FileText },
-        { id: "orcamentos", label: "Orçamentos Salvos", icon: Save },
-        { id: "orcamentos-execucao", label: "Em Execução", icon: Ruler },
-        { id: "propostas", label: "Propostas", icon: Search },
+        { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
+        { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
+        { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },
+        { id: "orcamentos-cobranca", label: "3 - Cobrança", icon: CircleDollarSign },
+        { id: "orcamentos-execucao", label: "4 - Em Execução", icon: Ruler },
+        { id: "orcamentos-propostas", label: "5 - Propostas", icon: Search },
+        { id: "orcamentos-recusados", label: "6 - Recusados", icon: ThumbsDown },
         { id: "produtos-tabela", label: "Tabela de Produtos", icon: Table },
       ]
     },
