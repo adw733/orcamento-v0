@@ -6,6 +6,7 @@ export interface Estampa {
   posicao?: string
   tipo?: string
   largura?: number
+  comprimento?: number
 }
 
 // Corrigir a função obterProximoCodigoCliente que está incompleta

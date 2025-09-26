@@ -1,9 +1,16 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(python:*)",
-      "Bash(rg:*)"
-    ],
-    "deny": []
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=orcamento_manual"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_e7075cbcdd7bf61e501b01e5821081b71d3eaa55"
+      }
+    }
   }
 }

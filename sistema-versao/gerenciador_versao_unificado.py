@@ -300,9 +300,7 @@ class VersionControlUnified:
             self.git_status_label.config(text="❌ Git não encontrado!", foreground="red")
             messagebox.showerror(
                 "Erro de Configuração: Git não encontrado",
-                "O Git é essencial para o funcionamento do programa e não foi encontrado.\n\n"
-                "Por favor, instale o Git e certifique-se de que ele esteja no PATH do sistema.\n"
-                "Download: https://git-scm.com/downloads"
+                "O Git é essencial para o funcionamento do programa e não foi encontrado.\n\nPor favor, instale o Git e certifique-se de que ele esteja no PATH do sistema.\nDownload: https://git-scm.com/downloads"
             )
             return
 
@@ -504,7 +502,7 @@ class VersionControlUnified:
         
         temp_versions_data = []
         try:
-            separator = "<|>"
+            separator = "<||" # Changed separator to avoid conflicts
             command = f'git log --date=format:"%d/%m %H:%M" --pretty=format:"%h{separator}%ad{separator}%s{separator}%at" -20'
             success, output, _ = self.run_command(command)
 
@@ -575,7 +573,7 @@ class VersionControlUnified:
         if not self.is_repo_valid: return
         
         temp_forks_data = []
-        separator = "<|>"
+        separator = "<||" # Changed separator to avoid conflicts
         try:
             current_success, current_output, _ = self.run_command('git branch --show-current')
             current_branch = current_output.strip() if current_success and current_output.strip() else None
@@ -1016,7 +1014,7 @@ class VersionControlUnified:
         self.log_deploy_message("Abrindo terminal para login no Vercel...", "INFO")
         try:
             # Abre um novo terminal para o processo de login interativo.
-            executable = f'"{self.executables["vercel"]}"'
+            executable = f'"{self.executables['vercel']}"'
             command = f'cmd.exe /c "cd /d {self.project_path} && {executable} login"'
             subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
             self.root.after(8000, self.check_vercel_status) # Aumentado o tempo de espera
@@ -1103,4 +1101,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

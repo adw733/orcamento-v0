@@ -150,6 +150,25 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       ) {
         return true
       }
+
+      // Comparação detalhada das estampas
+      if (itemAtual.estampas && itemRef.estampas) {
+        for (let j = 0; j < itemAtual.estampas.length; j++) {
+          const estampaAtual = itemAtual.estampas[j]
+          const estampaRef = itemRef.estampas[j]
+          
+          if (!estampaRef) return true
+          
+          if (
+            (estampaAtual.posicao || '') !== (estampaRef.posicao || '') ||
+            (estampaAtual.tipo || '') !== (estampaRef.tipo || '') ||
+            Number(estampaAtual.largura || 0) !== Number(estampaRef.largura || 0) ||
+            Number(estampaAtual.comprimento || 0) !== Number(estampaRef.comprimento || 0)
+          ) {
+            return true
+          }
+        }
+      }
     }
 
     return false
@@ -1872,6 +1891,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               posicao: estampa.posicao,
               tipo: estampa.tipo,
               largura: estampa.largura,
+              comprimento: estampa.comprimento,
             }))
 
             const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -1986,6 +2006,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       if (error) throw error
 
+      // Atualizar o orcamentoOriginal após salvar com sucesso
+      setOrcamentoOriginal({ ...orcamento })
+
       // Mostrar feedback de sucesso
       setFeedbackSalvamento({
         visivel: true,
@@ -2011,56 +2034,21 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   // Substituir o trecho que atualiza o orçamento no Supabase por:
 
-  const atualizarOrcamento = async (novoOrcamento: Partial<Orcamento>) => {
+  const atualizarOrcamento = (novoOrcamento: Partial<Orcamento>) => {
     const orcamentoAtualizado = { ...orcamento, ...novoOrcamento }
     setOrcamento(orcamentoAtualizado)
 
-    // Se o orçamento estiver salvo e os itens foram atualizados, atualizar no Supabase
-    if (
-      orcamentoSalvo &&
-      (novoOrcamento.itens || novoOrcamento.valorFrete || novoOrcamento.nomeContato || novoOrcamento.telefoneContato)
-    ) {
-      try {
-        setIsLoading(true)
-
-        // Criar um objeto com metadados adicionais para incluir no JSON
-        const metadados = {
-          valorFrete: orcamentoAtualizado.valorFrete || 0,
-          nomeContato: orcamentoAtualizado.nomeContato || "",
-          telefoneContato: orcamentoAtualizado.telefoneContato || "",
-        }
-
-        // Atualizar o campo itens no Supabase, preservando a ordem atual dos itens
-        const { error } = await supabase
-          .from("orcamentos")
-          .update({
-            itens: JSON.stringify({
-              items: orcamentoAtualizado.itens || [],
-              metadados: metadados,
-            }),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orcamentoSalvo)
-
-        if (error) {
-          console.error("Erro ao atualizar ordem dos itens:", error)
-          setFeedbackSalvamento({
-            visivel: true,
-            sucesso: false,
-            mensagem: `Erro ao atualizar ordem dos itens: ${error.message}`,
-          })
-        } else {
-          setFeedbackSalvamento({
-            visivel: true,
-            sucesso: true,
-            mensagem: "Ordem dos itens atualizada com sucesso!",
-          })
-        }
-      } catch (error) {
-        console.error("Erro ao atualizar ordem dos itens:", error)
-      } finally {
-        setIsLoading(false)
-      }
+    // Mostrar mensagem de alteração pendente apenas se há orçamento salvo
+    if (orcamentoSalvo) {
+      setMensagemAlteracoes({
+        visivel: true,
+        mensagem: "Alterações pendentes. Clique em 'Salvar' para confirmar."
+      })
+      
+      // Ocultar a mensagem após 3 segundos
+      setTimeout(() => {
+        setMensagemAlteracoes({ visivel: false, mensagem: '' })
+      }, 3000)
     }
   }
 
@@ -2081,93 +2069,38 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       numero: novoNumero,
     })
 
-    // Salvar no Supabase se houver orçamento salvo
+    // Mostrar mensagem de alteração pendente apenas se há orçamento salvo
     if (orcamentoSalvo) {
-      try {
-        setIsLoading(true)
-
-        // Inserir o item no banco de dados
-        const { data: itemInserido, error: itemError } = await supabase
-          .from("itens_orcamento")
-          .insert({
-            id: item.id,
-            orcamento_id: orcamentoSalvo,
-            produto_id: item.produtoId,
-            quantidade: item.quantidade,
-            valor_unitario: item.valorUnitario,
-            tecido_nome: item.tecidoSelecionado?.nome,
-            tecido_composicao: item.tecidoSelecionado?.composicao,
-            cor_selecionada: item.corSelecionada,
-            tamanhos: item.tamanhos,
-            imagem: item.imagem,
-            observacao_comercial: item.observacaoComercial,
-            observacao_tecnica: item.observacaoTecnica,
-          })
-          .select()
-
-        if (itemError) throw itemError
-
-        // Inserir as estampas do item - CORRIGIDO: Sempre gerar novos IDs para as estampas
-        if (item.estampas && item.estampas.length > 0) {
-          try {
-            const estampasParaInserir = item.estampas.map((estampa) => ({
-              id: generateUUID(), // Sempre gerar um novo ID para evitar conflitos
-              item_orcamento_id: item.id,
-              posicao: estampa.posicao || null,
-              tipo: estampa.tipo || null,
-              largura: estampa.largura || null,
-            }))
-
-            const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
-
-            if (estampasError) {
-              console.error("Erro ao inserir estampas:", estampasError)
-              throw estampasError
-            }
-          } catch (estampaErr) {
-            console.error("Erro ao processar estampas:", estampaErr)
-            // Continue mesmo se as estampas falharem
-          }
-        }
-
-        // Atualizar também o número do orçamento no banco de dados
-        await supabase.from("orcamentos").update({ numero: novoNumero }).eq("id", orcamentoSalvo)
-      } catch (error) {
-        console.error("Erro ao adicionar item:", error)
-      } finally {
-        setIsLoading(false)
-      }
+      setMensagemAlteracoes({
+        visivel: true,
+        mensagem: "Item adicionado. Clique em 'Salvar' para confirmar."
+      })
+      
+      // Ocultar a mensagem após 3 segundos
+      setTimeout(() => {
+        setMensagemAlteracoes({ visivel: false, mensagem: '' })
+      }, 3000)
     }
   }
 
-  const removerItem = async (id: string) => {
+  const removerItem = (id: string) => {
     const itensAtualizados = orcamento.itens.filter((item) => item.id !== id)
     setOrcamento({
       ...orcamento,
       itens: itensAtualizados,
     })
 
-    // Remover do Supabase se houver orçamento salvo
+    // Mostrar mensagem de alteração pendente apenas se há orçamento salvo
     if (orcamentoSalvo) {
-      try {
-        setIsLoading(true)
-
-        // Primeiro, excluir todas as estampas associadas ao item
-        const { error: estampasError } = await supabase.from("estampas").delete().eq("item_orcamento_id", id)
-
-        if (estampasError) {
-          console.error("Erro ao excluir estampas do item:", estampasError)
-        }
-
-        // Em seguida, excluir o item
-        const { error } = await supabase.from("itens_orcamento").delete().eq("id", id)
-
-        if (error) throw error
-      } catch (error) {
-        console.error("Erro ao remover item:", error)
-      } finally {
-        setIsLoading(false)
-      }
+      setMensagemAlteracoes({
+        visivel: true,
+        mensagem: "Item removido. Clique em 'Salvar' para confirmar."
+      })
+      
+      // Ocultar a mensagem após 3 segundos
+      setTimeout(() => {
+        setMensagemAlteracoes({ visivel: false, mensagem: '' })
+      }, 3000)
     }
   }
 
@@ -2237,6 +2170,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 posicao: estampa.posicao || null,
                 tipo: estampa.tipo || null,
                 largura: estampa.largura ? Number(estampa.largura) : null,
+                comprimento: estampa.comprimento ? Number(estampa.comprimento) : null,
               }))
 
               const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
@@ -2257,6 +2191,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           visivel: true,
           sucesso: true,
           mensagem: "Item duplicado com sucesso!",
+        })
+        
+        // Atualizar o orcamentoOriginal após duplicar item com sucesso
+        setOrcamentoOriginal({
+          ...orcamento,
+          itens: [...orcamento.itens, itemDuplicado],
         })
       } else {
         // Mostrar feedback para item duplicado em orçamento não salvo
@@ -2281,131 +2221,15 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   }
 
   // Update the atualizarItem function to include both observation fields
-  const atualizarItem = async (id: string, novoItem: Partial<ItemOrcamento>) => {
+  const atualizarItem = (id: string, novoItem: Partial<ItemOrcamento>) => {
     const itensAtualizados = orcamento.itens.map((item) => (item.id === id ? { ...item, ...novoItem } : item))
     setOrcamento({
       ...orcamento,
       itens: itensAtualizados,
     })
 
-    // Atualizar no Supabase se houver orçamento salvo
-    if (orcamentoSalvo) {
-      try {
-        setIsLoading(true)
-
-        const itemAtualizado = itensAtualizados.find((item) => item.id === id)
-
-        if (itemAtualizado) {
-          // Primeiro, verificar se o item existe no banco
-          const { data: itemExiste, error: checkError } = await supabase
-            .from("itens_orcamento")
-            .select("id")
-            .eq("id", id)
-            .maybeSingle()
-
-          if (checkError) {
-            console.error("Erro ao verificar item no banco:", checkError)
-            throw new Error(`Erro ao verificar item: ${checkError.message}`)
-          }
-
-          if (!itemExiste) {
-            // Se o item não existe, inserir como novo
-            console.log("Item não encontrado no banco, inserindo como novo:", id)
-            const { error: insertError } = await supabase
-              .from("itens_orcamento")
-              .insert({
-                id: id,
-                orcamento_id: orcamento.id,
-                codigo: itemAtualizado.codigo,
-                descricao: itemAtualizado.descricao,
-                quantidade: itemAtualizado.quantidade,
-                valor_unitario: itemAtualizado.valorUnitario,
-                tecido_nome: itemAtualizado.tecidoSelecionado?.nome,
-                tecido_composicao: itemAtualizado.tecidoSelecionado?.composicao,
-                cor_selecionada: itemAtualizado.corSelecionada,
-                tamanhos: itemAtualizado.tamanhos,
-                imagem: itemAtualizado.imagem,
-                observacao_comercial: itemAtualizado.observacaoComercial,
-                observacao_tecnica: itemAtualizado.observacaoTecnica,
-              })
-
-            if (insertError) throw insertError
-          } else {
-            // Se o item existe, atualizar
-            const { error } = await supabase
-              .from("itens_orcamento")
-              .update({
-                quantidade: itemAtualizado.quantidade,
-                valor_unitario: itemAtualizado.valorUnitario,
-                tecido_nome: itemAtualizado.tecidoSelecionado?.nome,
-                tecido_composicao: itemAtualizado.tecidoSelecionado?.composicao,
-                cor_selecionada: itemAtualizado.corSelecionada,
-                tamanhos: itemAtualizado.tamanhos,
-                imagem: itemAtualizado.imagem,
-                observacao_comercial: itemAtualizado.observacaoComercial,
-                observacao_tecnica: itemAtualizado.observacaoTecnica,
-              })
-              .eq("id", id)
-
-            if (error) throw error
-          }
-
-          // Atualizar as estampas do item
-          if (itemAtualizado.estampas && itemAtualizado.estampas.length > 0) {
-            try {
-              // Primeiro, excluir todas as estampas existentes
-              await supabase.from("estampas").delete().eq("item_orcamento_id", id)
-
-              // Em seguida, inserir as novas estampas com novos IDs
-              const estampasParaInserir = itemAtualizado.estampas.map((estampa) => ({
-                id: generateUUID(), // Sempre gerar um novo ID para evitar conflitos
-                item_orcamento_id: id,
-                posicao: estampa.posicao,
-                tipo: estampa.tipo,
-                largura: estampa.largura,
-                comprimento: estampa.comprimento,
-              }))
-
-              const { error: estampasError } = await supabase.from("estampas").insert(estampasParaInserir)
-
-              if (estampasError) {
-                console.error("Erro ao inserir estampas:", estampasError)
-                console.error("Estampas que tentaram ser inseridas:", estampasParaInserir)
-                console.error("ID do item:", id)
-                // Não lançar o erro para não interromper a atualização do item
-                // throw estampasError
-              }
-            } catch (estampaErr) {
-              console.error("Erro ao processar estampas:", estampaErr)
-              // Continuar mesmo se as estampas falharem
-            }
-          } else {
-            // Se não houver estampas, excluir todas as existentes
-            try {
-              await supabase.from("estampas").delete().eq("item_orcamento_id", id)
-            } catch (deleteErr) {
-              console.error("Erro ao deletar estampas:", deleteErr)
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao atualizar item:", error)
-        
-        // Log mais detalhado do erro
-        if (error && typeof error === 'object') {
-          console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
-        }
-        
-        // Mostrar feedback de erro para o usuário
-        setFeedbackSalvamento({
-          visivel: true,
-          sucesso: false,
-          mensagem: `Erro ao atualizar item: ${error instanceof Error ? error.message : "Tente novamente"}`,
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
+    // NÃO salvar automaticamente - apenas atualizar o estado local
+    // O salvamento deve ser manual através do botão "Salvar"
   }
 
   const calcularTotal = () => {
@@ -2500,6 +2324,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     posicao: estampa.posicao || undefined,
                     tipo: estampa.tipo || undefined,
                     largura: estampa.largura || undefined,
+                    comprimento: estampa.comprimento || undefined,
                   }))
                 : []
 
