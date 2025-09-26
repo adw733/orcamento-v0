@@ -14,6 +14,7 @@ import datetime
 import threading
 import webbrowser
 import re
+import time
 
 class VersionControlUnified:
     def __init__(self):
@@ -29,12 +30,11 @@ class VersionControlUnified:
         if os.path.exists("debug.log"):
             os.remove("debug.log")
 
-        # Define um caminho inicial, mas o usuário poderá mudar
-        self.project_path = os.getcwd() 
+        # Define um caminho inicial, conforme solicitado.
+        self.project_path = r"C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2"
         self.is_repo_valid = False
-        self.is_git_available = False
-        self.git_executable = "git" # Default, assume que está no PATH. Será substituído se encontrado em outro lugar.
-
+        self.executables = {} # Dicionário para armazenar os caminhos dos executáveis encontrados
+        self.vercel_widgets = [] # Lista para armazenar widgets controláveis do Vercel
         
         # Variáveis de ordenação
         self.versions_sort_column = None
@@ -54,10 +54,14 @@ class VersionControlUnified:
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
+        config_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Configurações", menu=config_menu)
+        config_menu.add_command(label="Definir Usuário do Repositório", command=self.configure_git_user)
+
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Ajuda", menu=help_menu)
         help_menu.add_command(label="Exibir Log de Debug", command=self.show_debug_log)
-        help_menu.add_command(label="Verificar Instalação do Git", command=self.check_git_availability)
+        help_menu.add_command(label="Verificar Ferramentas", command=self.perform_startup_checks)
 
 
         main_frame = ttk.Frame(self.root)
@@ -168,45 +172,53 @@ class VersionControlUnified:
         ttk.Separator(actions_frame, orient='horizontal').pack(fill='x', pady=10)
         
         ttk.Label(actions_frame, text="🚀 Projeto:", font=('Arial', 9, 'bold')).pack(anchor='w')
-        proj_buttons = ttk.Frame(actions_frame)
-        proj_buttons.pack(fill='x')
-        ttk.Button(proj_buttons, text="▶️ Iniciar", command=self.start_project).pack(fill='x', pady=2)
-        ttk.Button(proj_buttons, text="🌐 Navegador", command=self.open_browser).pack(fill='x', pady=2)
-        ttk.Button(proj_buttons, text="📥 Sync", command=self.sync_repository).pack(fill='x', pady=2)
+        self.proj_buttons = ttk.Frame(actions_frame)
+        self.proj_buttons.pack(fill='x')
+        self.start_project_button = ttk.Button(self.proj_buttons, text="▶️ Iniciar", command=self.start_project)
+        self.start_project_button.pack(fill='x', pady=2)
+        ttk.Button(self.proj_buttons, text="🌐 Navegador", command=self.open_browser).pack(fill='x', pady=2)
+        ttk.Button(self.proj_buttons, text="📥 Sync", command=self.sync_repository).pack(fill='x', pady=2)
         
         # COLUNA 3: DEPLOY
-        deploy_frame = ttk.LabelFrame(main_frame, text="🚀 Deploy Vercel", padding="5")
-        deploy_frame.grid(row=1, column=2, sticky='nsew', padx=(10, 0))
-        deploy_frame.rowconfigure(3, weight=1)
-        deploy_frame.columnconfigure(0, weight=1)
+        self.deploy_frame = ttk.LabelFrame(main_frame, text="🚀 Deploy Vercel", padding="5")
+        self.deploy_frame.grid(row=1, column=2, sticky='nsew', padx=(10, 0))
+        self.deploy_frame.rowconfigure(3, weight=1)
+        self.deploy_frame.columnconfigure(0, weight=1)
         
-        self.login_status_label = ttk.Label(deploy_frame, text="❌ Não logado", font=('Arial', 9, 'bold'))
+        self.login_status_label = ttk.Label(self.deploy_frame, text="❌ Não logado", font=('Arial', 9, 'bold'))
         self.login_status_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
         
-        login_buttons = ttk.Frame(deploy_frame)
+        login_buttons = ttk.Frame(self.deploy_frame)
         login_buttons.grid(row=1, column=0, sticky='ew', pady=(0, 10))
-        ttk.Button(login_buttons, text="🔑 Login", command=self.vercel_login, width=8).pack(side=tk.LEFT, padx=(0, 3))
-        ttk.Button(login_buttons, text="🔍 Status", command=self.check_vercel_status, width=8).pack(side=tk.LEFT, padx=3)
-        ttk.Button(login_buttons, text="🚪 Logout", command=self.vercel_logout, width=8).pack(side=tk.LEFT, padx=3)
+        btn_login = ttk.Button(login_buttons, text="🔑 Login", command=self.vercel_login, width=8)
+        btn_login.pack(side=tk.LEFT, padx=(0, 3))
+        btn_status = ttk.Button(login_buttons, text="🔍 Status", command=self.check_vercel_status, width=8)
+        btn_status.pack(side=tk.LEFT, padx=3)
+        btn_logout = ttk.Button(login_buttons, text="🚪 Logout", command=self.vercel_logout, width=8)
+        btn_logout.pack(side=tk.LEFT, padx=3)
         
-        config_frame = ttk.Frame(deploy_frame)
+        config_frame = ttk.Frame(self.deploy_frame)
         config_frame.grid(row=2, column=0, sticky='ew', pady=(0, 10))
         ttk.Label(config_frame, text="📝 Projeto:", font=('Arial', 9, 'bold')).pack(anchor='w')
         self.project_name_var = tk.StringVar(value="orcamento-sistema")
         self.project_name_entry = ttk.Entry(config_frame, textvariable=self.project_name_var)
         self.project_name_entry.pack(fill='x', pady=(2, 5))
         
-        deploy_buttons = ttk.Frame(config_frame)
-        deploy_buttons.pack(fill='x')
-        ttk.Button(deploy_buttons, text="🔍 Verificar", command=self.check_project_setup).pack(fill='x', pady=1)
-        ttk.Button(deploy_buttons, text="🚀 Preview", command=self.deploy_preview).pack(fill='x', pady=1)
-        ttk.Button(deploy_buttons, text="⭐ Production", command=self.deploy_production).pack(fill='x', pady=1)
-        ttk.Button(deploy_buttons, text="📋 Listar", command=self.list_deployments).pack(fill='x', pady=1)
+        deploy_buttons_frame = ttk.Frame(config_frame)
+        deploy_buttons_frame.pack(fill='x')
+        btn_verify = ttk.Button(deploy_buttons_frame, text="🔍 Verificar", command=self.check_project_setup)
+        btn_verify.pack(fill='x', pady=1)
+        btn_preview = ttk.Button(deploy_buttons_frame, text="🚀 Preview", command=self.deploy_preview)
+        btn_preview.pack(fill='x', pady=1)
+        btn_prod = ttk.Button(deploy_buttons_frame, text="⭐ Production", command=self.deploy_production)
+        btn_prod.pack(fill='x', pady=1)
+        btn_list = ttk.Button(deploy_buttons_frame, text="📋 Listar", command=self.list_deployments)
+        btn_list.pack(fill='x', pady=1)
         
-        self.deploy_log = scrolledtext.ScrolledText(deploy_frame, height=10, font=('Consolas', 8))
+        self.deploy_log = scrolledtext.ScrolledText(self.deploy_frame, height=10, font=('Consolas', 8))
         self.deploy_log.grid(row=3, column=0, sticky='nsew', pady=(5, 5))
         
-        urls_frame = ttk.Frame(deploy_frame)
+        urls_frame = ttk.Frame(self.deploy_frame)
         urls_frame.grid(row=4, column=0, sticky='ew')
         
         self.preview_url_var = tk.StringVar()
@@ -217,83 +229,108 @@ class VersionControlUnified:
         preview_frame = ttk.Frame(urls_frame)
         preview_frame.pack(fill='x', pady=2)
         ttk.Label(preview_frame, text="Preview:", width=8).pack(side=tk.LEFT)
-        ttk.Entry(preview_frame, textvariable=self.preview_url_var, state="readonly", width=20).pack(side=tk.LEFT, fill='x', expand=True, padx=(5, 3))
-        ttk.Button(preview_frame, text="🌐", command=lambda: self.open_url(self.preview_url_var.get()), width=3).pack(side=tk.RIGHT)
+        preview_entry = ttk.Entry(preview_frame, textvariable=self.preview_url_var, state="readonly", width=20)
+        preview_entry.pack(side=tk.LEFT, fill='x', expand=True, padx=(5, 3))
+        preview_btn = ttk.Button(preview_frame, text="🌐", command=lambda: self.open_url(self.preview_url_var.get()), width=3)
+        preview_btn.pack(side=tk.RIGHT)
         
         prod_frame = ttk.Frame(urls_frame)
         prod_frame.pack(fill='x', pady=2)
         ttk.Label(prod_frame, text="Prod:", width=8).pack(side=tk.LEFT)
-        ttk.Entry(prod_frame, textvariable=self.production_url_var, state="readonly", width=20).pack(side=tk.LEFT, fill='x', expand=True, padx=(5, 3))
-        ttk.Button(prod_frame, text="🌐", command=lambda: self.open_url(self.production_url_var.get()), width=3).pack(side=tk.RIGHT)
+        prod_entry = ttk.Entry(prod_frame, textvariable=self.production_url_var, state="readonly", width=20)
+        prod_entry.pack(side=tk.LEFT, fill='x', expand=True, padx=(5, 3))
+        prod_btn = ttk.Button(prod_frame, text="🌐", command=lambda: self.open_url(self.production_url_var.get()), width=3)
+        prod_btn.pack(side=tk.RIGHT)
         
+        # Armazena os widgets do Vercel para poder habilitar/desabilitar
+        self.vercel_widgets = [
+            btn_login, btn_status, btn_logout, self.project_name_entry,
+            btn_verify, btn_preview, btn_prod, btn_list,
+            preview_entry, preview_btn, prod_entry, prod_btn
+        ]
+
         # Inicializar
-        self.root.after(100, self.check_git_availability)
-        self.root.after(500, self.check_vercel_status)
+        self.root.after(100, self.perform_startup_checks)
 
     # ==================== MÉTODOS DE CAMINHO E VALIDAÇÃO ====================
-    def find_git_executable(self):
-        """Tenta encontrar o executável do Git em locais comuns no Windows."""
-        if os.name != 'nt': # Em Linux/Mac, assume-se que está no PATH
-            return "git" 
-
-        search_paths = [
-            os.environ.get("ProgramFiles", "C:\\Program Files"),
-            os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"),
-            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")
-        ]
-        
-        for path in search_paths:
-            if not path: continue
-            # Verifica ambos os caminhos, bin e cmd, pois pode variar
-            git_path_bin = os.path.join(path, "Git", "bin", "git.exe")
-            git_path_cmd = os.path.join(path, "Git", "cmd", "git.exe")
-            
-            if os.path.exists(git_path_bin):
-                return git_path_bin
-            if os.path.exists(git_path_cmd):
-                return git_path_cmd
-        
+    def find_executable(self, name):
+        """Tenta encontrar um executável no PATH, depois em locais comuns."""
+        try:
+            cmd = 'where' if os.name == 'nt' else 'which'
+            result = subprocess.run([cmd, name], check=True, capture_output=True, text=True, shell=True)
+            return f'"{result.stdout.strip().splitlines()[0]}"'
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            if os.name == 'nt':
+                name_with_ext = f"{name}.exe"
+                search_paths = [
+                    os.environ.get("ProgramFiles", "C:\\Program Files"),
+                    os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"),
+                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")
+                ]
+                if name == 'git':
+                    for path in search_paths:
+                        for sub_path in [("Git", "bin"), ("Git", "cmd")]:
+                            full_path = os.path.join(path, *sub_path, name_with_ext)
+                            if os.path.exists(full_path):
+                                return f'"{full_path}"'
+                
+                name_with_ext = f"{name}.cmd"
+                if name in ['npm', 'vercel', 'pnpm', 'yarn']:
+                    search_paths.extend([
+                        os.path.join(os.environ.get("ProgramFiles", ""), "nodejs"),
+                        os.path.join(os.environ.get("APPDATA", ""), "npm")
+                    ])
+                    for path in search_paths:
+                        full_path = os.path.join(path, name_with_ext)
+                        if os.path.exists(full_path):
+                            return f'"{full_path}"'
         return None
 
-    def check_git_availability(self):
-        """Verifica se o comando 'git' está disponível, procurando o executável se necessário."""
-        try:
-            # Tenta executar com o default 'git', que pode estar no PATH
-            subprocess.run('git --version', shell=True, check=True, capture_output=True)
-            self.is_git_available = True
+    def perform_startup_checks(self):
+        """Verifica a disponibilidade de todas as ferramentas externas necessárias."""
+        tools_to_check = ['git', 'npm', 'vercel']
+        found_tools = {tool: self.find_executable(tool) for tool in tools_to_check}
+
+        # Verifica GIT
+        if found_tools['git']:
+            self.executables['git'] = found_tools['git']
             self.verify_project_path()
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # Se falhou, tenta encontrar o executável em pastas comuns
-            found_path = self.find_git_executable()
-            if found_path:
-                self.git_executable = found_path
-                self.is_git_available = True
-                self.verify_project_path()
-                return True
-            else:
-                # Se não encontrou de nenhuma forma, exibe o erro
-                self.is_git_available = False
-                self.clear_all_views()
-                self.git_status_label.config(text="❌ Git não encontrado!", foreground="red")
-                messagebox.showerror(
-                    "Erro de Configuração: Git não encontrado",
-                    "O sistema não conseguiu encontrar o Git instalado no seu computador.\n\n"
-                    "Para que o programa funcione, por favor, siga estes passos:\n\n"
-                    "1. Verifique se o Git está instalado. Se não estiver, baixe e instale a partir de:\n"
-                    "   https://git-scm.com/downloads\n\n"
-                    "2. Durante a instalação, na etapa 'Adjusting your PATH environment', "
-                    "certifique-se de selecionar a opção recomendada:\n"
-                    "   'Git from the command line and also from 3rd-party software'.\n\n"
-                    "3. Após a instalação, reinicie este programa."
-                )
-                return False
+        else:
+            self.clear_all_views()
+            self.git_status_label.config(text="❌ Git não encontrado!", foreground="red")
+            messagebox.showerror(
+                "Erro de Configuração: Git não encontrado",
+                "O Git é essencial para o funcionamento do programa e não foi encontrado.\n\n"
+                "Por favor, instale o Git e certifique-se de que ele esteja no PATH do sistema.\n"
+                "Download: https://git-scm.com/downloads"
+            )
+            return
+
+        # Verifica NPM (para iniciar projeto)
+        if found_tools['npm']:
+            self.executables['npm'] = found_tools['npm']
+            self.start_project_button.config(state=tk.NORMAL)
+        else:
+            self.start_project_button.config(state=tk.DISABLED)
+            self.log_deploy_message("AVISO: 'npm' não encontrado. A função 'Iniciar' está desabilitada.", "WARNING")
+
+        # Verifica Vercel
+        if found_tools['vercel']:
+            self.executables['vercel'] = found_tools['vercel']
+            for widget in self.vercel_widgets:
+                widget.state(['!disabled'])
+        else:
+            for widget in self.vercel_widgets:
+                widget.state(['disabled'])
+            self.log_deploy_message("AVISO: 'vercel' não encontrado. Funções de deploy desabilitadas.", "WARNING")
+        
+        self.check_vercel_status()
 
 
     def select_project_folder(self):
         """Abre um diálogo para o usuário selecionar a pasta do projeto Git."""
-        if not self.is_git_available:
-            messagebox.showwarning("Aviso", "A instalação do Git não foi encontrada. Verifique a configuração do seu sistema.")
+        if 'git' not in self.executables:
+            messagebox.showwarning("Aviso", "A instalação do Git não foi encontrada.")
             return
         path = filedialog.askdirectory(title="Selecione a pasta do seu projeto Git")
         if path:
@@ -302,7 +339,7 @@ class VersionControlUnified:
 
     def verify_project_path(self):
         """Verifica se o caminho selecionado é um repositório Git válido."""
-        if not self.is_git_available: return
+        if 'git' not in self.executables: return
 
         git_path = os.path.join(self.project_path, '.git')
         self.path_label.config(text=f"Pasta: {self.project_path}")
@@ -318,10 +355,9 @@ class VersionControlUnified:
                                    f"A pasta selecionada não parece ser um repositório Git.\n\nDeseja inicializar um novo repositório em:\n{self.project_path}?"):
                 success, _, error = self.run_command('git init')
                 if success:
-                    self.run_command('git config user.name "Usuario"')
-                    self.run_command('git config user.email "usuario@local"')
-                    messagebox.showinfo("Sucesso", "✅ Repositório Git inicializado!")
+                    messagebox.showinfo("Sucesso", "✅ Repositório Git inicializado! Por favor, configure seu usuário.")
                     self.is_repo_valid = True
+                    self.configure_git_user()
                     self.refresh_all()
                 else:
                     messagebox.showerror("Erro", f"Falha ao inicializar o repositório:\n{error}")
@@ -345,11 +381,11 @@ class VersionControlUnified:
             if not self.project_path or not os.path.isdir(self.project_path):
                  return False, "", f"Diretório do projeto inválido: {self.project_path}"
             
-            # Prepara o comando com o caminho completo do executável do Git, se necessário
-            if command.strip().startswith("git "):
-                command_parts = command.split(" ", 1)
-                # Adiciona aspas ao redor do executável para lidar com espaços no caminho
-                full_command = f'"{self.git_executable}" {command_parts[1]}'
+            command_name = command.strip().split(" ")[0]
+            
+            if command_name in self.executables:
+                # Substitui apenas a primeira ocorrência do comando pelo caminho completo
+                full_command = command.replace(command_name, self.executables[command_name], 1)
             else:
                 full_command = command
 
@@ -374,7 +410,7 @@ class VersionControlUnified:
 
     def refresh_all(self):
         """Atualiza todas as listas se o repositório for válido."""
-        if not self.is_repo_valid or not self.is_git_available:
+        if not self.is_repo_valid or 'git' not in self.executables:
             self.clear_all_views()
             return
         try:
@@ -590,6 +626,58 @@ class VersionControlUnified:
             messagebox.showerror("Erro", "Nenhum repositório Git válido selecionado.")
             return False
         return True
+
+    def configure_git_user(self):
+        if not self._check_repo_validity(): return
+
+        # Create a new top-level window
+        config_window = tk.Toplevel(self.root)
+        config_window.title("Configurar Usuário do Git (Repositório Local)")
+        config_window.geometry("400x150")
+        config_window.transient(self.root)
+        config_window.grab_set()
+        config_window.resizable(False, False)
+
+        main_frame = ttk.Frame(config_window, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Get current user name and email from the local config
+        _, current_name, _ = self.run_command('git config user.name')
+        _, current_email, _ = self.run_command('git config user.email')
+
+        # Name entry
+        ttk.Label(main_frame, text="Nome de Usuário:").grid(row=0, column=0, sticky='w', pady=(0, 5))
+        name_var = tk.StringVar(value=current_name.strip())
+        name_entry = ttk.Entry(main_frame, textvariable=name_var, width=40)
+        name_entry.grid(row=0, column=1, sticky='ew', pady=(0, 5))
+
+        # Email entry
+        ttk.Label(main_frame, text="Email:").grid(row=1, column=0, sticky='w', pady=(0, 10))
+        email_var = tk.StringVar(value=current_email.strip())
+        email_entry = ttk.Entry(main_frame, textvariable=email_var, width=40)
+        email_entry.grid(row=1, column=1, sticky='ew', pady=(0, 10))
+        
+        main_frame.columnconfigure(1, weight=1)
+
+        def save_config():
+            new_name = name_var.get().strip()
+            new_email = email_var.get().strip()
+
+            if not new_name or not new_email:
+                messagebox.showwarning("Aviso", "Nome e email não podem estar vazios.", parent=config_window)
+                return
+
+            self.run_command(f'git config user.name "{new_name}"')
+            self.run_command(f'git config user.email "{new_email}"')
+            
+            messagebox.showinfo("Sucesso", "Usuário do Git configurado para este repositório.", parent=config_window)
+            config_window.destroy()
+
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=2, column=0, columnspan=2, sticky='e', pady=(10,0))
+        
+        ttk.Button(button_frame, text="Salvar", command=save_config).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancelar", command=config_window.destroy).pack(side=tk.LEFT)
 
     def save_version(self):
         if not self._check_repo_validity(): return
@@ -827,37 +915,43 @@ class VersionControlUnified:
             messagebox.showerror("Erro", "Arquivo package.json não encontrado!")
             return
 
-        def kill_node_processes():
-            if os.name != 'nt': return True, "Não é Windows."
-            try:
-                subprocess.run(['taskkill', '/F', '/IM', 'node.exe'], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                return True, "Processos Node.js anteriores terminados."
-            except Exception as e: return False, f"Erro ao terminar processos: {e}"
-
         def start_in_background():
-            kill_success, kill_message = kill_node_processes()
-            print(kill_message)
-            time.sleep(1)
-            
-            with open(package_json, 'r', encoding='utf-8') as f: scripts = json.load(f).get('scripts', {})
+            with open(package_json, 'r', encoding='utf-8') as f:
+                scripts = json.load(f).get('scripts', {})
             
             dev_command = None
             if 'dev' in scripts:
-                if os.path.exists(os.path.join(self.project_path, 'pnpm-lock.yaml')): dev_command = 'pnpm dev'
-                elif os.path.exists(os.path.join(self.project_path, 'yarn.lock')): dev_command = 'yarn dev'
-                else: dev_command = 'npm run dev'
+                if os.path.exists(os.path.join(self.project_path, 'pnpm-lock.yaml')):
+                    dev_command = 'pnpm dev'
+                elif os.path.exists(os.path.join(self.project_path, 'yarn.lock')):
+                    dev_command = 'yarn dev'
+                else:
+                    dev_command = 'npm run dev'
 
             if dev_command:
                 try:
-                    subprocess.Popen(dev_command, shell=True, cwd=self.project_path, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
+                    # Abre um novo terminal para rodar o servidor, evitando bloquear a GUI.
+                    # O usuário pode ver o output e parar o servidor manualmente.
+                    if os.name == 'nt':
+                        command = f'cmd.exe /c "cd /d {self.project_path} && {dev_command}"'
+                        subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
+                    else:
+                        # Fallback para outros sistemas (pode não abrir um terminal visível)
+                        cmd_parts = dev_command.split()
+                        executable = self.executables.get(cmd_parts[0], cmd_parts[0])
+                        subprocess.Popen([executable] + cmd_parts[1:], cwd=self.project_path)
                     return True, dev_command
-                except Exception as e: return False, f"Erro ao iniciar projeto: {e}"
+                except Exception as e:
+                    return False, f"Erro ao iniciar projeto: {e}"
             return False, "Script 'dev' não encontrado no package.json"
 
         def run_start():
             success, result = start_in_background()
-            self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Projeto iniciado com: {result}") if success else messagebox.showerror("Erro", result))
-            if success: self.root.after(3000, self.open_browser)
+            if success:
+                self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Projeto sendo iniciado em um novo terminal com: '{result}'.\nO navegador abrirá em instantes."))
+                self.root.after(4000, self.open_browser)
+            else:
+                self.root.after(0, lambda: messagebox.showerror("Erro", result))
 
         threading.Thread(target=run_start, daemon=True).start()
     
@@ -885,11 +979,15 @@ class VersionControlUnified:
     def run_vercel_command(self, command, show_output=True):
         try:
             if not self.is_repo_valid: return False, "", "Repositório inválido"
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore', cwd=self.project_path)
+            
+            # Utiliza o run_command principal que já trata os paths
+            success, stdout, stderr = self.run_command(command)
+
             if show_output:
-                if result.stdout.strip(): self.log_deploy_message(result.stdout.strip(), "INFO")
-                if result.stderr.strip(): self.log_deploy_message(result.stderr.strip(), "WARNING")
-            return result.returncode == 0, result.stdout, result.stderr
+                if stdout.strip(): self.log_deploy_message(stdout.strip(), "INFO")
+                if stderr.strip(): self.log_deploy_message(stderr.strip(), "WARNING")
+            
+            return success, stdout, stderr
         except Exception as e:
             if show_output: self.log_deploy_message(f"Erro na execução: {e}", "ERROR")
             return False, "", str(e)
@@ -908,22 +1006,23 @@ class VersionControlUnified:
         self.deploy_log.tag_config("WARNING", foreground="orange")
         self.deploy_log.tag_config("ERROR", foreground="red")
         self.deploy_log.tag_config("INFO", foreground="black")
-
-    def check_vercel_cli_installed(self):
-        success, _, _ = self.run_vercel_command("vercel --version", show_output=False)
-        return success
     
     def vercel_login(self):
         if not self._check_repo_validity(): return
-        if not self.check_vercel_cli_installed():
-            if messagebox.askyesno("Instalar Vercel CLI", "Vercel CLI não encontrado. Instalar com 'npm install -g vercel'?"):
-                self.log_deploy_message("Instalando Vercel CLI...", "INFO")
-                subprocess.Popen('npm install -g vercel', shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
+        if 'vercel' not in self.executables or not self.executables['vercel']:
+            messagebox.showerror("Erro", "Vercel CLI não encontrado. A função de login está desabilitada.")
             return
-        
-        self.log_deploy_message("Abra o terminal para fazer o login no Vercel...", "INFO")
-        subprocess.Popen('vercel login', shell=True, cwd=self.project_path, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
-        self.root.after(5000, self.check_vercel_status)
+
+        self.log_deploy_message("Abrindo terminal para login no Vercel...", "INFO")
+        try:
+            # Abre um novo terminal para o processo de login interativo.
+            executable = f'"{self.executables["vercel"]}"'
+            command = f'cmd.exe /c "cd /d {self.project_path} && {executable} login"'
+            subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            self.root.after(8000, self.check_vercel_status) # Aumentado o tempo de espera
+        except Exception as e:
+            self.log_deploy_message(f"Falha ao abrir terminal para login: {e}", "ERROR")
+            messagebox.showerror("Erro", f"Não foi possível iniciar o processo de login do Vercel.\n\n{e}")
 
     def vercel_logout(self):
         if messagebox.askyesno("Logout", "Fazer logout do Vercel?"):
@@ -932,7 +1031,9 @@ class VersionControlUnified:
     
     def check_vercel_status(self):
         def check():
-            if not self.is_repo_valid: return
+            if not self.is_repo_valid or 'vercel' not in self.executables: 
+                self.login_status_label.config(text="Vercel indisponível")
+                return
             success, output, _ = self.run_vercel_command("vercel whoami", show_output=False)
             status_text = f"✅ {output.strip()}" if success and output.strip() else "❌ Não logado"
             self.root.after(0, lambda: self.login_status_label.config(text=status_text))
@@ -1002,5 +1103,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

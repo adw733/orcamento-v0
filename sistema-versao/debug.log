@@ -1,197 +1,14 @@
 
-==================== 2025-09-26 11:58:11.871336 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
+==================== 2025-09-26 12:40:04.684189 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" log --date=format:"%d/%m %H:%M" --pretty=format:"%h<|>%ad<|>%s<|>%at" -20
+
+==================== 2025-09-26 12:40:04.684431 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Users\adw73\AppData\Roaming\npm\vercel" whoami
 RETURN CODE: 0
 STDOUT:
-2ce7dee<|>26/09 11:31<|>feat(deploy): add comprehensive deployment system with scripts and GUI manager<|>1758897110
-STDERR:
-
-
-==================== 2025-09-26 11:58:12.052200 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 2ce7dee
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:12.210403 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
-RETURN CODE: 0
-STDOUT:
- D README_CORRECOES.md
- D deploy_fix.bat
- D deploy_manager.py
- D deploy_rapido.py
- D deploy_simples.bat
- D executar_deploy_manager.bat
- D fix_build.py
- D fix_deploy.py
- D fix_final.bat
- D fix_windows_errors.bat
- D gerenciador_versao_completo.py
- D verificar_sistema.bat
-?? debug.log
-?? gerenciador_versao_unificado.py
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:12.359198 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
-RETURN CODE: 0
-STDOUT:
-master
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:12.496095 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" for-each-ref --format="%(refname:short)<|>%(committerdate:format:%d/%m %H:%M)<|>%(committerdate:unix)" refs/heads/
-RETURN CODE: 0
-STDOUT:
-master<|>26/09 11:31<|>1758897110
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:12.636307 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
-RETURN CODE: 0
-STDOUT:
-master
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:12.771984 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
-RETURN CODE: 0
-STDOUT:
- D README_CORRECOES.md
- D deploy_fix.bat
- D deploy_manager.py
- D deploy_rapido.py
- D deploy_simples.bat
- D executar_deploy_manager.bat
- D fix_build.py
- D fix_deploy.py
- D fix_final.bat
- D fix_windows_errors.bat
- D gerenciador_versao_completo.py
- D verificar_sistema.bat
-?? debug.log
-?? gerenciador_versao_unificado.py
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:19.293627 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" log --date=format:"%d/%m %H:%M" --pretty=format:"%h<|>%ad<|>%s<|>%at" -20
-RETURN CODE: 0
-STDOUT:
-2ce7dee<|>26/09 11:31<|>feat(deploy): add comprehensive deployment system with scripts and GUI manager<|>1758897110
-STDERR:
-
-
-==================== 2025-09-26 11:58:19.425526 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 2ce7dee
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:19.556366 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
-RETURN CODE: 0
-STDOUT:
- D README_CORRECOES.md
- D deploy_fix.bat
- D deploy_manager.py
- D deploy_rapido.py
- D deploy_simples.bat
- D executar_deploy_manager.bat
- D fix_build.py
- D fix_deploy.py
- D fix_final.bat
- D fix_windows_errors.bat
- D gerenciador_versao_completo.py
- D verificar_sistema.bat
-?? debug.log
-?? gerenciador_versao_unificado.py
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:19.693905 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
-RETURN CODE: 0
-STDOUT:
-master
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:19.822553 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" for-each-ref --format="%(refname:short)<|>%(committerdate:format:%d/%m %H:%M)<|>%(committerdate:unix)" refs/heads/
-RETURN CODE: 0
-STDOUT:
-master<|>26/09 11:31<|>1758897110
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:19.999720 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
-RETURN CODE: 0
-STDOUT:
-master
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:20.132862 ====================
-CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2\sistema-versao
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
-RETURN CODE: 0
-STDOUT:
- D README_CORRECOES.md
- D deploy_fix.bat
- D deploy_manager.py
- D deploy_rapido.py
- D deploy_simples.bat
- D executar_deploy_manager.bat
- D fix_build.py
- D fix_deploy.py
- D fix_final.bat
- D fix_windows_errors.bat
- D gerenciador_versao_completo.py
- D verificar_sistema.bat
-?? debug.log
-?? gerenciador_versao_unificado.py
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:33.075348 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" log --date=format:"%d/%m %H:%M" --pretty=format:"%h<|>%ad<|>%s<|>%at" -20
-RETURN CODE: 0
-STDOUT:
+1da3117<|>26/09 11:59<|>correcao do sistema de gerenciamento<|>1758898784
 b702a10<|>26/09 11:31<|>refactor(version_control): improve robustness and error handling in git operations<|>1758897099
 76b1d22<|>07/08 23:25<|>ordenacao tamanhos tabela resumo impressao<|>1754619940
 bdb8552<|>07/08 22:23<|>ordenação tamanhos na tebela resumo<|>1754616201
@@ -211,12 +28,20 @@ bb5ed2e<|>03/07 22:45<|>pesquisa produtos itens orçamento<|>1751593518
 cef4888<|>26/06 15:32<|>ocorrecao ordem colunas itens orcamentos<|>1750962720
 a831c8e<|>26/06 15:11<|>correcao salvamento<|>1750961503
 ae336bb<|>23/06 18:33<|>edicao arte<|>1750714401
-c42672a<|>23/06 18:19<|>correcao inserir arte<|>1750713555
 STDERR:
 
 
-==================== 2025-09-26 11:58:33.235384 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:04.791642 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 1da3117
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:40:04.868876 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at b702a10
 RETURN CODE: 0
 STDOUT:
@@ -224,8 +49,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:33.380717 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:04.950617 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 76b1d22
 RETURN CODE: 0
 STDOUT:
@@ -233,8 +58,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:33.518808 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.031834 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at bdb8552
 RETURN CODE: 0
 STDOUT:
@@ -242,8 +67,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:33.655766 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.111377 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 7cbe8ab
 RETURN CODE: 0
 STDOUT:
@@ -251,8 +76,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:33.797914 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.193261 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 500756a
 RETURN CODE: 0
 STDOUT:
@@ -260,8 +85,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:33.942677 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.273061 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at b3f035c
 RETURN CODE: 0
 STDOUT:
@@ -269,8 +94,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.079975 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.353494 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 9abe844
 RETURN CODE: 0
 STDOUT:
@@ -278,8 +103,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.214215 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.427695 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 2fa34f6
 RETURN CODE: 0
 STDOUT:
@@ -287,8 +112,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.355033 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.502910 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at f6b2118
 RETURN CODE: 0
 STDOUT:
@@ -296,8 +121,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.494609 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.576289 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 8bc1e9d
 RETURN CODE: 0
 STDOUT:
@@ -305,8 +130,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.631640 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.648603 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at f9e4b8a
 RETURN CODE: 0
 STDOUT:
@@ -314,8 +139,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.767881 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.722357 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 5f9387d
 RETURN CODE: 0
 STDOUT:
@@ -323,17 +148,24 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:34.916458 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.801631 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 9fa0aeb
+RETURN CODE: 0
+STDOUT:
+adw733
+
+STDERR:
+Vercel CLI 44.2.7
+
 RETURN CODE: 0
 STDOUT:
 
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.070406 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.885346 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at bb5ed2e
 RETURN CODE: 0
 STDOUT:
@@ -341,8 +173,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.205753 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:05.971229 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 30c65c6
 RETURN CODE: 0
 STDOUT:
@@ -350,8 +182,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.388723 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.052053 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 81c37a8
 RETURN CODE: 0
 STDOUT:
@@ -359,8 +191,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.532128 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.131321 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at cef4888
 RETURN CODE: 0
 STDOUT:
@@ -368,8 +200,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.670970 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.209359 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at a831c8e
 RETURN CODE: 0
 STDOUT:
@@ -377,8 +209,8 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.809809 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.284168 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at ae336bb
 RETURN CODE: 0
 STDOUT:
@@ -386,342 +218,20 @@ STDOUT:
 STDERR:
 
 
-==================== 2025-09-26 11:58:35.943969 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at c42672a
-
-==================== 2025-09-26 11:58:36.055575 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" log --date=format:"%d/%m %H:%M" --pretty=format:"%h<|>%ad<|>%s<|>%at" -20
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.088775 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.363813 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
 RETURN CODE: 0
 STDOUT:
-b702a10<|>26/09 11:31<|>refactor(version_control): improve robustness and error handling in git operations<|>1758897099
-76b1d22<|>07/08 23:25<|>ordenacao tamanhos tabela resumo impressao<|>1754619940
-bdb8552<|>07/08 22:23<|>ordenação tamanhos na tebela resumo<|>1754616201
-7cbe8ab<|>07/08 21:24<|>nao sei mas ta funcionando<|>1754612678
-500756a<|>24/07 22:26<|>Valor total ficha tecncia<|>1753406775
-b3f035c<|>24/07 12:58<|>correcao erro deploy<|>1753372682
-9abe844<|>24/07 12:34<|>atualizacao yaml<|>1753371241
-2fa34f6<|>17/07 20:15<|>nao sei, se comecar dar problema, volte<|>1752794126
-f6b2118<|>11/07 13:26<|>supabase largura arte<|>1752251174
-8bc1e9d<|>09/07 14:09<|>separaçao produtos tabela<|>1752080976
-f9e4b8a<|>09/07 13:55<|>duplicar item<|>1752080109
-5f9387d<|>07/07 21:57<|>salvamento<|>1751936269
-9fa0aeb<|>03/07 23:00<|>itens orcamento<|>1751594404
-bb5ed2e<|>03/07 22:45<|>pesquisa produtos itens orçamento<|>1751593518
-30c65c6<|>02/07 16:32<|>filtro tabela de produtos<|>1751484766
-81c37a8<|>30/06 22:16<|>correcao gerador de orcamento<|>1751332593
-cef4888<|>26/06 15:32<|>ocorrecao ordem colunas itens orcamentos<|>1750962720
-a831c8e<|>26/06 15:11<|>correcao salvamento<|>1750961503
-ae336bb<|>23/06 18:33<|>edicao arte<|>1750714401
-c42672a<|>23/06 18:19<|>correcao inserir arte<|>1750713555
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.213876 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at b702a10
-RETURN CODE: 0
-STDOUT:
+ M sistema-versao/debug.log
  M sistema-versao/gerenciador_versao_unificado.py
-?? sistema-versao/debug.log
+?? GEMINI.md
 
 STDERR:
 
 
-==================== 2025-09-26 11:58:36.235899 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.350355 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 76b1d22
-RETURN CODE: 0
-STDOUT:
-restore_0724_2219
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.367604 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" for-each-ref --format="%(refname:short)<|>%(committerdate:format:%d/%m %H:%M)<|>%(committerdate:unix)" refs/heads/
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.486878 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at bdb8552
-RETURN CODE: 0
-STDOUT:
-04_06_25<|>30/05 18:12<|>1748639520
-fork_0608_2225_alt_tamanhos<|>09/06 22:29<|>1749518978
-fork_0709_1313_gestao<|>10/07 19:04<|>1752185045
-fork_0710_1913<|>09/07 14:09<|>1752080976
-fork_0710_1913_seguro<|>11/07 16:28<|>1752262125
-fork_20250604_1<|>04/06 13:03<|>1749053029
-fork_20250604_2<|>04/06 22:41<|>1749087679
-fork_20250604_2243<|>04/06 22:46<|>1749087979
-fork_20250604_2253<|>04/06 23:03<|>1749088986
-fork_20250604_2303<|>04/06 23:36<|>1749090960
-fork_20250605_1654<|>04/06 13:03<|>1749053029
-fork_20250606_1402<|>06/06 14:51<|>1749232291
-fork_20250606_1453<|>06/06 16:53<|>1749239625
-fork_20250606_1653<|>06/06 17:18<|>1749241082
-fork_20250606_1718<|>06/06 19:25<|>1749248747
-fork_20250606_1925<|>08/06 21:38<|>1749429508
-main<|>03/06 21:53<|>1748998393
-master<|>30/05 16:56<|>1748634962
-restore_0608_2138<|>08/06 22:24<|>1749432294
-restore_0609_2229<|>16/06 23:21<|>1750126884
-restore_0616_2321<|>19/06 14:14<|>1750353280
-restore_0619_1414<|>20/06 21:56<|>1750467392
-restore_0620_2239<|>20/06 22:39<|>1750469980
-restore_0620_2240<|>30/06 12:53<|>1751298782
-restore_0630_1253<|>03/07 22:35<|>1751592930
-restore_0703_2235<|>05/07 19:49<|>1751755769
-restore_0705_1949_edit_direct_view<|>09/07 13:13<|>1752077618
-restore_0709_1314<|>09/07 14:09<|>1752080976
-restore_0710_1908<|>09/07 13:13<|>1752077618
-restore_0711_1629<|>11/07 17:04<|>1752264274
-restore_0711_1704<|>17/07 21:49<|>1752799771
-restore_0717_2150<|>18/07 17:55<|>1752872128
-restore_0718_1755<|>18/07 18:26<|>1752873980
-restore_0718_1826<|>24/07 22:18<|>1753406289
-restore_0724_2219<|>26/09 11:31<|>1758897099
-restore_20250604_2249<|>04/06 22:46<|>1749087979
-restore_20250604_2250<|>04/06 22:41<|>1749087679
-restore_20250604_2251<|>04/06 22:53<|>1749088424
-restore_20250604_2324<|>04/06 23:12<|>1749089579
-restore_20250605_1639<|>04/06 23:36<|>1749090960
-restore_20250605_1643<|>05/06 18:59<|>1749160763
-restore_20250605_1859<|>05/06 22:15<|>1749172508
-restore_20250605_2216<|>05/06 22:23<|>1749173032
-restore_20250605_2223<|>05/06 20:49<|>1749167370
-restore_20250605_2224<|>05/06 22:15<|>1749172508
-restore_20250605_2225<|>05/06 20:49<|>1749167370
-restore_20250605_2226<|>05/06 20:49<|>1749167370
-restore_20250605_2228<|>05/06 23:30<|>1749177012
-restore_20250605_2330<|>05/06 23:03<|>1749175407
-restore_20250605_2349<|>05/06 23:03<|>1749175407
-restore_20250605_2350<|>05/06 23:50<|>1749178236
-restore_20250605_2351<|>06/06 00:07<|>1749179265
-restore_20250606_0007<|>06/06 14:02<|>1749229332
-restore_20250608_2053<|>08/06 20:53<|>1749426812
-restore_20250608_2054<|>08/06 16:22<|>1749410553
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.528438 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.629414 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 7cbe8ab
-RETURN CODE: 0
-STDOUT:
-restore_0724_2219
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.659612 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.766535 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 500756a
-RETURN CODE: 0
-STDOUT:
- M sistema-versao/gerenciador_versao_unificado.py
-?? sistema-versao/debug.log
-
-STDERR:
-
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:36.910511 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at b3f035c
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.055736 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 9abe844
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.193682 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 2fa34f6
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.324101 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at f6b2118
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.458072 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 8bc1e9d
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.592970 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at f9e4b8a
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.732734 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 5f9387d
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:37.867121 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 9fa0aeb
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.000267 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at bb5ed2e
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.132913 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 30c65c6
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.264084 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 81c37a8
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.402013 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at cef4888
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.536939 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at a831c8e
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.674852 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at ae336bb
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.813249 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at c42672a
-RETURN CODE: 0
-STDOUT:
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:38.949159 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
-RETURN CODE: 0
-STDOUT:
- M sistema-versao/gerenciador_versao_unificado.py
-?? sistema-versao/debug.log
-
-STDERR:
-
-
-==================== 2025-09-26 11:58:39.090632 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.440265 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
 RETURN CODE: 0
 STDOUT:
@@ -730,8 +240,8 @@ restore_0724_2219
 STDERR:
 
 
-==================== 2025-09-26 11:58:39.221916 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.510313 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" for-each-ref --format="%(refname:short)<|>%(committerdate:format:%d/%m %H:%M)<|>%(committerdate:unix)" refs/heads/
 RETURN CODE: 0
 STDOUT:
@@ -769,7 +279,7 @@ restore_0711_1704<|>17/07 21:49<|>1752799771
 restore_0717_2150<|>18/07 17:55<|>1752872128
 restore_0718_1755<|>18/07 18:26<|>1752873980
 restore_0718_1826<|>24/07 22:18<|>1753406289
-restore_0724_2219<|>26/09 11:31<|>1758897099
+restore_0724_2219<|>26/09 11:59<|>1758898784
 restore_20250604_2249<|>04/06 22:46<|>1749087979
 restore_20250604_2250<|>04/06 22:41<|>1749087679
 restore_20250604_2251<|>04/06 22:53<|>1749088424
@@ -794,8 +304,8 @@ restore_20250608_2054<|>08/06 16:22<|>1749410553
 STDERR:
 
 
-==================== 2025-09-26 11:58:39.376889 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.603878 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
 RETURN CODE: 0
 STDOUT:
@@ -804,28 +314,573 @@ restore_0724_2219
 STDERR:
 
 
-==================== 2025-09-26 11:58:39.510434 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:40:06.670051 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
 RETURN CODE: 0
 STDOUT:
+ M sistema-versao/debug.log
  M sistema-versao/gerenciador_versao_unificado.py
-?? sistema-versao/debug.log
+?? GEMINI.md
 
 STDERR:
 
 
-==================== 2025-09-26 11:59:40.391456 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
-COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
+==================== 2025-09-26 12:41:57.986927 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Users\adw73\AppData\Roaming\npm\vercel" whoami
 RETURN CODE: 0
 STDOUT:
- M sistema-versao/gerenciador_versao_unificado.py
-?? sistema-versao/debug.log
+adw733
+
+STDERR:
+Vercel CLI 44.2.7
+
+
+==================== 2025-09-26 12:43:19.852026 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Users\adw73\AppData\Roaming\npm\vercel"  --name orcamento-sistema
+
+==================== 2025-09-26 12:43:23.743554 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Users\adw73\AppData\Roaming\npm\vercel" ls orcamento-sistema
+RETURN CODE: 1
+STDOUT:
+
+STDERR:
+Vercel CLI 44.2.7
+Error: The provided argument "orcamento-sistema" is not a valid project name
+
+
+==================== 2025-09-26 12:43:28.271310 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Users\adw73\AppData\Roaming\npm\vercel" ls orcamento-sistema
+RETURN CODE: 1
+STDOUT:
+
+STDERR:
+Vercel CLI 44.2.7
+Error: The provided argument "orcamento-sistema" is not a valid project name
+
+
+==================== 2025-09-26 12:44:50.305778 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" log --date=format:"%d/%m %H:%M" --pretty=format:"%h<|>%ad<|>%s<|>%at" -20
+RETURN CODE: 0
+STDOUT:
+1da3117<|>26/09 11:59<|>correcao do sistema de gerenciamento<|>1758898784
+b702a10<|>26/09 11:31<|>refactor(version_control): improve robustness and error handling in git operations<|>1758897099
+76b1d22<|>07/08 23:25<|>ordenacao tamanhos tabela resumo impressao<|>1754619940
+bdb8552<|>07/08 22:23<|>ordenação tamanhos na tebela resumo<|>1754616201
+7cbe8ab<|>07/08 21:24<|>nao sei mas ta funcionando<|>1754612678
+500756a<|>24/07 22:26<|>Valor total ficha tecncia<|>1753406775
+b3f035c<|>24/07 12:58<|>correcao erro deploy<|>1753372682
+9abe844<|>24/07 12:34<|>atualizacao yaml<|>1753371241
+2fa34f6<|>17/07 20:15<|>nao sei, se comecar dar problema, volte<|>1752794126
+f6b2118<|>11/07 13:26<|>supabase largura arte<|>1752251174
+8bc1e9d<|>09/07 14:09<|>separaçao produtos tabela<|>1752080976
+f9e4b8a<|>09/07 13:55<|>duplicar item<|>1752080109
+5f9387d<|>07/07 21:57<|>salvamento<|>1751936269
+9fa0aeb<|>03/07 23:00<|>itens orcamento<|>1751594404
+bb5ed2e<|>03/07 22:45<|>pesquisa produtos itens orçamento<|>1751593518
+30c65c6<|>02/07 16:32<|>filtro tabela de produtos<|>1751484766
+81c37a8<|>30/06 22:16<|>correcao gerador de orcamento<|>1751332593
+cef4888<|>26/06 15:32<|>ocorrecao ordem colunas itens orcamentos<|>1750962720
+a831c8e<|>26/06 15:11<|>correcao salvamento<|>1750961503
+ae336bb<|>23/06 18:33<|>edicao arte<|>1750714401
+STDERR:
+
+
+==================== 2025-09-26 12:44:50.403993 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 1da3117
+RETURN CODE: 0
+STDOUT:
 
 STDERR:
 
 
-==================== 2025-09-26 11:59:43.799312 ====================
-CWD: C:/Users/adw73/Desktop/01 - Desenvolvimento/02 - Projetos/01 - Gerador de Orçamento/orcamento_rev2
+==================== 2025-09-26 12:44:50.488583 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at b702a10
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:50.568103 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 76b1d22
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:50.649861 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at bdb8552
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:50.747190 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 7cbe8ab
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:50.843850 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 500756a
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:50.925603 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at b3f035c
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.006658 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 9abe844
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.085442 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 2fa34f6
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.163229 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at f6b2118
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.242437 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 8bc1e9d
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.359668 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at f9e4b8a
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.470246 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 5f9387d
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.563635 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 9fa0aeb
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.669311 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at bb5ed2e
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.756640 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 30c65c6
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.840019 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at 81c37a8
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:51.920738 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at cef4888
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.012712 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at a831c8e
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.105457 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" tag --points-at ae336bb
+RETURN CODE: 0
+STDOUT:
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.198474 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
+RETURN CODE: 0
+STDOUT:
+ M sistema-versao/debug.log
+ M sistema-versao/gerenciador_versao_unificado.py
+?? GEMINI.md
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.286063 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
+RETURN CODE: 0
+STDOUT:
+restore_0724_2219
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.378689 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" for-each-ref --format="%(refname:short)<|>%(committerdate:format:%d/%m %H:%M)<|>%(committerdate:unix)" refs/heads/
+RETURN CODE: 0
+STDOUT:
+04_06_25<|>30/05 18:12<|>1748639520
+fork_0608_2225_alt_tamanhos<|>09/06 22:29<|>1749518978
+fork_0709_1313_gestao<|>10/07 19:04<|>1752185045
+fork_0710_1913<|>09/07 14:09<|>1752080976
+fork_0710_1913_seguro<|>11/07 16:28<|>1752262125
+fork_20250604_1<|>04/06 13:03<|>1749053029
+fork_20250604_2<|>04/06 22:41<|>1749087679
+fork_20250604_2243<|>04/06 22:46<|>1749087979
+fork_20250604_2253<|>04/06 23:03<|>1749088986
+fork_20250604_2303<|>04/06 23:36<|>1749090960
+fork_20250605_1654<|>04/06 13:03<|>1749053029
+fork_20250606_1402<|>06/06 14:51<|>1749232291
+fork_20250606_1453<|>06/06 16:53<|>1749239625
+fork_20250606_1653<|>06/06 17:18<|>1749241082
+fork_20250606_1718<|>06/06 19:25<|>1749248747
+fork_20250606_1925<|>08/06 21:38<|>1749429508
+main<|>03/06 21:53<|>1748998393
+master<|>30/05 16:56<|>1748634962
+restore_0608_2138<|>08/06 22:24<|>1749432294
+restore_0609_2229<|>16/06 23:21<|>1750126884
+restore_0616_2321<|>19/06 14:14<|>1750353280
+restore_0619_1414<|>20/06 21:56<|>1750467392
+restore_0620_2239<|>20/06 22:39<|>1750469980
+restore_0620_2240<|>30/06 12:53<|>1751298782
+restore_0630_1253<|>03/07 22:35<|>1751592930
+restore_0703_2235<|>05/07 19:49<|>1751755769
+restore_0705_1949_edit_direct_view<|>09/07 13:13<|>1752077618
+restore_0709_1314<|>09/07 14:09<|>1752080976
+restore_0710_1908<|>09/07 13:13<|>1752077618
+restore_0711_1629<|>11/07 17:04<|>1752264274
+restore_0711_1704<|>17/07 21:49<|>1752799771
+restore_0717_2150<|>18/07 17:55<|>1752872128
+restore_0718_1755<|>18/07 18:26<|>1752873980
+restore_0718_1826<|>24/07 22:18<|>1753406289
+restore_0724_2219<|>26/09 11:59<|>1758898784
+restore_20250604_2249<|>04/06 22:46<|>1749087979
+restore_20250604_2250<|>04/06 22:41<|>1749087679
+restore_20250604_2251<|>04/06 22:53<|>1749088424
+restore_20250604_2324<|>04/06 23:12<|>1749089579
+restore_20250605_1639<|>04/06 23:36<|>1749090960
+restore_20250605_1643<|>05/06 18:59<|>1749160763
+restore_20250605_1859<|>05/06 22:15<|>1749172508
+restore_20250605_2216<|>05/06 22:23<|>1749173032
+restore_20250605_2223<|>05/06 20:49<|>1749167370
+restore_20250605_2224<|>05/06 22:15<|>1749172508
+restore_20250605_2225<|>05/06 20:49<|>1749167370
+restore_20250605_2226<|>05/06 20:49<|>1749167370
+restore_20250605_2228<|>05/06 23:30<|>1749177012
+restore_20250605_2330<|>05/06 23:03<|>1749175407
+restore_20250605_2349<|>05/06 23:03<|>1749175407
+restore_20250605_2350<|>05/06 23:50<|>1749178236
+restore_20250605_2351<|>06/06 00:07<|>1749179265
+restore_20250606_0007<|>06/06 14:02<|>1749229332
+restore_20250608_2053<|>08/06 20:53<|>1749426812
+restore_20250608_2054<|>08/06 16:22<|>1749410553
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.542908 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" branch --show-current
+RETURN CODE: 0
+STDOUT:
+restore_0724_2219
+
+STDERR:
+
+
+==================== 2025-09-26 12:44:52.656085 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
+RETURN CODE: 0
+STDOUT:
+ M sistema-versao/debug.log
+ M sistema-versao/gerenciador_versao_unificado.py
+?? GEMINI.md
+
+STDERR:
+
+RETURN CODE: 0
+STDOUT:
+https://orcamento-rev1-f82peifpg-adw733s-projects.vercel.app
+STDERR:
+Vercel CLI 44.2.7
+The "--name" option is deprecated (https://vercel.link/name-flag)
+Retrieving project…
+Deploying adw733s-projects/orcamento-rev1
+Uploading [--------------------] (0.0B/197.5KB)
+Uploading [======--------------] (60.3KB/197.5KB)
+Uploading [===========---------] (110.5KB/197.5KB)
+Uploading [================----] (158.7KB/197.5KB)
+Uploading [====================] (197.5KB/197.5KB)
+Inspect: https://vercel.com/adw733s-projects/orcamento-rev1/EjeMDL3ka5rYXC5QQiqexxY7KVp9 [4s]
+Preview: https://orcamento-rev1-f82peifpg-adw733s-projects.vercel.app [4s]
+Queued
+2025-09-26T15:43:24.958Z  Running build in Washington, D.C., USA (East) – iad1
+2025-09-26T15:43:24.958Z  Build machine configuration: 2 cores, 8 GB
+2025-09-26T15:43:24.970Z  Retrieving list of deployment files...
+2025-09-26T15:43:25.142Z  Previous build caches not available
+2025-09-26T15:43:25.461Z  Downloading 132 deployment files...
+2025-09-26T15:43:27.571Z  Running "vercel build"
+2025-09-26T15:43:28.063Z  Vercel CLI 48.1.6
+2025-09-26T15:43:29.360Z  Detected `pnpm-lock.yaml` 9 which may be generated by pnpm@9.x or pnpm@10.x
+2025-09-26T15:43:29.360Z  Using pnpm@10.x based on project creation date
+2025-09-26T15:43:29.360Z  To use pnpm@9.x, manually opt in using corepack (https://vercel.com/docs/deployments/configure-a-build#corepack)
+2025-09-26T15:43:29.382Z  Installing dependencies...
+2025-09-26T15:43:30.230Z  Lockfile is up to date, resolution step is skipped
+2025-09-26T15:43:30.334Z  Progress: resolved 1, reused 0, downloaded 0, added 0
+2025-09-26T15:43:30.397Z  Packages: +439
+2025-09-26T15:43:30.397Z  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2025-09-26T15:43:31.336Z  Progress: resolved 439, reused 0, downloaded 63, added 13
+2025-09-26T15:43:32.337Z  Progress: resolved 439, reused 0, downloaded 169, added 59
+2025-09-26T15:43:33.339Z  Progress: resolved 439, reused 0, downloaded 194, added 67
+2025-09-26T15:43:34.348Z  Progress: resolved 439, reused 0, downloaded 205, added 71
+2025-09-26T15:43:35.350Z  Progress: resolved 439, reused 0, downloaded 209, added 71
+2025-09-26T15:43:36.349Z  Progress: resolved 439, reused 0, downloaded 216, added 75
+2025-09-26T15:43:37.350Z  Progress: resolved 439, reused 0, downloaded 220, added 75
+2025-09-26T15:43:38.353Z  Progress: resolved 439, reused 0, downloaded 225, added 79
+2025-09-26T15:43:39.353Z  Progress: resolved 439, reused 0, downloaded 297, added 99
+2025-09-26T15:43:40.354Z  Progress: resolved 439, reused 0, downloaded 439, added 169
+2025-09-26T15:43:41.371Z  Progress: resolved 439, reused 0, downloaded 439, added 196
+2025-09-26T15:43:42.356Z  Progress: resolved 439, reused 0, downloaded 439, added 209
+2025-09-26T15:43:43.575Z  Progress: resolved 439, reused 0, downloaded 439, added 210
+2025-09-26T15:43:44.576Z  Progress: resolved 439, reused 0, downloaded 439, added 255
+2025-09-26T15:43:45.577Z  Progress: resolved 439, reused 0, downloaded 439, added 332
+2025-09-26T15:43:46.007Z  Progress: resolved 439, reused 0, downloaded 439, added 439, done
+2025-09-26T15:43:48.001Z  
+2025-09-26T15:43:48.002Z  dependencies:
+2025-09-26T15:43:48.002Z  + @google/generative-ai 0.24.1
+2025-09-26T15:43:48.002Z  + @hookform/resolvers 3.10.0
+2025-09-26T15:43:48.002Z  + @radix-ui/react-accordion 1.2.2
+2025-09-26T15:43:48.002Z  + @radix-ui/react-alert-dialog 1.1.4
+2025-09-26T15:43:48.002Z  + @radix-ui/react-aspect-ratio 1.1.1
+2025-09-26T15:43:48.003Z  + @radix-ui/react-avatar 1.1.2
+2025-09-26T15:43:48.003Z  + @radix-ui/react-checkbox 1.1.3
+2025-09-26T15:43:48.003Z  + @radix-ui/react-collapsible 1.1.2
+2025-09-26T15:43:48.003Z  + @radix-ui/react-context-menu 2.2.4
+2025-09-26T15:43:48.003Z  + @radix-ui/react-dialog 1.1.4
+2025-09-26T15:43:48.006Z  + @radix-ui/react-dropdown-menu 2.1.4
+2025-09-26T15:43:48.006Z  + @radix-ui/react-hover-card 1.1.4
+2025-09-26T15:43:48.006Z  + @radix-ui/react-label 2.1.1
+2025-09-26T15:43:48.006Z  + @radix-ui/react-menubar 1.1.4
+2025-09-26T15:43:48.006Z  + @radix-ui/react-navigation-menu 1.2.3
+2025-09-26T15:43:48.006Z  + @radix-ui/react-popover 1.1.4
+2025-09-26T15:43:48.007Z  + @radix-ui/react-progress 1.1.1
+2025-09-26T15:43:48.007Z  + @radix-ui/react-radio-group 1.2.2
+2025-09-26T15:43:48.007Z  + @radix-ui/react-scroll-area 1.2.2
+2025-09-26T15:43:48.007Z  + @radix-ui/react-select 2.1.4
+2025-09-26T15:43:48.007Z  + @radix-ui/react-separator 1.1.1
+2025-09-26T15:43:48.007Z  + @radix-ui/react-slider 1.2.2
+2025-09-26T15:43:48.007Z  + @radix-ui/react-slot 1.1.1
+2025-09-26T15:43:48.008Z  + @radix-ui/react-switch 1.1.2
+2025-09-26T15:43:48.008Z  + @radix-ui/react-tabs 1.1.2
+2025-09-26T15:43:48.008Z  + @radix-ui/react-toast 1.2.4
+2025-09-26T15:43:48.008Z  + @radix-ui/react-toggle 1.1.1
+2025-09-26T15:43:48.008Z  + @radix-ui/react-toggle-group 1.1.1
+2025-09-26T15:43:48.008Z  + @radix-ui/react-tooltip 1.1.6
+2025-09-26T15:43:48.008Z  + @react-pdf/renderer 4.3.0
+2025-09-26T15:43:48.008Z  + @sparticuz/chromium 138.0.2
+2025-09-26T15:43:48.008Z  + @supabase/supabase-js 2.50.0
+2025-09-26T15:43:48.009Z  + autoprefixer 10.4.21
+2025-09-26T15:43:48.009Z  + class-variance-authority 0.7.1
+2025-09-26T15:43:48.009Z  + clsx 2.1.1
+2025-09-26T15:43:48.009Z  + cmdk 1.0.4
+2025-09-26T15:43:48.009Z  + date-fns 4.1.0
+2025-09-26T15:43:48.009Z  + embla-carousel-react 8.5.1
+2025-09-26T15:43:48.009Z  + html2canvas 1.4.1
+2025-09-26T15:43:48.009Z  + input-otp 1.4.1
+2025-09-26T15:43:48.010Z  + jspdf 3.0.1
+2025-09-26T15:43:48.010Z  + lucide-react 0.454.0
+2025-09-26T15:43:48.010Z  + next 15.2.4
+2025-09-26T15:43:48.010Z  + next-themes 0.4.6
+2025-09-26T15:43:48.010Z  + puppeteer 24.15.0
+2025-09-26T15:43:48.010Z  + puppeteer-core 24.15.0
+2025-09-26T15:43:48.010Z  + react 19.1.0
+2025-09-26T15:43:48.010Z  + react-day-picker 8.10.1
+2025-09-26T15:43:48.011Z  + react-dom 19.1.0
+2025-09-26T15:43:48.011Z  + react-hook-form 7.57.0
+2025-09-26T15:43:48.011Z  + react-resizable-panels 2.1.9
+2025-09-26T15:43:48.011Z  + recharts 2.15.0
+2025-09-26T15:43:48.018Z  + sonner 1.7.4
+2025-09-26T15:43:48.018Z  + tailwind-merge 2.6.0
+2025-09-26T15:43:48.018Z  + tailwindcss-animate 1.0.7
+2025-09-26T15:43:48.018Z  + vaul 0.9.9
+2025-09-26T15:43:48.018Z  + zod 3.25.64
+2025-09-26T15:43:48.018Z  
+2025-09-26T15:43:48.018Z  devDependencies:
+2025-09-26T15:43:48.019Z  + @types/node 22.15.31
+2025-09-26T15:43:48.019Z  + @types/react 19.1.8
+2025-09-26T15:43:48.019Z  + @types/react-dom 19.1.6
+2025-09-26T15:43:48.019Z  + postcss 8.5.5
+2025-09-26T15:43:48.019Z  + tailwindcss 3.4.17
+2025-09-26T15:43:48.019Z  + typescript 5.8.3
+2025-09-26T15:43:48.019Z  
+2025-09-26T15:43:48.019Z  ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2025-09-26T15:43:48.019Z  │                                                                              │
+2025-09-26T15:43:48.019Z  │   Ignored build scripts: core-js, puppeteer, sharp.                          │
+2025-09-26T15:43:48.020Z  │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+2025-09-26T15:43:48.020Z  │   to run scripts.                                                            │
+2025-09-26T15:43:48.020Z  │                                                                              │
+2025-09-26T15:43:48.020Z  ╰──────────────────────────────────────────────────────────────────────────────╯
+2025-09-26T15:43:48.020Z  
+2025-09-26T15:43:48.044Z  Done in 18.3s using pnpm v10.17.1
+2025-09-26T15:43:48.071Z  Detected Next.js version: 15.2.4
+2025-09-26T15:43:48.120Z  Running "pnpm run build"
+2025-09-26T15:43:48.405Z  
+2025-09-26T15:43:48.406Z  > my-v0-project@0.1.0 build /vercel/path0
+2025-09-26T15:43:48.406Z  > next build
+2025-09-26T15:43:48.406Z  
+2025-09-26T15:43:49.132Z  Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2025-09-26T15:43:49.133Z  This information is used to shape Next.js' roadmap and prioritize features.
+2025-09-26T15:43:49.133Z  You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2025-09-26T15:43:49.134Z  https://nextjs.org/telemetry
+2025-09-26T15:43:49.134Z  
+2025-09-26T15:43:49.192Z     ▲ Next.js 15.2.4
+2025-09-26T15:43:49.193Z  
+2025-09-26T15:43:49.260Z     Creating an optimized production build ...
+2025-09-26T15:44:03.529Z   ⚠ Compiled with warnings
+2025-09-26T15:44:03.530Z  
+2025-09-26T15:44:03.530Z  ./node_modules/.pnpm/@supabase+realtime-js@2.11.10/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+2025-09-26T15:44:03.530Z  Critical dependency: the request of a dependency is an expression
+2025-09-26T15:44:03.530Z  
+2025-09-26T15:44:03.530Z  Import trace for requested module:
+2025-09-26T15:44:03.530Z  ./node_modules/.pnpm/@supabase+realtime-js@2.11.10/node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+2025-09-26T15:44:03.530Z  ./node_modules/.pnpm/@supabase+realtime-js@2.11.10/node_modules/@supabase/realtime-js/dist/main/index.js
+2025-09-26T15:44:03.530Z  ./node_modules/.pnpm/@supabase+supabase-js@2.50.0/node_modules/@supabase/supabase-js/dist/module/index.js
+2025-09-26T15:44:03.531Z  ./lib/supabase.ts
+2025-09-26T15:44:03.531Z  ./app/actions/gemini-actions.ts
+2025-09-26T15:44:03.531Z  
+2025-09-26T15:44:20.119Z   ✓ Compiled successfully
+2025-09-26T15:44:20.124Z     Skipping validation of types
+2025-09-26T15:44:20.125Z     Skipping linting
+2025-09-26T15:44:20.412Z     Collecting page data ...
+2025-09-26T15:44:23.330Z     Generating static pages (0/6) ...
+2025-09-26T15:44:23.945Z   ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
+2025-09-26T15:44:23.946Z  Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+2025-09-26T15:44:24.026Z     Generating static pages (1/6) 
+2025-09-26T15:44:24.027Z   ⚠ Unsupported metadata viewport is configured in metadata export in /draggable-list-example. Please move it to viewport export instead.
+2025-09-26T15:44:24.027Z  Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+2025-09-26T15:44:24.150Z   ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+2025-09-26T15:44:24.151Z  Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+2025-09-26T15:44:24.492Z     Generating static pages (2/6) 
+2025-09-26T15:44:24.493Z     Generating static pages (4/6) 
+2025-09-26T15:44:24.493Z   ✓ Generating static pages (6/6)
+2025-09-26T15:44:24.830Z     Finalizing page optimization ...
+2025-09-26T15:44:24.831Z     Collecting build traces ...
+2025-09-26T15:44:39.853Z  
+2025-09-26T15:44:39.856Z  Route (app)                                 Size  First Load JS
+2025-09-26T15:44:39.856Z  ┌ ○ /                                     296 kB         410 kB
+2025-09-26T15:44:39.857Z  ├ ○ /_not-found                            983 B         103 kB
+2025-09-26T15:44:39.857Z  ├ ƒ /api/export-pdf                        138 B         102 kB
+2025-09-26T15:44:39.857Z  └ ○ /draggable-list-example              1.76 kB         103 kB
+2025-09-26T15:44:39.857Z  + First Load JS shared by all             102 kB
+2025-09-26T15:44:39.857Z    ├ chunks/11eacf67-e4fcba68adcd787f.js  53.2 kB
+2025-09-26T15:44:39.857Z    ├ chunks/954-62814139f164db11.js       46.2 kB
+2025-09-26T15:44:39.858Z    └ other shared chunks (total)          2.06 kB
+2025-09-26T15:44:39.858Z  
+2025-09-26T15:44:39.858Z  
+2025-09-26T15:44:39.858Z  ○  (Static)   prerendered as static content
+2025-09-26T15:44:39.858Z  ƒ  (Dynamic)  server-rendered on demand
+2025-09-26T15:44:39.858Z  
+2025-09-26T15:44:39.999Z  Traced Next.js server files in: 87.765ms
+2025-09-26T15:44:40.829Z  Created all serverless functions in: 829.199ms
+2025-09-26T15:44:40.838Z  Collected static files (public/, static/, .next/static): 4.845ms
+2025-09-26T15:44:40.927Z  Build Completed in /vercel/output [1m]
+2025-09-26T15:44:41.120Z  Deploying outputs...
+2025-09-26T15:44:57.347Z  Deployment completed
+To deploy to production (orcamento-rev1.vercel.app), run `vercel --prod`
+
+
+==================== 2025-09-26 12:45:07.011424 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
+COMMAND: "C:\Program Files\Git\bin\git.exe" status --porcelain
+RETURN CODE: 0
+STDOUT:
+ M sistema-versao/debug.log
+ M sistema-versao/gerenciador_versao_unificado.py
+?? GEMINI.md
+
+STDERR:
+
+
+==================== 2025-09-26 12:45:07.853126 ====================
+CWD: C:\Users\adw73\Desktop\01 - Desenvolvimento\02 - Projetos\01 - Gerador de Orçamento\orcamento_rev2
 COMMAND: "C:\Program Files\Git\bin\git.exe" add .
