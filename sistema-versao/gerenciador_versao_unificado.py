@@ -25,7 +25,11 @@ class VersionControlUnified:
         except:
             pass
         
-        self.project_path = os.path.dirname(os.path.dirname(__file__))
+        # O __file__ pode não estar disponível em alguns ambientes, então usamos um fallback
+        try:
+            self.project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        except NameError:
+            self.project_path = os.getcwd() # Usa o diretório atual como fallback
         
         # Variáveis de ordenação
         self.versions_sort_column = None
@@ -55,7 +59,7 @@ class VersionControlUnified:
         header.grid(row=0, column=0, columnspan=3, sticky='ew', pady=(0, 10))
         
         ttk.Label(header, text="🚀 Sistema de Controle de Versões - Orçamento v0", 
-                 font=('Arial', 14, 'bold')).pack(side=tk.LEFT)
+                  font=('Arial', 14, 'bold')).pack(side=tk.LEFT)
         
         self.git_status_label = ttk.Label(header, text="🔄 Carregando...", font=('Arial', 10))
         self.git_status_label.pack(side=tk.RIGHT)
@@ -206,8 +210,11 @@ class VersionControlUnified:
     def run_command(self, command):
         """Executa comando no terminal"""
         try:
+            # Garante que o diretório do projeto existe
+            if not os.path.isdir(self.project_path):
+                 return False, "", f"Diretório do projeto não encontrado: {self.project_path}"
             os.chdir(self.project_path)
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
             return False, "", str(e)
@@ -238,7 +245,7 @@ class VersionControlUnified:
                 status_text += " | ✅ Limpo"
             
             self.git_status_label.config(text=status_text)
-        except:
+        except Exception:
             self.git_status_label.config(text="❌ Erro Git")
     
     # ==================== MÉTODOS DE ORDENAÇÃO ====================
@@ -328,17 +335,30 @@ class VersionControlUnified:
         try:
             self.versions_data = []
             
-            success, output, _ = self.run_command('git log --oneline --date=format:"%d/%m %H:%M" --pretty=format:"%h|%ad|%s|%at" -20')
+            # Comando Git mais limpo e robusto. O '--oneline' foi removido por ser redundante.
+            command = 'git log --date=format:"%d/%m %H:%M" --pretty=format:"%h|%ad|%s|%at" -20'
+            success, output, _ = self.run_command(command)
+
             if success and output:
                 for line in output.strip().split('\n'):
                     if '|' in line:
                         parts = line.split('|')
-                        if len(parts) >= 4:
+                        # Lógica de parse robusta para lidar com '|' na mensagem do commit.
+                        # Garante que temos pelo menos os campos essenciais.
+                        if len(parts) >= 3: # Hash, Data, e pelo menos parte da mensagem/timestamp
                             hash_short = parts[0]
                             date_time = parts[1]
-                            message = parts[2]
-                            timestamp = int(parts[3]) if parts[3].isdigit() else 0
+                            # O timestamp é sempre a última parte
+                            timestamp_str = parts[-1]
+                            # A mensagem é tudo que está entre a data e o timestamp
+                            message = '|'.join(parts[2:-1]) if len(parts) > 3 else parts[2]
                             
+                            timestamp = int(timestamp_str) if timestamp_str.isdigit() else 0
+                            
+                            # Se o timestamp não foi encontrado corretamente, a última parte pode ser da mensagem.
+                            if timestamp == 0:
+                                message = '|'.join(parts[2:])
+
                             # Verificar tag
                             tag_success, tag_output, _ = self.run_command(f'git tag --points-at {hash_short}')
                             if tag_success and tag_output.strip():
@@ -384,8 +404,9 @@ class VersionControlUnified:
             
             success, output, _ = self.run_command('git status --porcelain')
             if success and output:
+                lines = output.strip().split('\n')
                 count = 0
-                for line in output.strip().split('\n')[:10]:
+                for line in lines[:10]:
                     if line.strip():
                         status = line[:2]
                         file_path = line[3:]
@@ -394,10 +415,10 @@ class VersionControlUnified:
                         self.status_text.insert(tk.END, f"{icon} {short_name}\n")
                         count += 1
                 
-                if count == 10:
-                    self.status_text.insert(tk.END, "... (mais arquivos)")
+                if len(lines) > 10:
+                    self.status_text.insert(tk.END, "... (mais arquivos)\n")
                 
-                self.status_text.insert(tk.END, f"\n📊 Total: {len(output.strip().split(chr(10)))} arquivo(s)")
+                self.status_text.insert(tk.END, f"\n📊 Total: {len(lines)} arquivo(s)")
             else:
                 self.status_text.insert(tk.END, "✅ Sem mudanças\n🎉 Repositório limpo!")
         except Exception as e:
@@ -409,10 +430,11 @@ class VersionControlUnified:
             self.forks_data = []
             
             current_success, current_output, _ = self.run_command('git branch --show-current')
-            current_branch = current_output.strip() if current_success else None
+            current_branch = current_output.strip() if current_success and current_output.strip() else None
             is_detached = not current_branch
             
             if is_detached:
+                self.detached_button.pack(side=tk.LEFT, padx=3)
                 commit_success, commit_output, _ = self.run_command('git log -1 --format="%h|%ad|%at" --date=format:"%d/%m %H:%M"')
                 if commit_success and commit_output.strip():
                     parts = commit_output.strip().split('|')
@@ -429,11 +451,9 @@ class VersionControlUnified:
                             'timestamp': timestamp,
                             'tag': f"detached-{hash_short}"
                         })
-                
-                self.detached_button.pack(side=tk.LEFT, padx=3)
             else:
                 self.detached_button.pack_forget()
-            
+
             success, output, _ = self.run_command('git for-each-ref --format="%(refname:short)|%(committerdate:format:%d/%m %H:%M)|%(committerdate:unix)" refs/heads/')
             
             if success and output:
@@ -461,15 +481,21 @@ class VersionControlUnified:
                                 'tag': branch_name
                             })
             
-            if not self.forks_data:
+            if not self.forks_data and not is_detached:
                 now = datetime.datetime.now()
+                main_branch_name = 'main' # Default
+                # Checa se o branch principal é 'master'
+                _, branches, _ = self.run_command('git branch')
+                if 'master' in branches and 'main' not in branches:
+                    main_branch_name = 'master'
+
                 self.forks_data.append({
                     'status_icon': '🌟',
                     'status': '🌟 Atual',
-                    'name': 'main',
+                    'name': main_branch_name,
                     'date': now.strftime('%d/%m %H:%M'),
                     'timestamp': int(now.timestamp()),
-                    'tag': 'main'
+                    'tag': main_branch_name
                 })
             
             if not self.forks_sort_column:
@@ -639,7 +665,7 @@ class VersionControlUnified:
         item = self.forks_tree.item(selection[0])
         fork_name = item['tags'][0] if item['tags'] else None
         
-        if fork_name:
+        if fork_name and not fork_name.startswith('detached-'):
             success, _, error = self.run_command(f'git checkout {fork_name}')
             if success:
                 messagebox.showinfo("Sucesso", f"✅ Mudou para '{fork_name}'!")
@@ -657,6 +683,10 @@ class VersionControlUnified:
         item = self.forks_tree.item(selection[0])
         old_name = item['tags'][0] if item['tags'] else None
         
+        if not old_name or old_name.startswith('detached-'):
+             messagebox.showwarning("Aviso", "Não é possível renomear um estado 'detached'.")
+             return
+
         if old_name in ['main', 'master']:
             messagebox.showwarning("Aviso", "❌ Não é possível renomear branch principal!")
             return
@@ -682,6 +712,10 @@ class VersionControlUnified:
         fork_name = item['tags'][0] if item['tags'] else None
         status = item['values'][0] if item['values'] else ""
         
+        if not fork_name or fork_name.startswith('detached-'):
+             messagebox.showwarning("Aviso", "Não é possível excluir um estado 'detached'.")
+             return
+
         if fork_name in ['main', 'master'] or "🌟" in status:
             messagebox.showwarning("Aviso", "❌ Não é possível excluir branch principal ou atual!")
             return
@@ -716,7 +750,7 @@ class VersionControlUnified:
         else:
             success, branches_output, _ = self.run_command('git branch')
             main_branch = 'main'
-            if success and 'master' in branches_output:
+            if success and 'master' in branches_output and 'main' not in branches_output:
                 main_branch = 'master'
             
             success, _, error = self.run_command(f'git checkout {main_branch}')
@@ -816,14 +850,19 @@ class VersionControlUnified:
             return
 
         def kill_node_processes():
-            """Termina todos os processos Node.js em execução"""
+            """Termina todos os processos Node.js em execução (apenas Windows)"""
+            if os.name != 'nt':
+                return True, "Não é Windows, pulando a finalização de processos."
             try:
                 result = subprocess.run(
                     ['taskkill', '/F', '/IM', 'node.exe'],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW
                 )
                 return True, f"Processos Node.js terminados: {result.stdout}"
+            except FileNotFoundError:
+                 return True, "Comando taskkill não encontrado (não é um problema se não for Windows)."
             except Exception as e:
                 return False, f"Erro ao terminar processos Node.js: {str(e)}"
 
@@ -835,24 +874,35 @@ class VersionControlUnified:
                 print(f"⚠️ {kill_message}")
             
             import time
-            time.sleep(2)
+            time.sleep(1) # Pequena pausa
             
-            commands = ['npm run dev', 'yarn dev', 'pnpm dev']
-            for cmd in commands:
+            with open(package_json, 'r', encoding='utf-8') as f:
+                pj_data = json.load(f)
+                scripts = pj_data.get('scripts', {})
+            
+            dev_command = None
+            if 'dev' in scripts:
+                dev_command = 'npm run dev' # Default
+                # Detecta gerenciador de pacotes
+                if os.path.exists(os.path.join(self.project_path, 'yarn.lock')):
+                    dev_command = 'yarn dev'
+                elif os.path.exists(os.path.join(self.project_path, 'pnpm-lock.yaml')):
+                    dev_command = 'pnpm dev'
+
+            if dev_command:
                 try:
-                    manager = cmd.split()[0]
-                    check_result = subprocess.run(f'{manager} --version', shell=True, capture_output=True)
-                    if check_result.returncode == 0:
-                        subprocess.Popen(
-                            cmd,
-                            shell=True,
-                            cwd=self.project_path,
-                            creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
-                        )
-                        return True, cmd
-                except:
-                    continue
-            return False, "Nenhum gerenciador de pacotes encontrado"
+                    # Inicia o processo em um novo console
+                    subprocess.Popen(
+                        dev_command,
+                        shell=True,
+                        cwd=self.project_path,
+                        creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+                    )
+                    return True, dev_command
+                except Exception as e:
+                    return False, f"Erro ao iniciar o projeto: {e}"
+
+            return False, "Script 'dev' não encontrado no package.json"
 
         def run_start():
             success, result = start_in_background()
@@ -884,16 +934,20 @@ class VersionControlUnified:
                 return
             
             # Pull primeiro
-            success, _, error = self.run_command("git pull")
+            self.log_deploy_message("Executando 'git pull'...", "INFO")
+            success, output, error = self.run_command("git pull")
+            self.log_deploy_message(output, "INFO")
             if success:
                 self.log_deploy_message("Pull realizado!", "SUCCESS")
                 
                 # Push depois
-                success, _, error = self.run_command("git push")
-                if success:
+                self.log_deploy_message("Executando 'git push'...", "INFO")
+                success_push, output_push, error_push = self.run_command("git push")
+                self.log_deploy_message(output_push, "INFO")
+                if success_push:
                     self.log_deploy_message("Push realizado!", "SUCCESS")
                 else:
-                    self.log_deploy_message(f"Erro no push: {error}", "ERROR")
+                    self.log_deploy_message(f"Erro no push: {error_push}", "ERROR")
             else:
                 self.log_deploy_message(f"Erro no pull: {error}", "ERROR")
             
@@ -902,8 +956,10 @@ class VersionControlUnified:
     def run_vercel_command(self, command, show_output=True):
         """Executa comando do Vercel"""
         try:
+            if not os.path.isdir(self.project_path):
+                 return False, "", f"Diretório do projeto não encontrado: {self.project_path}"
             os.chdir(self.project_path)
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             
             if show_output:
                 if result.stdout.strip():
@@ -921,13 +977,6 @@ class VersionControlUnified:
         """Adiciona mensagem ao log de deploy"""
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         
-        color_map = {
-            "INFO": "",
-            "SUCCESS": "green",
-            "WARNING": "orange", 
-            "ERROR": "red"
-        }
-        
         icon_map = {
             "INFO": "ℹ️",
             "SUCCESS": "✅", 
@@ -937,19 +986,24 @@ class VersionControlUnified:
         
         formatted_message = f"[{timestamp}] {icon_map.get(level, 'ℹ️')} {message}\n"
         
-        self.deploy_log.insert(tk.END, formatted_message)
-        
-        if level in color_map and color_map[level]:
-            start_line = self.deploy_log.index(tk.END + "-1l linestart")
-            end_line = self.deploy_log.index(tk.END + "-1l lineend")
-            self.deploy_log.tag_add(level, start_line, end_line)
-            self.deploy_log.tag_config(level, foreground=color_map[level])
-        
-        self.deploy_log.see(tk.END)
-        self.deploy_log.update_idletasks()
+        # Garante que a operação de GUI seja na thread principal
+        def do_insert():
+            self.deploy_log.config(state=tk.NORMAL)
+            self.deploy_log.insert(tk.END, formatted_message, level)
+            self.deploy_log.config(state=tk.DISABLED)
+            self.deploy_log.see(tk.END)
+
+        self.root.after(0, do_insert)
     
     # ==================== VERCEL METHODS ====================
     
+    def setup_deploy_log_tags(self):
+        """Configura as tags de cor para o log"""
+        self.deploy_log.tag_config("SUCCESS", foreground="green")
+        self.deploy_log.tag_config("WARNING", foreground="orange")
+        self.deploy_log.tag_config("ERROR", foreground="red")
+        self.deploy_log.tag_config("INFO", foreground="black")
+
     def check_vercel_cli_installed(self):
         """Verifica se Vercel CLI está instalado"""
         success, _, _ = self.run_vercel_command("vercel --version", show_output=False)
@@ -958,30 +1012,35 @@ class VersionControlUnified:
     def vercel_login(self):
         """Login no Vercel"""
         if not self.check_vercel_cli_installed():
-            if messagebox.askyesno("Instalar Vercel CLI", "Vercel CLI não encontrado. Instalar?"):
+            if messagebox.askyesno("Instalar Vercel CLI", "Vercel CLI não encontrado. Instalar globalmente com npm?"):
                 self.log_deploy_message("Instalando Vercel CLI...", "INFO")
-                success, _, _ = self.run_vercel_command("npm install -g vercel")
-                if not success:
-                    self.log_deploy_message("Falha na instalação", "ERROR")
-                    return
-            else:
-                return
+                
+                def install_thread():
+                    success, _, error = self.run_vercel_command("npm install -g vercel")
+                    if not success:
+                       self.root.after(0, lambda: self.log_deploy_message(f"Falha na instalação: {error}", "ERROR"))
+                    else:
+                       self.root.after(0, lambda: self.log_deploy_message("Vercel CLI instalado!", "SUCCESS"))
+                       self.root.after(100, self.vercel_login) # Tenta o login de novo
+                
+                threading.Thread(target=install_thread, daemon=True).start()
+            return
+
+        command = "vercel login"
         
-        choice = messagebox.askyesno("Login", "GitHub OAuth (Sim) ou Email (Não)?")
-        command = "vercel login --github" if choice else "vercel login"
-        
-        self.log_deploy_message("Iniciando login...", "INFO")
-        
+        self.log_deploy_message("Iniciando login no terminal...", "INFO")
+        self.log_deploy_message("Siga as instruções no console que será aberto.", "WARNING")
+
         def login_thread():
-            success, output, error = self.run_vercel_command(command)
-            if success:
-                self.root.after(0, lambda: self.log_deploy_message("Login realizado!", "SUCCESS"))
-                self.root.after(0, self.check_vercel_status)
-            else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error}", "ERROR"))
-        
+            # Abre um novo terminal para o processo de login interativo
+            subprocess.Popen(command, shell=True, cwd=self.project_path, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
+            # Como o login é interativo, não podemos capturar o resultado diretamente.
+            # Apenas informamos o usuário e pedimos para ele verificar o status depois.
+            self.root.after(5000, lambda: self.log_deploy_message("Processo de login iniciado. Verifique o status após concluir.", "SUCCESS"))
+            self.root.after(6000, self.check_vercel_status)
+
         threading.Thread(target=login_thread, daemon=True).start()
-    
+
     def vercel_logout(self):
         """Logout do Vercel"""
         if messagebox.askyesno("Logout", "Fazer logout do Vercel?"):
@@ -996,17 +1055,20 @@ class VersionControlUnified:
     
     def check_vercel_status(self):
         """Verifica status Vercel"""
-        if not self.check_vercel_cli_installed():
-            self.login_status_label.config(text="❌ CLI não instalado")
-            return
+        def check():
+            if not self.check_vercel_cli_installed():
+                self.login_status_label.config(text="❌ CLI não instalado")
+                return
+            
+            success, output, _ = self.run_vercel_command("vercel whoami", show_output=False)
+            if success and output.strip():
+                username = output.strip()
+                self.login_status_label.config(text=f"✅ {username}")
+            else:
+                self.login_status_label.config(text="❌ Não logado")
         
-        success, output, _ = self.run_vercel_command("vercel whoami", show_output=False)
-        if success and output.strip():
-            username = output.strip()
-            self.login_status_label.config(text=f"✅ {username}")
-        else:
-            self.login_status_label.config(text="❌ Não logado")
-    
+        threading.Thread(target=check, daemon=True).start()
+
     def check_project_setup(self):
         """Verifica configuração do projeto"""
         self.log_deploy_message("Verificando projeto...", "INFO")
@@ -1051,20 +1113,24 @@ class VersionControlUnified:
             if self.project_name_var.get().strip():
                 command += f" --name {self.project_name_var.get().strip()}"
             
-            success, output, error = self.run_vercel_command(command)
+            success, output, error = self.run_vercel_command(command, show_output=False)
             
             if success:
+                full_log = output.strip()
+                self.root.after(0, lambda: self.log_deploy_message(full_log, "INFO"))
                 lines = output.split('\n')
-                for line in lines:
+                url_found = False
+                for line in reversed(lines):
                     if 'https://' in line and 'vercel.app' in line:
-                        url = line.strip()
+                        url = line.strip().split(' ')[-1] # Pega a última palavra que deve ser a URL
                         self.root.after(0, lambda: self.preview_url_var.set(url))
                         self.root.after(0, lambda: self.log_deploy_message(f"Preview: {url}", "SUCCESS"))
+                        url_found = True
                         break
-                else:
-                    self.root.after(0, lambda: self.log_deploy_message("Deploy concluído", "SUCCESS"))
+                if not url_found:
+                    self.root.after(0, lambda: self.log_deploy_message("Deploy concluído, mas URL não encontrada na saída.", "WARNING"))
             else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error}", "ERROR"))
+                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error or output}", "ERROR"))
         
         threading.Thread(target=deploy_thread, daemon=True).start()
     
@@ -1083,20 +1149,24 @@ class VersionControlUnified:
             if self.project_name_var.get().strip():
                 command += f" --name {self.project_name_var.get().strip()}"
             
-            success, output, error = self.run_vercel_command(command)
+            success, output, error = self.run_vercel_command(command, show_output=False)
             
             if success:
+                full_log = output.strip()
+                self.root.after(0, lambda: self.log_deploy_message(full_log, "INFO"))
                 lines = output.split('\n')
-                for line in lines:
-                    if 'https://' in line and ('vercel.app' in line or self.project_name_var.get() in line):
-                        url = line.strip()
+                url_found = False
+                for line in reversed(lines):
+                     if 'https://' in line and ('vercel.app' in line or self.project_name_var.get() in line):
+                        url = line.strip().split(' ')[-1]
                         self.root.after(0, lambda: self.production_url_var.set(url))
                         self.root.after(0, lambda: self.log_deploy_message(f"Produção: {url}", "SUCCESS"))
+                        url_found = True
                         break
-                else:
-                    self.root.after(0, lambda: self.log_deploy_message("Deploy produção concluído", "SUCCESS"))
+                if not url_found:
+                     self.root.after(0, lambda: self.log_deploy_message("Deploy produção concluído, mas URL não encontrada.", "WARNING"))
             else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error}", "ERROR"))
+                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error or output}", "ERROR"))
         
         threading.Thread(target=deploy_thread, daemon=True).start()
     
@@ -1104,16 +1174,24 @@ class VersionControlUnified:
         """Lista deployments"""
         self.log_deploy_message("Listando deployments...", "INFO")
         
-        success, output, error = self.run_vercel_command("vercel ls")
-        if success:
-            self.log_deploy_message("Deployments:", "SUCCESS")
-            lines = output.split('\n')[:8]
-            for line in lines:
-                if line.strip():
-                    self.log_deploy_message(line.strip(), "INFO")
-        else:
-            self.log_deploy_message(f"Erro: {error}", "ERROR")
-    
+        def list_thread():
+            project_name = self.project_name_var.get().strip()
+            if not project_name:
+                self.root.after(0, lambda: self.log_deploy_message("Nome do projeto é necessário para listar.", "WARNING"))
+                return
+            
+            success, output, error = self.run_vercel_command(f"vercel ls {project_name}", show_output=False)
+            if success:
+                self.root.after(0, lambda: self.log_deploy_message(f"Deployments para '{project_name}':", "SUCCESS"))
+                lines = output.strip().split('\n')[:10]
+                for line in lines:
+                    if line.strip():
+                        self.root.after(0, lambda line=line: self.log_deploy_message(line.strip(), "INFO"))
+            else:
+                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error or output}", "ERROR"))
+        
+        threading.Thread(target=list_thread, daemon=True).start()
+
     def open_url(self, url):
         """Abre URL no navegador"""
         if url and url.strip():
@@ -1129,8 +1207,11 @@ class VersionControlUnified:
     
     def run(self):
         """Inicia aplicação"""
+        self.setup_deploy_log_tags() # Configura as cores do log
+        self.deploy_log.config(state=tk.DISABLED)
+
         if not os.path.exists(os.path.join(self.project_path, '.git')):
-            if messagebox.askyesno("Git", "Inicializar repositório Git?"):
+            if messagebox.askyesno("Git", "Repositório Git não encontrado neste diretório. Deseja inicializar um?"):
                 success, _, error = self.run_command('git init')
                 if success:
                     self.run_command('git config user.name "Usuario"')
@@ -1148,8 +1229,15 @@ def main():
         app = VersionControlUnified()
         app.run()
     except Exception as e:
-        import tkinter.messagebox as mb
-        mb.showerror("Erro Fatal", f"❌ Erro ao iniciar aplicação:\n\n{e}")
+        import traceback
+        error_details = traceback.format_exc()
+        # Cria uma janela raiz temporária para mostrar o erro se a principal falhar
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Erro Fatal", f"❌ Erro ao iniciar aplicação:\n\n{e}\n\nDetalhes:\n{error_details}")
+        root.destroy()
+
 
 if __name__ == "__main__":
     main()
+
