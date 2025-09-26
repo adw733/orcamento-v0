@@ -6,7 +6,7 @@ Layout vertical com tabelas empilhadas e ordenação por clique
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog, scrolledtext
+from tkinter import ttk, messagebox, simpledialog, scrolledtext, filedialog
 import subprocess
 import os
 import json
@@ -25,11 +25,16 @@ class VersionControlUnified:
         except:
             pass
         
-        # O __file__ pode não estar disponível em alguns ambientes, então usamos um fallback
-        try:
-            self.project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        except NameError:
-            self.project_path = os.getcwd() # Usa o diretório atual como fallback
+        # Limpa o log de debug anterior ao iniciar
+        if os.path.exists("debug.log"):
+            os.remove("debug.log")
+
+        # Define um caminho inicial, mas o usuário poderá mudar
+        self.project_path = os.getcwd() 
+        self.is_repo_valid = False
+        self.is_git_available = False
+        self.git_executable = "git" # Default, assume que está no PATH. Será substituído se encontrado em outro lugar.
+
         
         # Variáveis de ordenação
         self.versions_sort_column = None
@@ -45,30 +50,50 @@ class VersionControlUnified:
         
     def setup_interface(self):
         """Interface unificada com layout vertical"""
+        # MENU BAR
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Ajuda", menu=help_menu)
+        help_menu.add_command(label="Exibir Log de Debug", command=self.show_debug_log)
+        help_menu.add_command(label="Verificar Instalação do Git", command=self.check_git_availability)
+
+
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Grid 3 colunas
-        main_frame.columnconfigure(0, weight=2)  # Tabelas empilhadas
-        main_frame.columnconfigure(1, weight=1)  # Ações
-        main_frame.columnconfigure(2, weight=2)  # Deploy
+        main_frame.columnconfigure(0, weight=2)
+        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(2, weight=2)
         main_frame.rowconfigure(1, weight=1)
         
         # CABEÇALHO
         header = ttk.Frame(main_frame)
         header.grid(row=0, column=0, columnspan=3, sticky='ew', pady=(0, 10))
+        header.columnconfigure(1, weight=1)
+
+        title_label = ttk.Label(header, text="🚀 Sistema de Controle de Versões", font=('Arial', 14, 'bold'))
+        title_label.grid(row=0, column=0, sticky='w')
+
+        path_frame = ttk.Frame(header)
+        path_frame.grid(row=0, column=1, sticky='ew', padx=10)
+        path_frame.columnconfigure(0, weight=1)
+
+        self.path_label = ttk.Label(path_frame, text=f"Pasta: {self.project_path}", anchor='w', foreground="blue")
+        self.path_label.grid(row=0, column=0, sticky='ew')
         
-        ttk.Label(header, text="🚀 Sistema de Controle de Versões - Orçamento v0", 
-                  font=('Arial', 14, 'bold')).pack(side=tk.LEFT)
-        
-        self.git_status_label = ttk.Label(header, text="🔄 Carregando...", font=('Arial', 10))
-        self.git_status_label.pack(side=tk.RIGHT)
-        
+        select_folder_button = ttk.Button(path_frame, text="Selecionar Pasta", command=self.select_project_folder)
+        select_folder_button.grid(row=0, column=1, sticky='e', padx=(5,0))
+
+        self.git_status_label = ttk.Label(header, text="Aguardando validação...", font=('Arial', 10))
+        self.git_status_label.grid(row=0, column=2, sticky='e')
+
         # COLUNA 1: TABELAS EMPILHADAS
         tables_frame = ttk.Frame(main_frame)
         tables_frame.grid(row=1, column=0, sticky='nsew', padx=(0, 10))
-        tables_frame.rowconfigure(0, weight=3)  # Versões (mais espaço)
-        tables_frame.rowconfigure(1, weight=1)  # Forks
+        tables_frame.rowconfigure(0, weight=3)
+        tables_frame.rowconfigure(1, weight=1)
         tables_frame.columnconfigure(0, weight=1)
         
         # VERSÕES (superior)
@@ -202,35 +227,171 @@ class VersionControlUnified:
         ttk.Button(prod_frame, text="🌐", command=lambda: self.open_url(self.production_url_var.get()), width=3).pack(side=tk.RIGHT)
         
         # Inicializar
-        self.root.after(100, self.refresh_all)
+        self.root.after(100, self.check_git_availability)
         self.root.after(500, self.check_vercel_status)
+
+    # ==================== MÉTODOS DE CAMINHO E VALIDAÇÃO ====================
+    def find_git_executable(self):
+        """Tenta encontrar o executável do Git em locais comuns no Windows."""
+        if os.name != 'nt': # Em Linux/Mac, assume-se que está no PATH
+            return "git" 
+
+        search_paths = [
+            os.environ.get("ProgramFiles", "C:\\Program Files"),
+            os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")
+        ]
+        
+        for path in search_paths:
+            if not path: continue
+            # Verifica ambos os caminhos, bin e cmd, pois pode variar
+            git_path_bin = os.path.join(path, "Git", "bin", "git.exe")
+            git_path_cmd = os.path.join(path, "Git", "cmd", "git.exe")
+            
+            if os.path.exists(git_path_bin):
+                return git_path_bin
+            if os.path.exists(git_path_cmd):
+                return git_path_cmd
+        
+        return None
+
+    def check_git_availability(self):
+        """Verifica se o comando 'git' está disponível, procurando o executável se necessário."""
+        try:
+            # Tenta executar com o default 'git', que pode estar no PATH
+            subprocess.run('git --version', shell=True, check=True, capture_output=True)
+            self.is_git_available = True
+            self.verify_project_path()
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Se falhou, tenta encontrar o executável em pastas comuns
+            found_path = self.find_git_executable()
+            if found_path:
+                self.git_executable = found_path
+                self.is_git_available = True
+                self.verify_project_path()
+                return True
+            else:
+                # Se não encontrou de nenhuma forma, exibe o erro
+                self.is_git_available = False
+                self.clear_all_views()
+                self.git_status_label.config(text="❌ Git não encontrado!", foreground="red")
+                messagebox.showerror(
+                    "Erro de Configuração: Git não encontrado",
+                    "O sistema não conseguiu encontrar o Git instalado no seu computador.\n\n"
+                    "Para que o programa funcione, por favor, siga estes passos:\n\n"
+                    "1. Verifique se o Git está instalado. Se não estiver, baixe e instale a partir de:\n"
+                    "   https://git-scm.com/downloads\n\n"
+                    "2. Durante a instalação, na etapa 'Adjusting your PATH environment', "
+                    "certifique-se de selecionar a opção recomendada:\n"
+                    "   'Git from the command line and also from 3rd-party software'.\n\n"
+                    "3. Após a instalação, reinicie este programa."
+                )
+                return False
+
+
+    def select_project_folder(self):
+        """Abre um diálogo para o usuário selecionar a pasta do projeto Git."""
+        if not self.is_git_available:
+            messagebox.showwarning("Aviso", "A instalação do Git não foi encontrada. Verifique a configuração do seu sistema.")
+            return
+        path = filedialog.askdirectory(title="Selecione a pasta do seu projeto Git")
+        if path:
+            self.project_path = path
+            self.verify_project_path()
+
+    def verify_project_path(self):
+        """Verifica se o caminho selecionado é um repositório Git válido."""
+        if not self.is_git_available: return
+
+        git_path = os.path.join(self.project_path, '.git')
+        self.path_label.config(text=f"Pasta: {self.project_path}")
+        
+        if os.path.isdir(git_path):
+            self.is_repo_valid = True
+            self.git_status_label.config(foreground="black")
+            self.refresh_all()
+        else:
+            self.is_repo_valid = False
+            self.git_status_label.config(text="❌ Repositório Git não encontrado", foreground="red")
+            if messagebox.askyesno("Repositório Git não encontrado", 
+                                   f"A pasta selecionada não parece ser um repositório Git.\n\nDeseja inicializar um novo repositório em:\n{self.project_path}?"):
+                success, _, error = self.run_command('git init')
+                if success:
+                    self.run_command('git config user.name "Usuario"')
+                    self.run_command('git config user.email "usuario@local"')
+                    messagebox.showinfo("Sucesso", "✅ Repositório Git inicializado!")
+                    self.is_repo_valid = True
+                    self.refresh_all()
+                else:
+                    messagebox.showerror("Erro", f"Falha ao inicializar o repositório:\n{error}")
+            else:
+                self.clear_all_views()
+
+    def clear_all_views(self):
+        """Limpa as tabelas e campos de texto."""
+        self.versions_data = []
+        self.forks_data = []
+        self.display_versions()
+        self.display_forks()
+        self.status_text.delete('1.0', tk.END)
+        self.status_text.insert('1.0', "Selecione uma pasta de repositório válida.")
     
     # ==================== MÉTODOS BÁSICOS ====================
     
     def run_command(self, command):
-        """Executa comando no terminal"""
+        """Executa comando no terminal e loga a saída."""
         try:
-            # Garante que o diretório do projeto existe
-            if not os.path.isdir(self.project_path):
-                 return False, "", f"Diretório do projeto não encontrado: {self.project_path}"
-            os.chdir(self.project_path)
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            if not self.project_path or not os.path.isdir(self.project_path):
+                 return False, "", f"Diretório do projeto inválido: {self.project_path}"
+            
+            # Prepara o comando com o caminho completo do executável do Git, se necessário
+            if command.strip().startswith("git "):
+                command_parts = command.split(" ", 1)
+                # Adiciona aspas ao redor do executável para lidar com espaços no caminho
+                full_command = f'"{self.git_executable}" {command_parts[1]}'
+            else:
+                full_command = command
+
+            with open("debug.log", "a", encoding='utf-8') as f:
+                f.write(f"\n{'='*20} {datetime.datetime.now()} {'='*20}\n")
+                f.write(f"CWD: {self.project_path}\n")
+                f.write(f"COMMAND: {full_command}\n")
+
+            result = subprocess.run(full_command, shell=True, capture_output=True, text=True, 
+                                    encoding='utf-8', errors='ignore', cwd=self.project_path)
+            
+            with open("debug.log", "a", encoding='utf-8') as f:
+                f.write(f"RETURN CODE: {result.returncode}\n")
+                f.write(f"STDOUT:\n{result.stdout}\n")
+                f.write(f"STDERR:\n{result.stderr}\n")
+
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
+            with open("debug.log", "a", encoding='utf-8') as f:
+                f.write(f"EXCEPTION: {e}\n")
             return False, "", str(e)
-    
+
     def refresh_all(self):
-        """Atualiza todas as listas"""
+        """Atualiza todas as listas se o repositório for válido."""
+        if not self.is_repo_valid or not self.is_git_available:
+            self.clear_all_views()
+            return
         try:
-            self.load_versions()
-            self.load_status()
-            self.load_forks()
-            self.update_git_status()
+            threading.Thread(target=self._refresh_in_background, daemon=True).start()
         except Exception as e:
-            print(f"Erro ao atualizar: {e}")
+            print(f"Erro ao iniciar thread de atualização: {e}")
+
+    def _refresh_in_background(self):
+        """Função que executa as cargas de dados em segundo plano."""
+        self.load_versions()
+        self.load_status()
+        self.load_forks()
+        self.update_git_status()
     
     def update_git_status(self):
-        """Atualiza status Git no cabeçalho"""
+        """Atualiza status Git no cabeçalho."""
+        if not self.is_repo_valid: return
         try:
             success, output, _ = self.run_command('git branch --show-current')
             current_branch = output.strip() if success and output.strip() else "HEAD detached"
@@ -244,9 +405,9 @@ class VersionControlUnified:
             else:
                 status_text += " | ✅ Limpo"
             
-            self.git_status_label.config(text=status_text)
+            self.root.after(0, lambda: self.git_status_label.config(text=status_text))
         except Exception:
-            self.git_status_label.config(text="❌ Erro Git")
+            self.root.after(0, lambda: self.git_status_label.config(text="❌ Erro Git"))
     
     # ==================== MÉTODOS DE ORDENAÇÃO ====================
     
@@ -287,105 +448,57 @@ class VersionControlUnified:
     
     def update_headers(self):
         """Atualiza cabeçalhos com indicadores de ordenação"""
-        # Versões
-        date_text = '📅 Data/Hora'
-        message_text = '📝 Descrição'
-        
-        if self.versions_sort_column == 'date':
-            date_text += ' ↑' if not self.versions_sort_reverse else ' ↓'
-        else:
-            date_text += ' ↕️'
-            
-        if self.versions_sort_column == 'message':
-            message_text += ' ↑' if not self.versions_sort_reverse else ' ↓'
-        else:
-            message_text += ' ↕️'
-        
-        self.versions_tree.heading('#1', text=date_text, command=lambda: self.sort_versions('date'))
-        self.versions_tree.heading('#2', text=message_text, command=lambda: self.sort_versions('message'))
-        
-        # Forks
-        status_text = '📊 Status'
-        name_text = '🏷️ Nome'
-        fork_date_text = '📅 Data'
-        
-        if self.forks_sort_column == 'status':
-            status_text += ' ↑' if not self.forks_sort_reverse else ' ↓'
-        else:
-            status_text += ' ↕️'
-            
-        if self.forks_sort_column == 'name':
-            name_text += ' ↑' if not self.forks_sort_reverse else ' ↓'
-        else:
-            name_text += ' ↕️'
-            
-        if self.forks_sort_column == 'date':
-            fork_date_text += ' ↑' if not self.forks_sort_reverse else ' ↓'
-        else:
-            fork_date_text += ' ↕️'
-        
-        self.forks_tree.heading('#1', text=status_text, command=lambda: self.sort_forks('status'))
-        self.forks_tree.heading('#2', text=name_text, command=lambda: self.sort_forks('name'))
-        self.forks_tree.heading('#3', text=fork_date_text, command=lambda: self.sort_forks('date'))
-    
+        date_text = '📅 Data/Hora' + (' ↕️' if self.versions_sort_column != 'date' else ' ↑' if not self.versions_sort_reverse else ' ↓')
+        message_text = '📝 Descrição' + (' ↕️' if self.versions_sort_column != 'message' else ' ↑' if not self.versions_sort_reverse else ' ↓')
+        self.versions_tree.heading('#1', text=date_text)
+        self.versions_tree.heading('#2', text=message_text)
+
+        status_text = '📊 Status' + (' ↕️' if self.forks_sort_column != 'status' else ' ↑' if not self.forks_sort_reverse else ' ↓')
+        name_text = '🏷️ Nome' + (' ↕️' if self.forks_sort_column != 'name' else ' ↑' if not self.forks_sort_reverse else ' ↓')
+        fork_date_text = '📅 Data' + (' ↕️' if self.forks_sort_column != 'date' else ' ↑' if not self.forks_sort_reverse else ' ↓')
+        self.forks_tree.heading('#1', text=status_text)
+        self.forks_tree.heading('#2', text=name_text)
+        self.forks_tree.heading('#3', text=fork_date_text)
+
     # ==================== CARREGAR DADOS ====================
     
     def load_versions(self):
         """Carrega lista de versões"""
+        if not self.is_repo_valid: return
+        
+        temp_versions_data = []
         try:
-            self.versions_data = []
-            
-            # Comando Git mais limpo e robusto. O '--oneline' foi removido por ser redundante.
-            command = 'git log --date=format:"%d/%m %H:%M" --pretty=format:"%h|%ad|%s|%at" -20'
+            separator = "<|>"
+            command = f'git log --date=format:"%d/%m %H:%M" --pretty=format:"%h{separator}%ad{separator}%s{separator}%at" -20'
             success, output, _ = self.run_command(command)
 
             if success and output:
                 for line in output.strip().split('\n'):
-                    if '|' in line:
-                        parts = line.split('|')
-                        # Lógica de parse robusta para lidar com '|' na mensagem do commit.
-                        # Garante que temos pelo menos os campos essenciais.
-                        if len(parts) >= 3: # Hash, Data, e pelo menos parte da mensagem/timestamp
-                            hash_short = parts[0]
-                            date_time = parts[1]
-                            # O timestamp é sempre a última parte
-                            timestamp_str = parts[-1]
-                            # A mensagem é tudo que está entre a data e o timestamp
-                            message = '|'.join(parts[2:-1]) if len(parts) > 3 else parts[2]
-                            
+                    if separator in line:
+                        parts = line.split(separator)
+                        if len(parts) == 4:
+                            hash_short, date_time, message, timestamp_str = parts
                             timestamp = int(timestamp_str) if timestamp_str.isdigit() else 0
                             
-                            # Se o timestamp não foi encontrado corretamente, a última parte pode ser da mensagem.
-                            if timestamp == 0:
-                                message = '|'.join(parts[2:])
-
-                            # Verificar tag
                             tag_success, tag_output, _ = self.run_command(f'git tag --points-at {hash_short}')
-                            if tag_success and tag_output.strip():
-                                tag_name = tag_output.strip().split('\n')[0]
-                                display_message = f"🏷️ {tag_name}"
-                            else:
-                                display_message = message[:60] + "..." if len(message) > 60 else message
+                            display_message = f"🏷️ {tag_output.strip().splitlines()[0]}" if tag_success and tag_output.strip() else message
                             
-                            self.versions_data.append({
-                                'hash': hash_short,
-                                'date': date_time,
-                                'message': display_message,
-                                'timestamp': timestamp
+                            temp_versions_data.append({
+                                'hash': hash_short, 'date': date_time,
+                                'message': display_message, 'timestamp': timestamp
                             })
             
-            if not self.versions_data:
-                self.versions_data.append({
-                    'hash': '',
-                    'date': '',
-                    'message': 'Nenhuma versão - Execute git commit primeiro',
-                    'timestamp': 0
+            if not temp_versions_data:
+                temp_versions_data.append({
+                    'hash': '', 'date': '',
+                    'message': 'Nenhuma versão. Execute "git commit" primeiro.', 'timestamp': 0
                 })
             
+            self.versions_data = temp_versions_data
             if not self.versions_sort_column:
                 self.versions_data.sort(key=lambda x: x['timestamp'], reverse=True)
             
-            self.display_versions()
+            self.root.after(0, self.display_versions)
         except Exception as e:
             print(f"Erro ao carregar versões: {e}")
     
@@ -399,110 +512,67 @@ class VersionControlUnified:
     
     def load_status(self):
         """Carrega status dos arquivos"""
+        if not self.is_repo_valid: return
         try:
-            self.status_text.delete('1.0', tk.END)
-            
             success, output, _ = self.run_command('git status --porcelain')
-            if success and output:
-                lines = output.strip().split('\n')
-                count = 0
-                for line in lines[:10]:
-                    if line.strip():
-                        status = line[:2]
-                        file_path = line[3:]
+            
+            def update_status_text():
+                self.status_text.delete('1.0', tk.END)
+                if success and output.strip():
+                    lines = output.strip().split('\n')
+                    for line in lines[:10]:
+                        status, file_path = line[:2], line[3:]
                         icon = {'M ': '📝', '??': '🆕', 'A ': '➕', 'D ': '🗑️'}.get(status, '📄')
-                        short_name = file_path.split('/')[-1][:25]
-                        self.status_text.insert(tk.END, f"{icon} {short_name}\n")
-                        count += 1
-                
-                if len(lines) > 10:
-                    self.status_text.insert(tk.END, "... (mais arquivos)\n")
-                
-                self.status_text.insert(tk.END, f"\n📊 Total: {len(lines)} arquivo(s)")
-            else:
-                self.status_text.insert(tk.END, "✅ Sem mudanças\n🎉 Repositório limpo!")
+                        self.status_text.insert(tk.END, f"{icon} {os.path.basename(file_path)}\n")
+                    
+                    if len(lines) > 10: self.status_text.insert(tk.END, "... (mais arquivos)\n")
+                    self.status_text.insert(tk.END, f"\n📊 Total: {len(lines)} arquivo(s)")
+                else:
+                    self.status_text.insert(tk.END, "✅ Sem mudanças\n🎉 Repositório limpo!")
+
+            self.root.after(0, update_status_text)
         except Exception as e:
-            self.status_text.insert(tk.END, f"❌ Erro: {str(e)}")
+            self.root.after(0, lambda: self.status_text.insert(tk.END, f"❌ Erro: {str(e)}"))
     
     def load_forks(self):
         """Carrega lista de forks"""
+        if not self.is_repo_valid: return
+        
+        temp_forks_data = []
+        separator = "<|>"
         try:
-            self.forks_data = []
-            
             current_success, current_output, _ = self.run_command('git branch --show-current')
             current_branch = current_output.strip() if current_success and current_output.strip() else None
             is_detached = not current_branch
             
-            if is_detached:
-                self.detached_button.pack(side=tk.LEFT, padx=3)
-                commit_success, commit_output, _ = self.run_command('git log -1 --format="%h|%ad|%at" --date=format:"%d/%m %H:%M"')
-                if commit_success and commit_output.strip():
-                    parts = commit_output.strip().split('|')
-                    if len(parts) >= 3:
-                        hash_short = parts[0]
-                        commit_date = parts[1]
-                        timestamp = int(parts[2]) if parts[2].isdigit() else 0
-                        
-                        self.forks_data.append({
-                            'status_icon': '🔴',
-                            'status': '🔴 Detached',
-                            'name': f"HEAD detached at {hash_short}",
-                            'date': commit_date,
-                            'timestamp': timestamp,
-                            'tag': f"detached-{hash_short}"
-                        })
-            else:
-                self.detached_button.pack_forget()
+            self.root.after(0, lambda d=is_detached: self.detached_button.pack(side=tk.LEFT, padx=3) if d else self.detached_button.pack_forget())
 
-            success, output, _ = self.run_command('git for-each-ref --format="%(refname:short)|%(committerdate:format:%d/%m %H:%M)|%(committerdate:unix)" refs/heads/')
-            
+            if is_detached:
+                commit_success, commit_output, _ = self.run_command(f'git log -1 --format="%h{separator}%ad{separator}%at" --date=format:"%d/%m %H:%M"')
+                if commit_success and commit_output.strip():
+                    parts = commit_output.strip().split(separator)
+                    if len(parts) == 3:
+                        hash_short, commit_date, timestamp = parts[0], parts[1], int(parts[2]) if parts[2].isdigit() else 0
+                        temp_forks_data.append({'status_icon': '🔴', 'status': '🔴 Detached', 'name': f"HEAD at {hash_short}",
+                                                 'date': commit_date, 'timestamp': timestamp, 'tag': f"detached-{hash_short}"})
+
+            success, output, _ = self.run_command(f'git for-each-ref --format="%(refname:short){separator}%(committerdate:format:%d/%m %H:%M){separator}%(committerdate:unix)" refs/heads/')
             if success and output:
                 for line in output.strip().split('\n'):
-                    if line and '|' in line:
-                        parts = line.split('|')
-                        if len(parts) >= 3:
-                            branch_name = parts[0]
-                            date_formatted = parts[1]
-                            date_unix = int(parts[2]) if parts[2].isdigit() else 0
-                            
-                            if current_branch == branch_name:
-                                status_icon = '🌟'
-                                status = '🌟 Atual'
-                            else:
-                                status_icon = '🔀'
-                                status = '🔀 Fork'
-                            
-                            self.forks_data.append({
-                                'status_icon': status_icon,
-                                'status': status,
-                                'name': branch_name,
-                                'date': date_formatted,
-                                'timestamp': date_unix,
-                                'tag': branch_name
-                            })
+                    if separator in line:
+                        parts = line.split(separator)
+                        if len(parts) == 3:
+                            branch_name, date_formatted, date_unix = parts[0], parts[1], int(parts[2]) if parts[2].isdigit() else 0
+                            is_current = current_branch == branch_name
+                            status_icon, status = ('🌟', '🌟 Atual') if is_current else ('🔀', '🔀 Fork')
+                            temp_forks_data.append({'status_icon': status_icon, 'status': status, 'name': branch_name,
+                                                     'date': date_formatted, 'timestamp': date_unix, 'tag': branch_name})
             
-            if not self.forks_data and not is_detached:
-                now = datetime.datetime.now()
-                main_branch_name = 'main' # Default
-                # Checa se o branch principal é 'master'
-                _, branches, _ = self.run_command('git branch')
-                if 'master' in branches and 'main' not in branches:
-                    main_branch_name = 'master'
-
-                self.forks_data.append({
-                    'status_icon': '🌟',
-                    'status': '🌟 Atual',
-                    'name': main_branch_name,
-                    'date': now.strftime('%d/%m %H:%M'),
-                    'timestamp': int(now.timestamp()),
-                    'tag': main_branch_name
-                })
-            
+            self.forks_data = temp_forks_data
             if not self.forks_sort_column:
-                priority = {'🌟': 1, '🔴': 2, '🔀': 3}
-                self.forks_data.sort(key=lambda x: priority.get(x.get('status_icon', '🔀'), 3))
+                self.forks_data.sort(key=lambda x: ({'🌟': 1, '🔴': 2, '🔀': 3}).get(x.get('status_icon'), 3))
             
-            self.display_forks()
+            self.root.after(0, self.display_forks)
         except Exception as e:
             print(f"Erro ao carregar forks: {e}")
     
@@ -515,23 +585,23 @@ class VersionControlUnified:
             self.forks_tree.insert('', tk.END, values=(fork['status'], fork['name'], fork['date']), tags=(fork['tag'],))
     
     # ==================== AÇÕES DE VERSÃO ====================
-    
+    def _check_repo_validity(self):
+        if not self.is_repo_valid: 
+            messagebox.showerror("Erro", "Nenhum repositório Git válido selecionado.")
+            return False
+        return True
+
     def save_version(self):
-        """Salva nova versão"""
+        if not self._check_repo_validity(): return
         message = self.message_entry.get().strip()
         if not message:
             messagebox.showwarning("Aviso", "Digite uma descrição!")
             return
         
         success, status_output, _ = self.run_command('git status --porcelain')
-        has_changes = success and status_output.strip()
+        confirm_msg = f"Salvar versão: {message}" + ("" if success and status_output.strip() else "\n\n⚠️ Sem alterações (versão vazia)")
         
-        confirm_msg = f"Salvar versão: {message}"
-        if not has_changes:
-            confirm_msg += "\n\n⚠️ Sem alterações (versão vazia)"
-        
-        if not messagebox.askyesno("Confirmar", confirm_msg):
-            return
+        if not messagebox.askyesno("Confirmar", confirm_msg): return
         
         self.run_command('git add .')
         success, _, error = self.run_command(f'git commit -m "{message}" --allow-empty')
@@ -544,226 +614,155 @@ class VersionControlUnified:
             messagebox.showerror("Erro", f"❌ Erro: {error}")
     
     def restore_version(self):
-        """Restaura versão selecionada"""
+        if not self._check_repo_validity(): return
         selection = self.versions_tree.selection()
-        if not selection:
-            messagebox.showwarning("Aviso", "Selecione uma versão!")
-            return
+        if not selection: messagebox.showwarning("Aviso", "Selecione uma versão!"); return
         
         item = self.versions_tree.item(selection[0])
-        commit_hash = item['tags'][0] if item['tags'] else None
+        commit_hash = item['tags'][0] if item.get('tags') else None
+        if not commit_hash: return
         
-        if not commit_hash:
-            return
+        choice = messagebox.askyesnocancel("Restaurar", "SIM: Criar fork desta versão\nNÃO: Apenas visualizar (detached)")
         
-        choice = messagebox.askyesnocancel(
-            "Restaurar",
-            "SIM: Criar fork desta versão\nNÃO: Apenas visualizar (detached)"
-        )
-        
-        if choice is None:
-            return
+        if choice is None: return
         elif choice:
-            fork_name = simpledialog.askstring("Nome do Fork", "Nome:", 
-                                              initialvalue=f"restore_{datetime.datetime.now().strftime('%m%d_%H%M')}")
+            fork_name = simpledialog.askstring("Nome do Fork", "Nome:", initialvalue=f"restore_{datetime.datetime.now().strftime('%m%d_%H%M')}")
             if fork_name:
-                success, _, error = self.run_command(f'git checkout -b {fork_name} {commit_hash}')
-                if success:
-                    messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!")
-                    self.refresh_all()
-                else:
-                    messagebox.showerror("Erro", error)
+                success, _, error = self.run_command(f'git checkout -b "{fork_name}" {commit_hash}')
+                if success: messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!"); self.refresh_all()
+                else: messagebox.showerror("Erro", error)
         else:
             success, _, error = self.run_command(f'git checkout {commit_hash}')
-            if success:
-                messagebox.showinfo("Sucesso", "✅ Versão restaurada (visualização)")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+            if success: messagebox.showinfo("Sucesso", "✅ Versão restaurada (visualização)"); self.refresh_all()
+            else: messagebox.showerror("Erro", error)
     
     def rename_version(self):
-        """Renomeia versão usando tags"""
+        if not self._check_repo_validity(): return
         selection = self.versions_tree.selection()
-        if not selection:
-            messagebox.showwarning("Aviso", "Selecione uma versão!")
-            return
+        if not selection: messagebox.showwarning("Aviso", "Selecione uma versão!"); return
         
         item = self.versions_tree.item(selection[0])
-        commit_hash = item['tags'][0] if item['tags'] else None
+        commit_hash = item['tags'][0] if item.get('tags') else None
+        if not commit_hash: return
+        
         current_message = item['values'][1] if len(item['values']) > 1 else ""
-        
-        if not commit_hash:
-            return
-        
         tag_success, tag_output, _ = self.run_command(f'git tag --points-at {commit_hash}')
         current_tag = tag_output.strip().split('\n')[0] if tag_success and tag_output.strip() else None
         
-        new_name = simpledialog.askstring("Renomear", "Novo nome:", 
-                                         initialvalue=current_tag or current_message.replace('🏷️ ', ''))
-        
-        if not new_name:
-            return
+        new_name = simpledialog.askstring("Renomear", "Novo nome:", initialvalue=current_tag or current_message.replace('🏷️ ', ''))
+        if not new_name: return
         
         clean_name = re.sub(r'[^a-zA-Z0-9._-]', '_', new_name.strip())
         
-        try:
-            if current_tag:
-                self.run_command(f'git tag -d {current_tag}')
-            
-            success, _, error = self.run_command(f'git tag {clean_name} {commit_hash}')
-            if success:
-                messagebox.showinfo("Sucesso", f"✅ Renomeado para '{clean_name}'!")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
-        except Exception as e:
-            messagebox.showerror("Erro", str(e))
+        if current_tag: self.run_command(f'git tag -d "{current_tag}"')
+        success, _, error = self.run_command(f'git tag "{clean_name}" {commit_hash}')
+        
+        if success: messagebox.showinfo("Sucesso", f"✅ Renomeado para '{clean_name}'!"); self.refresh_all()
+        else: messagebox.showerror("Erro", error)
     
     def create_fork_from_version(self):
-        """Cria fork da versão selecionada"""
+        if not self._check_repo_validity(): return
         selection = self.versions_tree.selection()
-        if not selection:
-            messagebox.showwarning("Aviso", "Selecione uma versão!")
-            return
+        if not selection: messagebox.showwarning("Aviso", "Selecione uma versão!"); return
         
         item = self.versions_tree.item(selection[0])
-        commit_hash = item['tags'][0] if item['tags'] else None
-        
-        fork_name = simpledialog.askstring("Fork", "Nome do fork:", 
-                                          initialvalue=f"fork_{datetime.datetime.now().strftime('%m%d_%H%M')}")
-        
-        if fork_name and commit_hash:
-            success, _, error = self.run_command(f'git checkout -b {fork_name} {commit_hash}')
-            if success:
-                messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+        commit_hash = item['tags'][0] if item.get('tags') else None
+        if not commit_hash: return
+
+        fork_name = simpledialog.askstring("Fork", "Nome do fork:", initialvalue=f"fork_{datetime.datetime.now().strftime('%m%d_%H%M')}")
+        if fork_name:
+            success, _, error = self.run_command(f'git checkout -b "{fork_name}" {commit_hash}')
+            if success: messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!"); self.refresh_all()
+            else: messagebox.showerror("Erro", error)
     
     # ==================== AÇÕES DE FORK ====================
-    
     def create_new_fork(self):
-        """Cria novo fork"""
-        fork_name = simpledialog.askstring("Novo Fork", "Nome:", 
-                                          initialvalue=f"fork_{datetime.datetime.now().strftime('%m%d_%H%M')}")
-        
+        if not self._check_repo_validity(): return
+        fork_name = simpledialog.askstring("Novo Fork", "Nome:", initialvalue=f"fork_{datetime.datetime.now().strftime('%m%d_%H%M')}")
         if fork_name:
-            success, _, error = self.run_command(f'git checkout -b {fork_name}')
-            if success:
-                messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+            success, _, error = self.run_command(f'git checkout -b "{fork_name}"')
+            if success: messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!"); self.refresh_all()
+            else: messagebox.showerror("Erro", error)
     
     def switch_fork(self):
-        """Muda para fork selecionado"""
+        if not self._check_repo_validity(): return
         selection = self.forks_tree.selection()
-        if not selection:
-            messagebox.showwarning("Aviso", "Selecione um fork!")
-            return
+        if not selection: messagebox.showwarning("Aviso", "Selecione um fork!"); return
         
         item = self.forks_tree.item(selection[0])
-        fork_name = item['tags'][0] if item['tags'] else None
+        fork_name = item['tags'][0] if item.get('tags') else None
         
         if fork_name and not fork_name.startswith('detached-'):
-            success, _, error = self.run_command(f'git checkout {fork_name}')
-            if success:
-                messagebox.showinfo("Sucesso", f"✅ Mudou para '{fork_name}'!")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+            success, _, error = self.run_command(f'git checkout "{fork_name}"')
+            if success: messagebox.showinfo("Sucesso", f"✅ Mudou para '{fork_name}'!"); self.refresh_all()
+            else: messagebox.showerror("Erro", error)
     
     def rename_fork(self):
-        """Renomeia fork selecionado"""
+        if not self._check_repo_validity(): return
         selection = self.forks_tree.selection()
-        if not selection:
-            messagebox.showwarning("Aviso", "Selecione um fork!")
-            return
+        if not selection: messagebox.showwarning("Aviso", "Selecione um fork!"); return
         
         item = self.forks_tree.item(selection[0])
-        old_name = item['tags'][0] if item['tags'] else None
+        old_name = item['tags'][0] if item.get('tags') else None
         
-        if not old_name or old_name.startswith('detached-'):
-             messagebox.showwarning("Aviso", "Não é possível renomear um estado 'detached'.")
-             return
-
-        if old_name in ['main', 'master']:
-            messagebox.showwarning("Aviso", "❌ Não é possível renomear branch principal!")
-            return
+        if not old_name or old_name.startswith('detached-'): messagebox.showwarning("Aviso", "Não é possível renomear 'detached'."); return
+        if old_name in ['main', 'master']: messagebox.showwarning("Aviso", "❌ Não é possível renomear branch principal!"); return
         
         new_name = simpledialog.askstring("Renomear Fork", "Novo nome:", initialvalue=old_name)
-        
         if new_name and new_name != old_name:
-            success, _, error = self.run_command(f'git branch -m {old_name} {new_name}')
-            if success:
-                messagebox.showinfo("Sucesso", f"✅ Fork renomeado para '{new_name}'!")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+            success, _, error = self.run_command(f'git branch -m "{old_name}" "{new_name}"')
+            if success: messagebox.showinfo("Sucesso", f"✅ Fork renomeado para '{new_name}'!"); self.refresh_all()
+            else: messagebox.showerror("Erro", error)
     
     def delete_fork(self):
-        """Exclui fork selecionado"""
+        if not self._check_repo_validity(): return
         selection = self.forks_tree.selection()
-        if not selection:
-            messagebox.showwarning("Aviso", "Selecione um fork!")
-            return
+        if not selection: messagebox.showwarning("Aviso", "Selecione um fork!"); return
         
         item = self.forks_tree.item(selection[0])
-        fork_name = item['tags'][0] if item['tags'] else None
+        fork_name = item['tags'][0] if item.get('tags') else None
         status = item['values'][0] if item['values'] else ""
         
-        if not fork_name or fork_name.startswith('detached-'):
-             messagebox.showwarning("Aviso", "Não é possível excluir um estado 'detached'.")
-             return
-
-        if fork_name in ['main', 'master'] or "🌟" in status:
-            messagebox.showwarning("Aviso", "❌ Não é possível excluir branch principal ou atual!")
-            return
+        if not fork_name or fork_name.startswith('detached-'): messagebox.showwarning("Aviso", "Não é possível excluir 'detached'."); return
+        if fork_name in ['main', 'master'] or "🌟" in status: messagebox.showwarning("Aviso", "❌ Não é possível excluir branch principal/atual!"); return
         
-        if messagebox.askyesno("Confirmar", f"Excluir fork '{fork_name}'?\n\n⚠️ Não pode ser desfeito!"):
-            success, _, error = self.run_command(f'git branch -D {fork_name}')
-            if success:
-                messagebox.showinfo("Sucesso", "✅ Fork excluído!")
-                self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+        if messagebox.askyesno("Confirmar", f"Excluir fork '{fork_name}'?\n\n⚠️ Ação irreversível!"):
+            success, _, error = self.run_command(f'git branch -D "{fork_name}"')
+            if success: messagebox.showinfo("Sucesso", "✅ Fork excluído!"); self.refresh_all()
+            else: messagebox.showerror("Erro", error)
     
     def exit_detached_head(self):
-        """Sai do estado HEAD detached"""
-        choice = messagebox.askyesnocancel(
-            "Sair do Detached",
-            "SIM: Criar fork da posição atual\nNÃO: Voltar para main/master"
-        )
+        if not self._check_repo_validity(): return
+        choice = messagebox.askyesnocancel("Sair do Detached", "SIM: Criar fork da posição atual\nNÃO: Voltar para branch principal")
         
-        if choice is None:
-            return
+        if choice is None: return
         elif choice:
-            fork_name = simpledialog.askstring("Nome do Fork", "Nome:", 
-                                              initialvalue=f"detached_save_{datetime.datetime.now().strftime('%m%d_%H%M')}")
+            fork_name = simpledialog.askstring("Nome do Fork", "Nome:", initialvalue=f"detached_save_{datetime.datetime.now().strftime('%m%d_%H%M')}")
             if fork_name:
-                success, _, error = self.run_command(f'git checkout -b {fork_name}')
-                if success:
-                    messagebox.showinfo("Sucesso", f"✅ Fork '{fork_name}' criado!")
-                    self.refresh_all()
-                else:
-                    messagebox.showerror("Erro", error)
-        else:
-            success, branches_output, _ = self.run_command('git branch')
-            main_branch = 'main'
-            if success and 'master' in branches_output and 'main' not in branches_output:
-                main_branch = 'master'
-            
-            success, _, error = self.run_command(f'git checkout {main_branch}')
-            if success:
-                messagebox.showinfo("Sucesso", f"✅ Voltou para '{main_branch}'!")
+                self.run_command(f'git checkout -b "{fork_name}"')
                 self.refresh_all()
-            else:
-                messagebox.showerror("Erro", error)
+        else:
+            _, branches_output, _ = self.run_command('git branch')
+            main_branch = 'main' if 'main' in branches_output else 'master'
+            self.run_command(f'git checkout {main_branch}')
+            self.refresh_all()
     
-    # ==================== STASH ====================
-    
+    def show_debug_log(self):
+        log_window = tk.Toplevel(self.root)
+        log_window.title("Log de Debug")
+        log_window.geometry("800x600")
+        log_text = scrolledtext.ScrolledText(log_window, wrap=tk.WORD, font=('Consolas', 9))
+        log_text.pack(expand=True, fill=tk.BOTH)
+        try:
+            with open("debug.log", "r", encoding='utf-8', errors='ignore') as f:
+                log_text.insert(tk.END, f.read())
+        except FileNotFoundError:
+            log_text.insert(tk.END, "Arquivo de log não encontrado.")
+        log_text.config(state=tk.DISABLED)
+
+    # ... O restante do código permanece o mesmo ...
     def manage_stash(self):
-        """Gerenciar stash - versão simplificada"""
+        if not self._check_repo_validity(): return
         stash_window = tk.Toplevel(self.root)
         stash_window.title("📦 Gerenciar Stash")
         stash_window.geometry("600x400")
@@ -783,444 +782,210 @@ class VersionControlUnified:
         stash_tree.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
         def load_stashes():
-            for item in stash_tree.get_children():
-                stash_tree.delete(item)
-            
+            for item in stash_tree.get_children(): stash_tree.delete(item)
             success, output, _ = self.run_command('git stash list')
             if success and output.strip():
                 for line in output.strip().split('\n'):
                     if line.strip():
                         parts = line.split(': ', 2)
                         if len(parts) >= 2:
-                            index = parts[0]
-                            message = parts[1] if len(parts) == 2 else parts[2]
-                            stash_tree.insert('', tk.END, values=(index, message))
+                            stash_tree.insert('', tk.END, values=(parts[0], parts[2] if len(parts)>2 else parts[1]))
             else:
                 stash_tree.insert('', tk.END, values=("", "Nenhum stash encontrado"))
         
         def apply_stash():
             selection = stash_tree.selection()
-            if not selection:
-                messagebox.showwarning("Aviso", "Selecione um stash!")
-                return
-            
+            if not selection: messagebox.showwarning("Aviso", "Selecione um stash!"); return
             item = stash_tree.item(selection[0])
             stash_index = item['values'][0] if item['values'] else None
-            
-            if not stash_index or stash_index == "":
-                return
-            
+            if not stash_index: return
             if messagebox.askyesno("Confirmar", f"Aplicar {stash_index}?"):
                 success, _, error = self.run_command(f'git stash apply {stash_index}')
-                if success:
-                    messagebox.showinfo("Sucesso", "✅ Stash aplicado!")
-                    load_stashes()
-                    self.refresh_all()
-                else:
-                    messagebox.showerror("Erro", error)
+                if success: messagebox.showinfo("Sucesso", "✅ Stash aplicado!"); load_stashes(); self.refresh_all()
+                else: messagebox.showerror("Erro", error)
         
         def create_stash():
             message = simpledialog.askstring("Criar Stash", "Mensagem:", initialvalue="Mudanças temporárias")
             if message:
                 success, _, error = self.run_command(f'git stash push -m "{message}"')
-                if success:
-                    messagebox.showinfo("Sucesso", "✅ Stash criado!")
-                    load_stashes()
-                    self.refresh_all()
-                else:
-                    messagebox.showerror("Erro", error)
+                if success: messagebox.showinfo("Sucesso", "✅ Stash criado!"); load_stashes(); self.refresh_all()
+                else: messagebox.showerror("Erro", error)
         
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.pack(fill='x', pady=(10, 0))
-        
         ttk.Button(buttons_frame, text="💾 Criar", command=create_stash).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(buttons_frame, text="✅ Aplicar", command=apply_stash).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="🔄 Atualizar", command=load_stashes).pack(side=tk.LEFT, padx=5)
         ttk.Button(buttons_frame, text="❌ Fechar", command=stash_window.destroy).pack(side=tk.RIGHT)
         
         load_stashes()
-    
-    # ==================== MÉTODOS AUXILIARES ====================
-    
+        
     def start_project(self):
-        """Inicia o projeto Next.js"""
+        if not self._check_repo_validity(): return
         package_json = os.path.join(self.project_path, 'package.json')
         if not os.path.exists(package_json):
             messagebox.showerror("Erro", "Arquivo package.json não encontrado!")
             return
 
         def kill_node_processes():
-            """Termina todos os processos Node.js em execução (apenas Windows)"""
-            if os.name != 'nt':
-                return True, "Não é Windows, pulando a finalização de processos."
+            if os.name != 'nt': return True, "Não é Windows."
             try:
-                result = subprocess.run(
-                    ['taskkill', '/F', '/IM', 'node.exe'],
-                    capture_output=True,
-                    text=True,
-                    creationflags=subprocess.CREATE_NO_WINDOW
-                )
-                return True, f"Processos Node.js terminados: {result.stdout}"
-            except FileNotFoundError:
-                 return True, "Comando taskkill não encontrado (não é um problema se não for Windows)."
-            except Exception as e:
-                return False, f"Erro ao terminar processos Node.js: {str(e)}"
+                subprocess.run(['taskkill', '/F', '/IM', 'node.exe'], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                return True, "Processos Node.js anteriores terminados."
+            except Exception as e: return False, f"Erro ao terminar processos: {e}"
 
         def start_in_background():
             kill_success, kill_message = kill_node_processes()
-            if kill_success:
-                print(f"✅ {kill_message}")
-            else:
-                print(f"⚠️ {kill_message}")
+            print(kill_message)
+            time.sleep(1)
             
-            import time
-            time.sleep(1) # Pequena pausa
-            
-            with open(package_json, 'r', encoding='utf-8') as f:
-                pj_data = json.load(f)
-                scripts = pj_data.get('scripts', {})
+            with open(package_json, 'r', encoding='utf-8') as f: scripts = json.load(f).get('scripts', {})
             
             dev_command = None
             if 'dev' in scripts:
-                dev_command = 'npm run dev' # Default
-                # Detecta gerenciador de pacotes
-                if os.path.exists(os.path.join(self.project_path, 'yarn.lock')):
-                    dev_command = 'yarn dev'
-                elif os.path.exists(os.path.join(self.project_path, 'pnpm-lock.yaml')):
-                    dev_command = 'pnpm dev'
+                if os.path.exists(os.path.join(self.project_path, 'pnpm-lock.yaml')): dev_command = 'pnpm dev'
+                elif os.path.exists(os.path.join(self.project_path, 'yarn.lock')): dev_command = 'yarn dev'
+                else: dev_command = 'npm run dev'
 
             if dev_command:
                 try:
-                    # Inicia o processo em um novo console
-                    subprocess.Popen(
-                        dev_command,
-                        shell=True,
-                        cwd=self.project_path,
-                        creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
-                    )
+                    subprocess.Popen(dev_command, shell=True, cwd=self.project_path, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
                     return True, dev_command
-                except Exception as e:
-                    return False, f"Erro ao iniciar o projeto: {e}"
-
+                except Exception as e: return False, f"Erro ao iniciar projeto: {e}"
             return False, "Script 'dev' não encontrado no package.json"
 
         def run_start():
             success, result = start_in_background()
-            if success:
-                self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Sistemas Node.js anteriores terminados.\nProjeto iniciado com: {result}"))
-                self.root.after(3000, self.open_browser)
-            else:
-                self.root.after(0, lambda: messagebox.showerror("Erro", result))
+            self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Projeto iniciado com: {result}") if success else messagebox.showerror("Erro", result))
+            if success: self.root.after(3000, self.open_browser)
 
         threading.Thread(target=run_start, daemon=True).start()
     
     def open_browser(self):
-        """Abre o projeto no navegador"""
-        try:
-            webbrowser.open("http://localhost:3000")
-            self.log_deploy_message("Abrindo navegador...", "INFO")
-        except Exception as e:
-            self.log_deploy_message(f"Erro ao abrir navegador: {e}", "ERROR")
+        webbrowser.open("http://localhost:3000")
     
     def sync_repository(self):
-        """Sincroniza repositório (git pull/push)"""
+        if not self._check_repo_validity(): return
         if messagebox.askyesno("Sync", "Sincronizar com repositório remoto?"):
             self.log_deploy_message("Sincronizando...", "INFO")
-            
-            # Verificar se existe remote
-            success, output, _ = self.run_command("git remote")
-            if not success or not output.strip():
-                self.log_deploy_message("Nenhum remote configurado", "WARNING")
-                return
-            
-            # Pull primeiro
-            self.log_deploy_message("Executando 'git pull'...", "INFO")
-            success, output, error = self.run_command("git pull")
-            self.log_deploy_message(output, "INFO")
-            if success:
-                self.log_deploy_message("Pull realizado!", "SUCCESS")
+            def sync_thread():
+                _, remote_out, _ = self.run_command("git remote")
+                if not remote_out.strip(): self.root.after(0, lambda: self.log_deploy_message("Nenhum remote configurado", "WARNING")); return
                 
-                # Push depois
-                self.log_deploy_message("Executando 'git push'...", "INFO")
-                success_push, output_push, error_push = self.run_command("git push")
-                self.log_deploy_message(output_push, "INFO")
-                if success_push:
-                    self.log_deploy_message("Push realizado!", "SUCCESS")
-                else:
-                    self.log_deploy_message(f"Erro no push: {error_push}", "ERROR")
-            else:
-                self.log_deploy_message(f"Erro no pull: {error}", "ERROR")
-            
-            self.refresh_all()
+                pull_success, pull_out, pull_err = self.run_command("git pull")
+                self.root.after(0, lambda: self.log_deploy_message(f"Pull: {pull_out or pull_err}", "SUCCESS" if pull_success else "ERROR"))
+                
+                if pull_success:
+                    push_success, push_out, push_err = self.run_command("git push")
+                    self.root.after(0, lambda: self.log_deploy_message(f"Push: {push_out or push_err}", "SUCCESS" if push_success else "ERROR"))
+                
+                self.root.after(0, self.refresh_all)
+            threading.Thread(target=sync_thread, daemon=True).start()
     
     def run_vercel_command(self, command, show_output=True):
-        """Executa comando do Vercel"""
         try:
-            if not os.path.isdir(self.project_path):
-                 return False, "", f"Diretório do projeto não encontrado: {self.project_path}"
-            os.chdir(self.project_path)
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            
+            if not self.is_repo_valid: return False, "", "Repositório inválido"
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore', cwd=self.project_path)
             if show_output:
-                if result.stdout.strip():
-                    self.log_deploy_message(result.stdout.strip(), "INFO")
-                if result.stderr.strip():
-                    self.log_deploy_message(result.stderr.strip(), "WARNING")
-            
+                if result.stdout.strip(): self.log_deploy_message(result.stdout.strip(), "INFO")
+                if result.stderr.strip(): self.log_deploy_message(result.stderr.strip(), "WARNING")
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
-            if show_output:
-                self.log_deploy_message(f"Erro na execução: {e}", "ERROR")
+            if show_output: self.log_deploy_message(f"Erro na execução: {e}", "ERROR")
             return False, "", str(e)
     
     def log_deploy_message(self, message, level="INFO"):
-        """Adiciona mensagem ao log de deploy"""
-        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        
-        icon_map = {
-            "INFO": "ℹ️",
-            "SUCCESS": "✅", 
-            "WARNING": "⚠️",
-            "ERROR": "❌"
-        }
-        
-        formatted_message = f"[{timestamp}] {icon_map.get(level, 'ℹ️')} {message}\n"
-        
-        # Garante que a operação de GUI seja na thread principal
         def do_insert():
             self.deploy_log.config(state=tk.NORMAL)
-            self.deploy_log.insert(tk.END, formatted_message, level)
+            self.deploy_log.insert(tk.END, f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {message}\n", level)
             self.deploy_log.config(state=tk.DISABLED)
             self.deploy_log.see(tk.END)
-
         self.root.after(0, do_insert)
     
     # ==================== VERCEL METHODS ====================
-    
     def setup_deploy_log_tags(self):
-        """Configura as tags de cor para o log"""
         self.deploy_log.tag_config("SUCCESS", foreground="green")
         self.deploy_log.tag_config("WARNING", foreground="orange")
         self.deploy_log.tag_config("ERROR", foreground="red")
         self.deploy_log.tag_config("INFO", foreground="black")
 
     def check_vercel_cli_installed(self):
-        """Verifica se Vercel CLI está instalado"""
         success, _, _ = self.run_vercel_command("vercel --version", show_output=False)
         return success
     
     def vercel_login(self):
-        """Login no Vercel"""
+        if not self._check_repo_validity(): return
         if not self.check_vercel_cli_installed():
-            if messagebox.askyesno("Instalar Vercel CLI", "Vercel CLI não encontrado. Instalar globalmente com npm?"):
+            if messagebox.askyesno("Instalar Vercel CLI", "Vercel CLI não encontrado. Instalar com 'npm install -g vercel'?"):
                 self.log_deploy_message("Instalando Vercel CLI...", "INFO")
-                
-                def install_thread():
-                    success, _, error = self.run_vercel_command("npm install -g vercel")
-                    if not success:
-                       self.root.after(0, lambda: self.log_deploy_message(f"Falha na instalação: {error}", "ERROR"))
-                    else:
-                       self.root.after(0, lambda: self.log_deploy_message("Vercel CLI instalado!", "SUCCESS"))
-                       self.root.after(100, self.vercel_login) # Tenta o login de novo
-                
-                threading.Thread(target=install_thread, daemon=True).start()
+                subprocess.Popen('npm install -g vercel', shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
             return
-
-        command = "vercel login"
         
-        self.log_deploy_message("Iniciando login no terminal...", "INFO")
-        self.log_deploy_message("Siga as instruções no console que será aberto.", "WARNING")
-
-        def login_thread():
-            # Abre um novo terminal para o processo de login interativo
-            subprocess.Popen(command, shell=True, cwd=self.project_path, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
-            # Como o login é interativo, não podemos capturar o resultado diretamente.
-            # Apenas informamos o usuário e pedimos para ele verificar o status depois.
-            self.root.after(5000, lambda: self.log_deploy_message("Processo de login iniciado. Verifique o status após concluir.", "SUCCESS"))
-            self.root.after(6000, self.check_vercel_status)
-
-        threading.Thread(target=login_thread, daemon=True).start()
+        self.log_deploy_message("Abra o terminal para fazer o login no Vercel...", "INFO")
+        subprocess.Popen('vercel login', shell=True, cwd=self.project_path, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
+        self.root.after(5000, self.check_vercel_status)
 
     def vercel_logout(self):
-        """Logout do Vercel"""
         if messagebox.askyesno("Logout", "Fazer logout do Vercel?"):
-            success, _, _ = self.run_vercel_command("vercel logout")
-            if success:
-                self.log_deploy_message("Logout realizado!", "SUCCESS")
-                self.login_status_label.config(text="❌ Não logado")
-                self.preview_url_var.set("")
-                self.production_url_var.set("")
-            else:
-                self.log_deploy_message("Erro ao fazer logout", "ERROR")
+            self.run_vercel_command("vercel logout")
+            self.check_vercel_status()
     
     def check_vercel_status(self):
-        """Verifica status Vercel"""
         def check():
-            if not self.check_vercel_cli_installed():
-                self.login_status_label.config(text="❌ CLI não instalado")
-                return
-            
+            if not self.is_repo_valid: return
             success, output, _ = self.run_vercel_command("vercel whoami", show_output=False)
-            if success and output.strip():
-                username = output.strip()
-                self.login_status_label.config(text=f"✅ {username}")
-            else:
-                self.login_status_label.config(text="❌ Não logado")
-        
+            status_text = f"✅ {output.strip()}" if success and output.strip() else "❌ Não logado"
+            self.root.after(0, lambda: self.login_status_label.config(text=status_text))
         threading.Thread(target=check, daemon=True).start()
 
     def check_project_setup(self):
-        """Verifica configuração do projeto"""
+        if not self.is_repo_valid: return False
         self.log_deploy_message("Verificando projeto...", "INFO")
-        
-        package_json = os.path.join(self.project_path, 'package.json')
-        if not os.path.exists(package_json):
+        if not os.path.exists(os.path.join(self.project_path, 'package.json')):
             self.log_deploy_message("❌ package.json não encontrado!", "ERROR")
             return False
-        
-        try:
-            with open(package_json, 'r', encoding='utf-8') as f:
-                package_data = json.load(f)
-                dependencies = package_data.get('dependencies', {})
-                dev_dependencies = package_data.get('devDependencies', {})
-                
-                if 'next' in dependencies or 'next' in dev_dependencies:
-                    self.log_deploy_message("✅ Projeto Next.js detectado", "SUCCESS")
-                else:
-                    self.log_deploy_message("⚠️ Next.js não detectado", "WARNING")
-                
-                scripts = package_data.get('scripts', {})
-                if 'build' in scripts:
-                    self.log_deploy_message(f"✅ Script build: {scripts['build']}", "SUCCESS")
-                else:
-                    self.log_deploy_message("⚠️ Script build não encontrado", "WARNING")
-        except Exception as e:
-            self.log_deploy_message(f"Erro ao ler package.json: {e}", "ERROR")
-            return False
-        
-        self.log_deploy_message("Verificação concluída!", "SUCCESS")
+        self.log_deploy_message("✅ package.json encontrado!", "SUCCESS")
         return True
     
-    def deploy_preview(self):
-        """Deploy de preview"""
-        if not self.check_project_setup():
-            return
+    def _run_deploy(self, prod=False):
+        if not self.check_project_setup(): return
+        env = "produção" if prod else "preview"
+        if prod and not messagebox.askyesno(f"Deploy {env.capitalize()}", f"Confirmar deploy para {env}?"): return
         
-        self.log_deploy_message("Iniciando deploy preview...", "INFO")
-        
-        def deploy_thread():
-            command = "vercel"
-            if self.project_name_var.get().strip():
-                command += f" --name {self.project_name_var.get().strip()}"
-            
-            success, output, error = self.run_vercel_command(command, show_output=False)
-            
-            if success:
-                full_log = output.strip()
-                self.root.after(0, lambda: self.log_deploy_message(full_log, "INFO"))
-                lines = output.split('\n')
-                url_found = False
-                for line in reversed(lines):
-                    if 'https://' in line and 'vercel.app' in line:
-                        url = line.strip().split(' ')[-1] # Pega a última palavra que deve ser a URL
-                        self.root.after(0, lambda: self.preview_url_var.set(url))
-                        self.root.after(0, lambda: self.log_deploy_message(f"Preview: {url}", "SUCCESS"))
-                        url_found = True
-                        break
-                if not url_found:
-                    self.root.after(0, lambda: self.log_deploy_message("Deploy concluído, mas URL não encontrada na saída.", "WARNING"))
-            else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error or output}", "ERROR"))
-        
-        threading.Thread(target=deploy_thread, daemon=True).start()
-    
-    def deploy_production(self):
-        """Deploy de produção"""
-        if not messagebox.askyesno("Deploy Produção", "Confirmar deploy para produção?"):
-            return
-        
-        if not self.check_project_setup():
-            return
-        
-        self.log_deploy_message("Iniciando deploy produção...", "INFO")
+        self.log_deploy_message(f"Iniciando deploy de {env}...", "INFO")
         
         def deploy_thread():
-            command = "vercel --prod"
-            if self.project_name_var.get().strip():
-                command += f" --name {self.project_name_var.get().strip()}"
+            command = f"vercel {'--prod' if prod else ''}"
+            if self.project_name_var.get().strip(): command += f" --name {self.project_name_var.get().strip()}"
             
             success, output, error = self.run_vercel_command(command, show_output=False)
-            
+            self.root.after(0, lambda: self.log_deploy_message(output or error, "INFO" if success else "ERROR"))
+
             if success:
-                full_log = output.strip()
-                self.root.after(0, lambda: self.log_deploy_message(full_log, "INFO"))
-                lines = output.split('\n')
-                url_found = False
-                for line in reversed(lines):
-                     if 'https://' in line and ('vercel.app' in line or self.project_name_var.get() in line):
-                        url = line.strip().split(' ')[-1]
-                        self.root.after(0, lambda: self.production_url_var.set(url))
-                        self.root.after(0, lambda: self.log_deploy_message(f"Produção: {url}", "SUCCESS"))
-                        url_found = True
-                        break
-                if not url_found:
-                     self.root.after(0, lambda: self.log_deploy_message("Deploy produção concluído, mas URL não encontrada.", "WARNING"))
-            else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error or output}", "ERROR"))
-        
+                url = next((line.strip().split(' ')[-1] for line in reversed(output.split('\n')) if 'https://' in line), None)
+                if url:
+                    var = self.production_url_var if prod else self.preview_url_var
+                    self.root.after(0, lambda: var.set(url))
+                    self.root.after(0, lambda: self.log_deploy_message(f"Deploy {env} concluído: {url}", "SUCCESS"))
         threading.Thread(target=deploy_thread, daemon=True).start()
-    
+
+    def deploy_preview(self): self._run_deploy(prod=False)
+    def deploy_production(self): self._run_deploy(prod=True)
+        
     def list_deployments(self):
-        """Lista deployments"""
         self.log_deploy_message("Listando deployments...", "INFO")
-        
-        def list_thread():
-            project_name = self.project_name_var.get().strip()
-            if not project_name:
-                self.root.after(0, lambda: self.log_deploy_message("Nome do projeto é necessário para listar.", "WARNING"))
-                return
-            
-            success, output, error = self.run_vercel_command(f"vercel ls {project_name}", show_output=False)
-            if success:
-                self.root.after(0, lambda: self.log_deploy_message(f"Deployments para '{project_name}':", "SUCCESS"))
-                lines = output.strip().split('\n')[:10]
-                for line in lines:
-                    if line.strip():
-                        self.root.after(0, lambda line=line: self.log_deploy_message(line.strip(), "INFO"))
-            else:
-                self.root.after(0, lambda: self.log_deploy_message(f"Erro: {error or output}", "ERROR"))
-        
-        threading.Thread(target=list_thread, daemon=True).start()
+        self.run_vercel_command(f"vercel ls {self.project_name_var.get().strip()}")
 
     def open_url(self, url):
-        """Abre URL no navegador"""
-        if url and url.strip():
-            try:
-                webbrowser.open(url.strip())
-                self.log_deploy_message(f"Abrindo: {url}", "INFO")
-            except Exception as e:
-                self.log_deploy_message(f"Erro ao abrir: {e}", "ERROR")
-        else:
-            messagebox.showwarning("Aviso", "URL não disponível!")
+        if url: webbrowser.open(url.strip())
+        else: messagebox.showwarning("Aviso", "URL não disponível!")
     
     # ==================== INICIALIZAÇÃO ====================
     
     def run(self):
         """Inicia aplicação"""
-        self.setup_deploy_log_tags() # Configura as cores do log
+        self.setup_deploy_log_tags()
         self.deploy_log.config(state=tk.DISABLED)
-
-        if not os.path.exists(os.path.join(self.project_path, '.git')):
-            if messagebox.askyesno("Git", "Repositório Git não encontrado neste diretório. Deseja inicializar um?"):
-                success, _, error = self.run_command('git init')
-                if success:
-                    self.run_command('git config user.name "Usuario"')
-                    self.run_command('git config user.email "usuario@local"')
-                    messagebox.showinfo("Sucesso", "✅ Git inicializado!")
-                    self.refresh_all()
-                else:
-                    messagebox.showerror("Erro", f"Erro: {error}")
-        
         self.root.mainloop()
 
 def main():
@@ -1231,13 +996,11 @@ def main():
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        # Cria uma janela raiz temporária para mostrar o erro se a principal falhar
-        root = tk.Tk()
-        root.withdraw()
+        root = tk.Tk(); root.withdraw()
         messagebox.showerror("Erro Fatal", f"❌ Erro ao iniciar aplicação:\n\n{e}\n\nDetalhes:\n{error_details}")
         root.destroy()
 
-
 if __name__ == "__main__":
     main()
+
 
