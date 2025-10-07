@@ -26,6 +26,7 @@ import {
   Truck,
   CircleDollarSign,
   TrendingUp,
+  LayoutDashboard,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
@@ -105,6 +106,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       title: "Financeiro",
       icon: TrendingUp,
       items: [
+        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "gastos-receitas", label: "Gastos e Receitas", icon: TrendingUp },
       ]
     },
