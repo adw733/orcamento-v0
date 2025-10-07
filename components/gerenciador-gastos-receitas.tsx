@@ -185,9 +185,10 @@ export default function GerenciadorGastosReceitas() {
 
   const abrirModal = (movimentacao?: MovimentacaoFinanceira) => {
     if (movimentacao) {
+      const { id, created_at, ...data } = movimentacao;
       setMovimentacaoEditando(movimentacao)
       setFormData({
-        ...movimentacao,
+        ...data,
         data: format(new Date(movimentacao.data), 'yyyy-MM-dd')
       })
     } else {
