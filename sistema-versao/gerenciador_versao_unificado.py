@@ -850,6 +850,40 @@ class VersionControlUnified:
         log_text.config(state=tk.DISABLED)
 
     # ... O restante do código permanece o mesmo ...
+    def kill_process_on_port(self, port):
+        if os.name != 'nt':
+            self.log_deploy_message(f"A função para liberar a porta {port} só funciona no Windows.", "WARNING")
+            return
+        
+        try:
+            command = f"netstat -aon | findstr LISTENING | findstr :{port}"
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            output = result.stdout.strip()
+            
+            if not output:
+                self.log_deploy_message(f"Nenhum processo encontrado na porta {port}.", "INFO")
+                return
+
+            for line in output.splitlines():
+                parts = line.strip().split()
+                if len(parts) >= 5:
+                    pid = parts[4]
+                    try:
+                        pid_num = int(pid)
+                        self.log_deploy_message(f"Processo PID {pid_num} encontrado na porta {port}. Encerrando...", "INFO")
+                        kill_command = f"taskkill /PID {pid_num} /F"
+                        kill_result = subprocess.run(kill_command, shell=True, capture_output=True, text=True)
+                        if kill_result.returncode == 0:
+                            self.log_deploy_message(f"Processo {pid_num} encerrado com sucesso.", "SUCCESS")
+                            time.sleep(1)
+                        else:
+                            error_message = kill_result.stdout.strip() or kill_result.stderr.strip()
+                            self.log_deploy_message(f"Falha ao encerrar processo {pid_num}: {error_message}", "ERROR")
+                    except (ValueError, IndexError):
+                        continue
+        except Exception as e:
+            self.log_deploy_message(f"Erro ao tentar liberar a porta {port}: {e}", "ERROR")
+
     def manage_stash(self):
         if not self._check_repo_validity(): return
         stash_window = tk.Toplevel(self.root)
@@ -917,6 +951,9 @@ class VersionControlUnified:
             return
 
         def start_in_background():
+            # Mata o processo na porta 3000 antes de iniciar um novo
+            self.kill_process_on_port(3000)
+            
             with open(package_json, 'r', encoding='utf-8') as f:
                 scripts = json.load(f).get('scripts', {})
             
@@ -931,13 +968,11 @@ class VersionControlUnified:
 
             if dev_command:
                 try:
-                    # Abre um novo terminal para rodar o servidor, evitando bloquear a GUI.
-                    # O usuário pode ver o output e parar o servidor manualmente.
+                    # Abre um novo terminal para rodar o servidor
                     if os.name == 'nt':
                         command = f'cmd.exe /c "cd /d {self.project_path} && {dev_command}"'
                         subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
                     else:
-                        # Fallback para outros sistemas (pode não abrir um terminal visível)
                         cmd_parts = dev_command.split()
                         executable = self.executables.get(cmd_parts[0], cmd_parts[0])
                         subprocess.Popen([executable] + cmd_parts[1:], cwd=self.project_path)
@@ -949,7 +984,7 @@ class VersionControlUnified:
         def run_start():
             success, result = start_in_background()
             if success:
-                self.root.after(0, lambda: messagebox.showinfo("Sucesso", f"Projeto sendo iniciado em um novo terminal com: '{result}'.\nO navegador abrirá em instantes."))
+                self.root.after(0, lambda: self.log_deploy_message(f"Servidor iniciando com: '{result}'. O navegador abrirá em breve.", "SUCCESS"))
                 self.root.after(4000, self.open_browser)
             else:
                 self.root.after(0, lambda: messagebox.showerror("Erro", result))

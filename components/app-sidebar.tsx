@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Truck,
   CircleDollarSign,
+  TrendingUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
@@ -98,6 +99,13 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
         { id: "produtos", label: "Produtos", icon: ShoppingBag },
         { id: "materiais", label: "Materiais", icon: Palette },
         { id: "empresa", label: "Empresa", icon: Building2 },
+      ]
+    },
+    {
+      title: "Financeiro",
+      icon: TrendingUp,
+      items: [
+        { id: "gastos-receitas", label: "Gastos e Receitas", icon: TrendingUp },
       ]
     },
     {

@@ -295,13 +295,25 @@ export default function ListaOrcamentos({
 
     // Filtrar por termo de busca
     if (searchTerm) {
-      const termLower = searchTerm.toLowerCase()
-      resultado = resultado.filter(
-        (orcamento) =>
-          orcamento.numero?.toLowerCase().includes(termLower) ||
-          orcamento.cliente?.nome.toLowerCase().includes(termLower) ||
-          orcamento.cliente?.cnpj.toLowerCase().includes(termLower),
-      )
+      const normalizedSearchTerm = searchTerm
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      const terms = normalizedSearchTerm.split(' ').filter(term => term.trim() !== '');
+
+      resultado = resultado.filter((orcamento) => {
+        const searchableContent = [
+          orcamento.numero,
+          orcamento.cliente?.nome,
+          orcamento.nomeContato,
+        ]
+          .join(' ')
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        
+        return terms.every(term => searchableContent.includes(term));
+      });
     }
 
     // Filtrar por status
@@ -612,7 +624,7 @@ export default function ListaOrcamentos({
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Buscar por número, cliente ou CNPJ..."
+            placeholder="Buscar por nº, empresa ou contato..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 w-full"

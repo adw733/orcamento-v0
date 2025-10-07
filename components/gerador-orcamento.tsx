@@ -26,6 +26,8 @@ import GerenciadorEmpresa from "@/components/gerenciador-empresa"
 import GerenciadorCategorias from "@/components/gerenciador-categorias"
 // Adicionar a importação do componente TabelaProdutos no início do arquivo, junto com as outras importações
 import TabelaProdutos from "@/components/tabela-produtos"
+// Adicionar a importação do componente GerenciadorGastosReceitas
+import GerenciadorGastosReceitas from "@/components/gerenciador-gastos-receitas"
 // Adicionar a importação do componente LixeiraOrcamentos
 import * as ReactDOM from "react-dom/client"
 import { Loader2 } from "lucide-react"
@@ -3024,6 +3026,14 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   <Card className="shadow-sm border border-gray-200">
                     <CardContent className="p-3 md:p-4">
                       <GerenciadorEmpresa />
+                    </CardContent>
+                  </Card>
+                )
+              case "gastos-receitas":
+                return (
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
+                      <GerenciadorGastosReceitas />
                     </CardContent>
                   </Card>
                 )
