@@ -28,16 +28,15 @@ export default function DashboardFinanceiro() {
   const [anoSelecionado, setAnoSelecionado] = useState<number | 'todos'>('todos');
   const [dataInicio, setDataInicio] = useState<Date | undefined>();
   const [dataFim, setDataFim] = useState<Date | undefined>();
+  const [mesesSelecionados, setMesesSelecionados] = useState<number[]>([]);
 
   useEffect(() => {
     carregarAnos();
   }, []);
 
   useEffect(() => {
-    if (anoSelecionado !== 'todos') {
-        carregarMovimentacoes();
-    }
-  }, [anoSelecionado]);
+    carregarMovimentacoes();
+  }, [anoSelecionado, dataInicio, dataFim]);
 
   const carregarAnos = async () => {
     try {
@@ -84,44 +83,60 @@ export default function DashboardFinanceiro() {
     }
   };
 
+  const toggleMes = (mesIndex: number) => {
+    setMesesSelecionados((prev) => {
+      const already = prev.includes(mesIndex);
+      const next = already ? prev.filter((m) => m !== mesIndex) : [...prev, mesIndex];
+      return next.sort((a, b) => a - b);
+    });
+  };
+  const mesesAbreviados = useMemo(() => ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"], []);
+
   const processedData = useMemo(() => {
-    const receitaBruta = movimentacoes.filter(m => m.tipo === 'Receita').reduce((acc, m) => acc + m.valor, 0);
-    const cpv = Math.abs(movimentacoes.filter(m => m.categoria === 'Produção').reduce((acc, m) => acc + m.valor, 0));
+    const movs = mesesSelecionados.length === 0 
+      ? movimentacoes 
+      : movimentacoes.filter(m => mesesSelecionados.includes(getMonth(parseISO(m.data))));
+
+    const receitaBruta = movs.filter(m => m.tipo === 'Receita').reduce((acc, m) => acc + m.valor, 0);
+    const cpv = Math.abs(movs.filter(m => m.categoria === 'Produção').reduce((acc, m) => acc + m.valor, 0));
     const resultadoBruto = receitaBruta - cpv;
-    const despesasOperacionais = Math.abs(movimentacoes.filter(m => ['Marketing', 'Logística', 'Estrutura'].includes(m.categoria)).reduce((acc, m) => acc + m.valor, 0));
+    const despesasOperacionais = Math.abs(movs.filter(m => ['Marketing', 'Logística', 'Estrutura'].includes(m.categoria)).reduce((acc, m) => acc + m.valor, 0));
     const resultadoOperacional = resultadoBruto - despesasOperacionais;
-    const despesasFinanceiras = Math.abs(movimentacoes.filter(m => m.categoria === 'Financeiro' && m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0));
+    const despesasFinanceiras = Math.abs(movs.filter(m => m.categoria === 'Financeiro' && m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0));
     const resultadoLiquido = resultadoOperacional - despesasFinanceiras;
 
     const margemBruta = receitaBruta ? (resultadoBruto / receitaBruta) * 100 : 0;
     const margemLiquida = receitaBruta ? (resultadoLiquido / receitaBruta) * 100 : 0;
 
-    const monthlyData = Array.from({ length: 12 }, (_, i) => {
-        const month = i + 1;
-        const monthKey = `${anoSelecionado}/${String(month).padStart(2, '0')}`;
-        const receitas = movimentacoes.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
-        const despesas = Math.abs(movimentacoes.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-        return { name: monthKey, Receita: receitas, Despesa: despesas };
+    const monthsIndices = mesesSelecionados.length === 0 
+      ? Array.from({ length: 12 }, (_, i) => i) 
+      : mesesSelecionados;
+
+    const monthlyData = monthsIndices.map((i) => {
+        const receitas = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
+        const despesas = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
+        return { name: mesesAbreviados[i], Receita: receitas, Despesa: despesas };
     });
 
     const custosProducao = ['Tecido', 'Estampa', 'Bordado', 'Costureira', 'Aviamento', 'Embalagem'];
     const composicaoCustos = custosProducao.map(custo => ({
         name: custo,
-        value: Math.abs(movimentacoes.filter(m => m.sub_categoria === custo).reduce((acc, m) => acc + m.valor, 0))
+        value: Math.abs(movs.filter(m => m.sub_categoria === custo).reduce((acc, m) => acc + m.valor, 0))
     }));
 
-    const evolucaoMargens = monthlyData.map((monthData, i) => {
-        const receitasMes = monthData.Receita;
-        const despesasMes = monthData.Despesa;
-        const cpvMes = Math.abs(movimentacoes.filter(m => m.categoria === 'Produção' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
+    const evolucaoMargens = monthsIndices.map((i) => {
+        const mesAbreviado = mesesAbreviados[i];
+        const receitasMes = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
+        const despesasMes = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
+        const cpvMes = Math.abs(movs.filter(m => m.categoria === 'Produção' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
         const resultadoBrutoMes = receitasMes - cpvMes;
         const margemBrutaMes = receitasMes ? (resultadoBrutoMes / receitasMes) * 100 : 0;
         const resultadoLiquidoMes = resultadoBrutoMes - (despesasMes - cpvMes);
         const margemLiquidaMes = receitasMes ? (resultadoLiquidoMes / receitasMes) * 100 : 0;
-        return { name: monthData.name, 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
+        return { name: mesAbreviado, 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
     });
 
-    const fornecedores = movimentacoes.filter(m => m.tipo === 'Despesa' && m.categoria === 'Produção').reduce((acc, m) => {
+    const fornecedores = movs.filter(m => m.tipo === 'Despesa' && m.categoria === 'Produção').reduce((acc, m) => {
         const fornecedor = m.descricao;
         acc[fornecedor] = (acc[fornecedor] || 0) + Math.abs(m.valor);
         return acc;
@@ -129,15 +144,16 @@ export default function DashboardFinanceiro() {
 
     const topFornecedores = Object.entries(fornecedores).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name, value]) => ({ name, value }));
 
-    const receitaPolimixEcomix = movimentacoes.filter(m => m.tipo === 'Receita' && (m.descricao.includes('Polimix') || m.descricao.includes('Ecomix'))).reduce((acc, m) => acc + m.valor, 0);
+    const receitaPolimixEcomix = movs.filter(m => m.tipo === 'Receita' && (m.descricao.includes('Polimix') || m.descricao.includes('Ecomix'))).reduce((acc, m) => acc + m.valor, 0);
     const dependenciaCliente = receitaBruta ? (receitaPolimixEcomix / receitaBruta) * 100 : 0;
 
-    const ticketMedio = movimentacoes.filter(m => m.tipo === 'Receita').length > 0 ? receitaBruta / movimentacoes.filter(m => m.tipo === 'Receita').length : 0;
+    const ticketMedio = movs.filter(m => m.tipo === 'Receita').length > 0 ? receitaBruta / movs.filter(m => m.tipo === 'Receita').length : 0;
 
-    const gastoTotal = movimentacoes.filter(m => m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0);
+    const gastoTotal = movs.filter(m => m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0);
 
     return { gastoTotal, receitaBruta, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, evolucaoMargens, topFornecedores, dependenciaCliente, ticketMedio };
-  }, [movimentacoes, anoSelecionado]);
+  }, [movimentacoes, anoSelecionado, mesesSelecionados]);
+
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-full">Carregando...</div>;
@@ -145,15 +161,27 @@ export default function DashboardFinanceiro() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-        <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">Dashboard Financeiro</h1>
-            <div className="flex items-center gap-2">
-                <Button onClick={() => handleFiltroAno('todos')} variant={anoSelecionado === 'todos' ? 'default' : 'outline'}>Todos</Button>
-                {anos.map(ano => (
-                    <Button key={ano} onClick={() => handleFiltroAno(ano)} variant={anoSelecionado === ano ? 'default' : 'outline'}>{ano}</Button>
-                ))}
-            </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold">Dashboard Financeiro</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button onClick={() => handleFiltroAno('todos')} variant={anoSelecionado === 'todos' ? 'default' : 'outline'}>Todos</Button>
+          {anos.map(ano => (
+            <Button key={ano} onClick={() => handleFiltroAno(ano)} variant={anoSelecionado === ano ? 'default' : 'outline'}>{ano}</Button>
+          ))}
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap -mt-2">
+        <span className="text-sm text-muted-foreground">Filtrar por Mês:</span>
+        <Button onClick={() => setMesesSelecionados([])} variant={mesesSelecionados.length === 0 ? 'default' : 'outline'} size="sm">Todos</Button>
+        <div className="flex items-center gap-1 flex-wrap">
+          {mesesAbreviados.map((mes, i) => (
+            <Button key={i} onClick={() => toggleMes(i)} variant={mesesSelecionados.includes(i) ? 'default' : 'outline'} size="sm" className="w-12">
+              {mes}
+            </Button>
+          ))}
+        </div>
+      </div>
 
         <div className="grid gap-6 md:grid-cols-2">
             <Card><CardHeader><CardTitle>Faturamento Total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatarMoeda(processedData.receitaBruta)}</p></CardContent></Card>

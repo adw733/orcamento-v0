@@ -57,6 +57,7 @@ export default function GerenciadorGastosReceitas() {
   const [dataFim, setDataFim] = useState<Date>()
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+  const [mesesSelecionados, setMesesSelecionados] = useState<number[]>([])
 
   const [formData, setFormData] = useState<Omit<MovimentacaoFinanceira, 'id' | 'created_at'>>({
     tipo: 'Receita',
@@ -149,7 +150,18 @@ export default function GerenciadorGastosReceitas() {
       setDataInicio(startOfYear(new Date(ano, 0, 1)))
       setDataFim(endOfYear(new Date(ano, 11, 31)))
     }
+    setMesesSelecionados([]) // Limpa os meses ao trocar o ano
   }
+
+  const toggleMes = (mesIndex: number) => {
+    setMesesSelecionados((prev) => {
+      const already = prev.includes(mesIndex);
+      const next = already ? prev.filter((m) => m !== mesIndex) : [...prev, mesIndex];
+      return next.sort((a, b) => a - b);
+    });
+  };
+  const mesesAbreviados = useMemo(() => ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"], []);
+
 
   const salvarMovimentacao = async () => {
     // ... (função inalterada)
@@ -179,12 +191,14 @@ export default function GerenciadorGastosReceitas() {
 
   const movimentacoesFiltradas = useMemo(() => {
     return movimentacoes.filter(mov => {
+      const mesDaMovimentacao = new Date(mov.data).getMonth();
+      if (mesesSelecionados.length > 0 && !mesesSelecionados.includes(mesDaMovimentacao)) return false;
       if (filtroTipo !== 'todos' && mov.tipo !== filtroTipo) return false
       if (filtroCategoria !== 'todas' && mov.categoria !== filtroCategoria) return false
       if (filtroConta !== 'todas' && mov.conta !== filtroConta) return false
       return true
     })
-  }, [movimentacoes, filtroTipo, filtroCategoria, filtroConta])
+  }, [movimentacoes, filtroTipo, filtroCategoria, filtroConta, mesesSelecionados])
 
   const sortedMovimentacoes = useMemo(() => {
     if (!sortColumn) return movimentacoesFiltradas;
@@ -204,14 +218,42 @@ export default function GerenciadorGastosReceitas() {
 
   const totalReceitas = useMemo(() => movimentacoesFiltradas.filter(mov => mov.tipo === 'Receita').reduce((acc, mov) => acc + mov.valor, 0), [movimentacoesFiltradas])
   const totalGastos = useMemo(() => movimentacoesFiltradas.filter(mov => mov.tipo === 'Despesa').reduce((acc, mov) => acc + mov.valor, 0), [movimentacoesFiltradas])
-  const saldoLiquido = totalReceitas + totalGastos
+  const saldoLiquido = totalReceitas - totalGastos
 
   const formatarMoeda = (valor: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)
 
   return (
     <div className="space-y-6">
       {/* Resumo Financeiro */}
-      {/* ... */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Receitas</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatarMoeda(totalReceitas)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Despesas</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{formatarMoeda(totalGastos)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Saldo Líquido</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${saldoLiquido >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>{formatarMoeda(saldoLiquido)}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filtros e Ações */}
       <Card>
@@ -221,19 +263,30 @@ export default function GerenciadorGastosReceitas() {
               <Filter className="h-5 w-5" />
               Filtros e Ações
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button onClick={() => handleFiltroAno('todos')} variant={anoSelecionado === 'todos' ? 'default' : 'outline'}>Todos</Button>
               {anos.map(ano => (
                 <Button key={ano} onClick={() => handleFiltroAno(ano)} variant={anoSelecionado === ano ? 'default' : 'outline'}>{ano}</Button>
               ))}
-              <Button onClick={() => abrirModal()} className="flex items-center gap-2 ml-4">
+              <Button onClick={() => abrirModal()} className="flex items-center gap-2 ml-auto">
                 <Plus className="h-4 w-4" />
                 Nova Movimentação
               </Button>
             </div>
           </div>
+          <div className="flex items-center gap-2 flex-wrap mt-4">
+            <span className="text-sm text-muted-foreground">Filtrar por Mês:</span>
+            <Button onClick={() => setMesesSelecionados([])} variant={mesesSelecionados.length === 0 ? 'default' : 'outline'} size="sm">Todos</Button>
+            <div className="flex items-center gap-1 flex-wrap">
+              {mesesAbreviados.map((mes, i) => (
+                <Button key={i} onClick={() => toggleMes(i)} variant={mesesSelecionados.includes(i) ? 'default' : 'outline'} size="sm" className="w-12">
+                  {mes}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
           <div className="space-y-1">
             <Label>Tipo</Label>
             <Select value={filtroTipo} onValueChange={(value: any) => setFiltroTipo(value)}>
@@ -275,6 +328,9 @@ export default function GerenciadorGastosReceitas() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('id')}>
+                  ID {sortColumn === 'id' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 inline" /> : <ArrowDown className="h-4 w-4 inline" />)}
+                </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('data')}>
                   Data {sortColumn === 'data' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 inline" /> : <ArrowDown className="h-4 w-4 inline" />)}
                 </TableHead>
@@ -301,9 +357,10 @@ export default function GerenciadorGastosReceitas() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center">Carregando...</TableCell></TableRow>
               ) : sortedMovimentacoes.map((mov) => (
                 <TableRow key={mov.id}>
+                  <TableCell className="font-mono text-xs">{String(mov.id).substring(0, 8)}</TableCell>
                   <TableCell>{format(new Date(mov.data), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                   <TableCell><Badge variant={mov.tipo === 'Receita' ? 'default' : 'destructive'}>{mov.tipo}</Badge></TableCell>
                   <TableCell>{mov.categoria}</TableCell>
