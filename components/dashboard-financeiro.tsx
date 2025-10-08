@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { getMonth, getYear, parseISO, startOfYear, endOfYear } from 'date-fns';
+import { Info } from "lucide-react"
 
 interface Movimentacao {
   id: string;
@@ -183,16 +185,102 @@ export default function DashboardFinanceiro() {
         </div>
       </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-            <Card><CardHeader><CardTitle>Faturamento Total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatarMoeda(processedData.receitaBruta)}</p></CardContent></Card>
-            <Card><CardHeader><CardTitle>Gasto Total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-red-500">{formatarMoeda(processedData.gastoTotal)}</p></CardContent></Card>
+        {/* Cards Principais */}
+        <div className="grid gap-6 md:grid-cols-3">
+            <Card>
+                <CardHeader><CardTitle>Faturamento Total</CardTitle></CardHeader>
+                <CardContent><p className="text-3xl font-bold text-green-600">{formatarMoeda(processedData.receitaBruta)}</p></CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Gasto Total</CardTitle></CardHeader>
+                <CardContent><p className="text-3xl font-bold text-red-600">{formatarMoeda(Math.abs(processedData.gastoTotal))}</p></CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Saldo Líquido</CardTitle></CardHeader>
+                <CardContent><p className={`text-3xl font-bold ${processedData.receitaBruta + processedData.gastoTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatarMoeda(processedData.receitaBruta + processedData.gastoTotal)}</p></CardContent>
+            </Card>
         </div>
-        <div className="grid gap-6 md:grid-cols-4">
-            <Card className={processedData.margemBruta < 30 ? "border-yellow-500" : ""}><CardHeader><CardTitle>Margem Bruta %</CardTitle></CardHeader><CardContent><p className={`text-2xl font-bold ${processedData.margemBruta < 30 ? "text-yellow-500" : ""}`}>{processedData.margemBruta.toFixed(2)}%</p></CardContent></Card>
-            <Card className={processedData.margemLiquida < 10 ? "border-red-500" : ""}><CardHeader><CardTitle>Margem Líquida %</CardTitle></CardHeader><CardContent><p className={`text-2xl font-bold ${processedData.margemLiquida < 10 ? "text-red-500" : ""}`}>{processedData.margemLiquida.toFixed(2)}%</p></CardContent></Card>
-            <Card><CardHeader><CardTitle>Ticket Médio</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatarMoeda(processedData.ticketMedio)}</p></CardContent></Card>
-            <Card><CardHeader><CardTitle>Lucro Líquido</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatarMoeda(processedData.resultadoLiquido)}</p></CardContent></Card>
-        </div>
+
+        {/* Cards Secundários */}
+        <TooltipProvider>
+          <div className="grid gap-6 md:grid-cols-4">
+            <Card className={processedData.margemBruta < 30 ? "border-yellow-500" : ""}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Margem Bruta %</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold">Margem Bruta</p>
+                    <p className="text-xs">Percentual que sobra da receita após descontar os custos de produção (CPV).</p>
+                    <p className="text-xs mt-1"><strong>Cálculo:</strong> (Receita - CPV) / Receita × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-2xl font-bold ${processedData.margemBruta < 30 ? "text-yellow-500" : ""}`}>{processedData.margemBruta.toFixed(2)}%</p>
+              </CardContent>
+            </Card>
+
+            <Card className={processedData.margemLiquida < 10 ? "border-red-500" : ""}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Margem Líquida %</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold">Margem Líquida</p>
+                    <p className="text-xs">Percentual de lucro real após todas as despesas (produção, operacionais e financeiras).</p>
+                    <p className="text-xs mt-1"><strong>Cálculo:</strong> Resultado Líquido / Receita × 100</p>
+                  </TooltipContent>
+                </Tooltip>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-2xl font-bold ${processedData.margemLiquida < 10 ? "text-red-500" : ""}`}>{processedData.margemLiquida.toFixed(2)}%</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">CPV</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold">Custo dos Produtos Vendidos</p>
+                    <p className="text-xs">Total gasto diretamente na produção (tecidos, estampas, bordados, costuras, aviamentos, embalagens).</p>
+                    <p className="text-xs mt-1"><strong>Cálculo:</strong> Soma de todas as despesas da categoria "Produção"</p>
+                  </TooltipContent>
+                </Tooltip>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-orange-600">{formatarMoeda(processedData.cpv)}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Despesas Operacionais</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold">Despesas Operacionais</p>
+                    <p className="text-xs">Gastos necessários para manter o negócio funcionando (marketing, logística, estrutura).</p>
+                    <p className="text-xs mt-1"><strong>Cálculo:</strong> Soma das categorias Marketing + Logística + Estrutura</p>
+                  </TooltipContent>
+                </Tooltip>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-purple-600">{formatarMoeda(processedData.despesasOperacionais)}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TooltipProvider>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-6">
@@ -214,7 +302,7 @@ export default function DashboardFinanceiro() {
                     <CardHeader><CardTitle>Receita vs. Despesa (Mensal)</CardTitle></CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={processedData.monthlyData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis tickFormatter={(value) => formatarMoeda(value as number)} /><Tooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="Receita" fill="#10B981" /><Bar dataKey="Despesa" fill="#EF4444" /></BarChart>
+                            <BarChart data={processedData.monthlyData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis tickFormatter={(value) => formatarMoeda(value as number)} /><RechartsTooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="Receita" fill="#10B981" /><Bar dataKey="Despesa" fill="#EF4444" /></BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
@@ -224,7 +312,7 @@ export default function DashboardFinanceiro() {
                     <CardHeader><CardTitle>Composição dos Custos de Produção</CardTitle></CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={processedData.composicaoCustos} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} /><YAxis type="category" dataKey="name" width={100} /><Tooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="value" fill="#8884d8" name="Custo" /></BarChart>
+                            <BarChart data={processedData.composicaoCustos} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} /><YAxis type="category" dataKey="name" width={100} /><RechartsTooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="value" fill="#8884d8" name="Custo" /></BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
@@ -232,7 +320,7 @@ export default function DashboardFinanceiro() {
                     <CardHeader><CardTitle>Evolução das Margens (%)</CardTitle></CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={processedData.evolucaoMargens}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Legend /><Line type="monotone" dataKey="Margem Bruta" stroke="#82ca9d" /><Line type="monotone" dataKey="Margem Líquida" stroke="#8884d8" /></LineChart>
+                            <LineChart data={processedData.evolucaoMargens}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><RechartsTooltip /><Legend /><Line type="monotone" dataKey="Margem Bruta" stroke="#82ca9d" /><Line type="monotone" dataKey="Margem Líquida" stroke="#8884d8" /></LineChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
@@ -244,7 +332,7 @@ export default function DashboardFinanceiro() {
                 <CardHeader><CardTitle>Principais Fornecedores</CardTitle></CardHeader>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={processedData.topFornecedores} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} /><YAxis type="category" dataKey="name" width={150} /><Tooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="value" fill="#FFBB28" name="Gasto" /></BarChart>
+                        <BarChart data={processedData.topFornecedores} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} /><YAxis type="category" dataKey="name" width={150} /><RechartsTooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="value" fill="#FFBB28" name="Gasto" /></BarChart>
                     </ResponsiveContainer>
                 </CardContent>
             </Card>
