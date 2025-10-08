@@ -8,7 +8,9 @@
       "Bash(powershell:*)",
       "Read(//c/Users/adw73/**)",
       "Bash(cmd /c:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables"
     ]
   },
   "mcpServers": {

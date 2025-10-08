@@ -218,7 +218,7 @@ export default function GerenciadorGastosReceitas() {
   }, [movimentacoesFiltradas, sortColumn, sortDirection]);
 
   const totalReceitas = useMemo(() => movimentacoesFiltradas.filter(mov => mov.tipo === 'Receita').reduce((acc, mov) => acc + mov.valor, 0), [movimentacoesFiltradas])
-  const totalGastos = useMemo(() => movimentacoesFiltradas.filter(mov => mov.tipo === 'Despesa').reduce((acc, mov) => acc + mov.valor, 0), [movimentacoesFiltradas])
+  const totalGastos = useMemo(() => movimentacoesFiltradas.filter(mov => mov.tipo === 'Despesa').reduce((acc, mov) => acc + Math.abs(mov.valor), 0), [movimentacoesFiltradas])
   const saldoLiquido = totalReceitas - totalGastos
 
   const formatarMoeda = (valor: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)
