@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, LabelList } from 'recharts';
 import { getMonth, getYear, parseISO, startOfYear, endOfYear } from 'date-fns';
 import { Info } from "lucide-react"
 
@@ -20,8 +20,18 @@ interface Movimentacao {
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
+const LIGHT_COLORS = ['#93c5fd', '#86efac', '#fcd34d', '#fca5a5', '#c4b5fd', '#6ee7b7', '#fde047'];
 
 const formatarMoeda = (valor: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+
+// Função para estimar a largura do texto em pixels
+const estimarLarguraTexto = (texto: string, fontSize: number = 11): number => {
+  // Aproximação: cada caractere tem ~0.6x o tamanho da fonte em pixels
+  // Para fontes bold, adiciona-se ~10% extra
+  const caracterePorPixel = 0.6;
+  const boldMultiplier = 1.1;
+  return texto.length * fontSize * caracterePorPixel * boldMultiplier;
+};
 
 export default function DashboardFinanceiro() {
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
@@ -121,10 +131,15 @@ export default function DashboardFinanceiro() {
     });
 
     const custosProducao = ['Tecido', 'Estampa', 'Bordado', 'Costureira', 'Aviamento', 'Embalagem'];
-    const composicaoCustos = custosProducao.map(custo => ({
-        name: custo,
-        value: Math.abs(movs.filter(m => m.sub_categoria === custo).reduce((acc, m) => acc + m.valor, 0))
-    }));
+    const composicaoCustos = custosProducao
+        .map(custo => ({
+            name: custo,
+            value: Math.abs(movs.filter(m => m.sub_categoria === custo).reduce((acc, m) => acc + m.valor, 0))
+        }))
+        .filter(item => item.value > 0) // Remove custos zerados
+        .sort((a, b) => b.value - a.value); // Ordena do maior para o menor
+
+    const totalCustos = composicaoCustos.reduce((acc, item) => acc + item.value, 0);
 
     const evolucaoMargens = monthsIndices.map((i) => {
         const mesAbreviado = mesesAbreviados[i];
@@ -153,7 +168,7 @@ export default function DashboardFinanceiro() {
 
     const gastoTotal = movs.filter(m => m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0);
 
-    return { gastoTotal, receitaBruta, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, evolucaoMargens, topFornecedores, dependenciaCliente, ticketMedio };
+    return { gastoTotal, receitaBruta, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, totalCustos, evolucaoMargens, topFornecedores, dependenciaCliente, ticketMedio };
   }, [movimentacoes, anoSelecionado, mesesSelecionados]);
 
 
@@ -312,7 +327,38 @@ export default function DashboardFinanceiro() {
                     <CardHeader><CardTitle>Composição dos Custos de Produção</CardTitle></CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={processedData.composicaoCustos} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} /><YAxis type="category" dataKey="name" width={100} /><RechartsTooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="value" fill="#8884d8" name="Custo" /></BarChart>
+                            <BarChart data={processedData.composicaoCustos} layout="vertical" margin={{ top: 5, right: 180, bottom: 5, left: 10 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} />
+                                <YAxis type="category" dataKey="name" width={100} />
+                                <RechartsTooltip
+                                    formatter={(value: number) => {
+                                        const percentual = processedData.totalCustos > 0
+                                            ? ((value / processedData.totalCustos) * 100).toFixed(1)
+                                            : '0.0';
+                                        return `${formatarMoeda(value)} (${percentual}%)`;
+                                    }}
+                                />
+                                <Legend />
+                                <Bar dataKey="value" name="Custo">
+                                    <LabelList
+                                        dataKey="value"
+                                        position="right"
+                                        fill="#000000"
+                                        fontSize={11}
+                                        fontWeight="bold"
+                                        formatter={(value: number) => {
+                                            const percentual = processedData.totalCustos > 0
+                                                ? ((value / processedData.totalCustos) * 100).toFixed(1)
+                                                : '0.0';
+                                            return `${formatarMoeda(value)} (${percentual}%)`;
+                                        }}
+                                    />
+                                    {processedData.composicaoCustos.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
