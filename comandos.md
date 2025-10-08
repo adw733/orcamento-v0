@@ -1,0 +1,1 @@
+npx @anthropic-ai/claude-code // abrir o claude code

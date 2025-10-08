@@ -31,6 +31,7 @@ import { useToast } from "@/components/ui/use-toast"
 
 interface MovimentacaoFinanceira {
   id: string
+  sequential_id?: number
   data: string
   tipo: 'Despesa' | 'Receita'
   sub_categoria: string
@@ -328,8 +329,8 @@ export default function GerenciadorGastosReceitas() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('id')}>
-                  ID {sortColumn === 'id' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 inline" /> : <ArrowDown className="h-4 w-4 inline" />)}
+                <TableHead className="cursor-pointer" onClick={() => handleSort('sequential_id')}>
+                  Nº {sortColumn === 'sequential_id' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 inline" /> : <ArrowDown className="h-4 w-4 inline" />)}
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('data')}>
                   Data {sortColumn === 'data' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4 inline" /> : <ArrowDown className="h-4 w-4 inline" />)}
@@ -360,7 +361,7 @@ export default function GerenciadorGastosReceitas() {
                 <TableRow><TableCell colSpan={9} className="text-center">Carregando...</TableCell></TableRow>
               ) : sortedMovimentacoes.map((mov) => (
                 <TableRow key={mov.id}>
-                  <TableCell className="font-mono text-xs">{String(mov.id).substring(0, 8)}</TableCell>
+                  <TableCell>{mov.sequential_id}</TableCell>
                   <TableCell>{format(new Date(mov.data), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                   <TableCell><Badge variant={mov.tipo === 'Receita' ? 'default' : 'destructive'}>{mov.tipo}</Badge></TableCell>
                   <TableCell>{mov.categoria}</TableCell>

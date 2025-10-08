@@ -1,4 +1,16 @@
 {
+  "permissions": {
+    "allow": [
+      "SlashCommand(/init)",
+      "Bash(dir:*)",
+      "Bash(claude mcp:*)",
+      "Bash(echo $env:APPDATA)",
+      "Bash(powershell:*)",
+      "Read(//c/Users/adw73/**)",
+      "Bash(cmd /c:*)",
+      "Bash(npx:*)"
+    ]
+  },
   "mcpServers": {
     "supabase": {
       "command": "npx",
@@ -12,10 +24,5 @@
         "SUPABASE_ACCESS_TOKEN": "sbp_e7075cbcdd7bf61e501b01e5821081b71d3eaa55"
       }
     }
-  },
-  "permissions": {
-    "allow": [
-      "SlashCommand(/init)"
-    ]
   }
 }
