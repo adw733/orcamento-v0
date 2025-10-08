@@ -8,26 +8,32 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
   Calendar as CalendarIcon,
   Filter,
   BarChart3,
   ArrowUp,
   ArrowDown
 } from "lucide-react"
-import { format, getYear, startOfYear, endOfYear } from "date-fns"
+import { format, getYear, getMonth, parseISO, startOfYear, endOfYear } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/components/ui/use-toast"
+import type { Orcamento } from "@/types/types"
+
+interface Periodo {
+  ano: number;
+  mes: number;
+}
 
 interface MovimentacaoFinanceira {
   id: string
@@ -44,21 +50,21 @@ interface MovimentacaoFinanceira {
 
 export default function GerenciadorGastosReceitas() {
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoFinanceira[]>([])
+  const [orcamentos, setOrcamentos] = useState<Partial<Orcamento>[]>([])
   const [categorias, setCategorias] = useState<string[]>([])
   const [subCategorias, setSubCategorias] = useState<string[]>([])
   const [contas, setContas] = useState<string[]>([])
   const [anos, setAnos] = useState<number[]>([])
-  const [anoSelecionado, setAnoSelecionado] = useState<number | 'todos'>('todos')
+  const [periodosSelecionados, setPeriodosSelecionados] = useState<Periodo[]>([])
+  const [dialogAberto, setDialogAberto] = useState(false)
   const [modalAberto, setModalAberto] = useState(false)
   const [movimentacaoEditando, setMovimentacaoEditando] = useState<MovimentacaoFinanceira | null>(null)
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'Receita' | 'Despesa'>('todos')
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas')
   const [filtroConta, setFiltroConta] = useState<string>('todas')
-  const [dataInicio, setDataInicio] = useState<Date>()
-  const [dataFim, setDataFim] = useState<Date>()
+  const [mostrarReceitasFuturas, setMostrarReceitasFuturas] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
-  const [mesesSelecionados, setMesesSelecionados] = useState<number[]>([])
 
   const [formData, setFormData] = useState<Omit<MovimentacaoFinanceira, 'id' | 'created_at'>>({
     tipo: 'Receita',
@@ -75,52 +81,40 @@ export default function GerenciadorGastosReceitas() {
 
   useEffect(() => {
     const inicializar = async () => {
-      await carregarAnos()
+      await carregarDados()
       await carregarOpcoesFiltros()
     }
     inicializar()
   }, [])
 
-  useEffect(() => {
-    carregarMovimentacoes()
-  }, [dataInicio, dataFim])
-
-  const carregarMovimentacoes = async () => {
+  const carregarDados = async () => {
     setIsLoading(true)
     try {
-      let query = supabase.from('gastos_receitas').select('*')
-
-      if (dataInicio) {
-        query = query.gte('data', dataInicio.toISOString())
-      }
-      if (dataFim) {
-        query = query.lte('data', dataFim.toISOString())
-      }
-
-      const { data, error } = await query.order('data', { ascending: false })
+      const { data, error } = await supabase
+        .from('gastos_receitas')
+        .select('*')
+        .order('data', { ascending: false })
 
       if (error) throw error
       setMovimentacoes(data || [])
+
+      // Carregar orçamentos para receitas futuras
+      const { data: orcamentosData, error: orcamentosError } = await supabase
+        .from('orcamentos')
+        .select('*')
+        .in('status', ['2', '3', '4'])
+
+      if (!orcamentosError) {
+        setOrcamentos(orcamentosData || [])
+      }
+
+      const years = [...new Set(data.map(item => getYear(parseISO(item.data))))].sort((a, b) => b - a)
+      setAnos(years)
     } catch (error) {
-      console.error('Erro ao carregar movimentações:', error)
-      toast({ title: "Erro", description: "Não foi possível carregar as movimentações.", variant: "destructive" })
+      console.error('Erro ao carregar dados:', error)
+      toast({ title: "Erro", description: "Não foi possível carregar os dados.", variant: "destructive" })
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const carregarAnos = async () => {
-    try {
-      const { data, error } = await supabase.from('gastos_receitas').select('data')
-      if (error) throw error
-      const years = [...new Set(data.map(item => getYear(new Date(item.data))))].sort((a, b) => b - a)
-      setAnos(years)
-      if (years.length > 0) {
-        setAnoSelecionado(years[0])
-        handleFiltroAno(years[0])
-      }
-    } catch (error) {
-      console.error('Erro ao carregar anos:', error)
     }
   }
 
@@ -142,26 +136,50 @@ export default function GerenciadorGastosReceitas() {
     }
   }
 
-  const handleFiltroAno = (ano: number | 'todos') => {
-    setAnoSelecionado(ano)
-    if (ano === 'todos') {
-      setDataInicio(undefined)
-      setDataFim(undefined)
-    } else {
-      setDataInicio(startOfYear(new Date(ano, 0, 1)))
-      setDataFim(endOfYear(new Date(ano, 11, 31)))
-    }
-    setMesesSelecionados([]) // Limpa os meses ao trocar o ano
-  }
+  const mesesAbreviados = useMemo(() => ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"], []);
 
-  const toggleMes = (mesIndex: number) => {
-    setMesesSelecionados((prev) => {
-      const already = prev.includes(mesIndex);
-      const next = already ? prev.filter((m) => m !== mesIndex) : [...prev, mesIndex];
-      return next.sort((a, b) => a - b);
+  const togglePeriodo = (ano: number, mes: number) => {
+    setPeriodosSelecionados((prev) => {
+      const exists = prev.some(p => p.ano === ano && p.mes === mes);
+      if (exists) {
+        return prev.filter(p => !(p.ano === ano && p.mes === mes));
+      } else {
+        const novoPeriodo = [...prev, { ano, mes }];
+        return novoPeriodo.sort((a, b) => {
+          if (a.ano !== b.ano) return a.ano - b.ano;
+          return a.mes - b.mes;
+        });
+      }
     });
   };
-  const mesesAbreviados = useMemo(() => ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"], []);
+
+  const selecionarAnoCompleto = (ano: number) => {
+    const novoPeriodos = [...periodosSelecionados];
+    for (let mes = 0; mes < 12; mes++) {
+      const existe = novoPeriodos.some(p => p.ano === ano && p.mes === mes);
+      if (!existe) {
+        novoPeriodos.push({ ano, mes });
+      }
+    }
+    novoPeriodos.sort((a, b) => {
+      if (a.ano !== b.ano) return a.ano - b.ano;
+      return a.mes - b.mes;
+    });
+    setPeriodosSelecionados(novoPeriodos);
+  };
+
+  const selecionarUltimosMeses = (quantidade: number) => {
+    const hoje = new Date();
+    const periodos: Periodo[] = [];
+    for (let i = 0; i < quantidade; i++) {
+      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      periodos.push({ ano: getYear(data), mes: getMonth(data) });
+    }
+    setPeriodosSelecionados(periodos.sort((a, b) => {
+      if (a.ano !== b.ano) return a.ano - b.ano;
+      return a.mes - b.mes;
+    }));
+  };
 
 
   const salvarMovimentacao = async () => {
@@ -191,15 +209,80 @@ export default function GerenciadorGastosReceitas() {
   };
 
   const movimentacoesFiltradas = useMemo(() => {
-    return movimentacoes.filter(mov => {
-      const mesDaMovimentacao = new Date(mov.data).getMonth();
-      if (mesesSelecionados.length > 0 && !mesesSelecionados.includes(mesDaMovimentacao)) return false;
+    // Cria receitas futuras virtuais
+    const receitasFuturas: MovimentacaoFinanceira[] = mostrarReceitasFuturas ? orcamentos.map(orc => {
+      // Calcula valor total do orçamento
+      let itensObj = orc.itens;
+      if (typeof itensObj === 'string') {
+        try { itensObj = JSON.parse(itensObj); } catch (e) { itensObj = []; }
+      }
+
+      // Extrai o array de itens (pode estar em itens.items ou direto em itens)
+      let itens: any[] = [];
+      if (itensObj && typeof itensObj === 'object') {
+        if (Array.isArray(itensObj)) {
+          itens = itensObj;
+        } else if (itensObj.items && Array.isArray(itensObj.items)) {
+          itens = itensObj.items;
+        }
+      }
+
+      const valorItens = itens.reduce((total, item) => {
+        const valorItem = (item.valorUnitario || 0) * (item.quantidade || 0);
+        return total + valorItem;
+      }, 0);
+      const valor = valorItens + (orc.valorFrete || 0);
+
+      // Calcula data projetada (90 dias)
+      const dataOriginal = new Date(orc.data || new Date());
+      dataOriginal.setDate(dataOriginal.getDate() + 90);
+      const dataProjetada = dataOriginal.toISOString().split('T')[0];
+
+      // Parse cliente para pegar o nome
+      let clienteNome = 'Cliente não identificado';
+      if (orc.cliente) {
+        if (typeof orc.cliente === 'string') {
+          try { clienteNome = JSON.parse(orc.cliente).nome || clienteNome; } catch (e) {}
+        } else if (typeof orc.cliente === 'object') {
+          clienteNome = orc.cliente.nome || clienteNome;
+        }
+      }
+
+      // Formata descrição: numero - NOME CLIENTE - CONTATO
+      const numero = orc.numero || '0000';
+      const nomeContato = orc.nomeContato || '';
+      const descricao = nomeContato
+        ? `${numero} - ${clienteNome.toUpperCase()} - ${nomeContato.toUpperCase()}`
+        : `${numero} - ${clienteNome.toUpperCase()}`;
+
+      return {
+        id: `futuro-${orc.id}`,
+        data: dataProjetada,
+        tipo: 'Receita' as const,
+        categoria: 'Recebimento',
+        sub_categoria: 'Receita Futura',
+        descricao,
+        valor,
+        conta: 'Andrew' as const
+      };
+    }) : [];
+
+    const todasMovimentacoes = [...movimentacoes, ...receitasFuturas];
+
+    return todasMovimentacoes.filter(mov => {
+      // Filtro de período
+      if (periodosSelecionados.length > 0) {
+        const data = parseISO(mov.data);
+        const ano = getYear(data);
+        const mes = getMonth(data);
+        if (!periodosSelecionados.some(p => p.ano === ano && p.mes === mes)) return false;
+      }
       if (filtroTipo !== 'todos' && mov.tipo !== filtroTipo) return false
       if (filtroCategoria !== 'todas' && mov.categoria !== filtroCategoria) return false
       if (filtroConta !== 'todas' && mov.conta !== filtroConta) return false
       return true
     })
-  }, [movimentacoes, filtroTipo, filtroCategoria, filtroConta, mesesSelecionados])
+  }, [movimentacoes, orcamentos, mostrarReceitasFuturas, filtroTipo, filtroCategoria, filtroConta, periodosSelecionados])
 
   const sortedMovimentacoes = useMemo(() => {
     if (!sortColumn) return movimentacoesFiltradas;
@@ -265,25 +348,88 @@ export default function GerenciadorGastosReceitas() {
               Filtros e Ações
             </CardTitle>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button onClick={() => handleFiltroAno('todos')} variant={anoSelecionado === 'todos' ? 'default' : 'outline'}>Todos</Button>
-              {anos.map(ano => (
-                <Button key={ano} onClick={() => handleFiltroAno(ano)} variant={anoSelecionado === ano ? 'default' : 'outline'}>{ano}</Button>
-              ))}
+              <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    Filtrar Período
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Selecionar Períodos</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="space-y-4 py-4">
+                    {/* Atalhos rápidos */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground">Atalhos:</span>
+                      <Button onClick={() => selecionarUltimosMeses(3)} variant="outline" size="sm" className="text-xs h-7">
+                        Últimos 3 meses
+                      </Button>
+                      <Button onClick={() => selecionarUltimosMeses(6)} variant="outline" size="sm" className="text-xs h-7">
+                        Últimos 6 meses
+                      </Button>
+                      <Button onClick={() => {
+                        const anoAtual = new Date().getFullYear();
+                        selecionarAnoCompleto(anoAtual);
+                      }} variant="outline" size="sm" className="text-xs h-7">
+                        Ano atual
+                      </Button>
+                    </div>
+
+                    {/* Grid de anos e meses */}
+                    <div className="space-y-4">
+                      {anos.map(ano => (
+                        <div key={ano} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-semibold text-muted-foreground">{ano}</div>
+                            <Button
+                              onClick={() => {
+                                const isCompleto = periodosSelecionados.filter(p => p.ano === ano).length === 12;
+                                if (isCompleto) {
+                                  setPeriodosSelecionados(prev => prev.filter(p => p.ano !== ano));
+                                } else {
+                                  selecionarAnoCompleto(ano);
+                                }
+                              }}
+                              variant={periodosSelecionados.filter(p => p.ano === ano).length === 12 ? 'default' : 'outline'}
+                              size="sm"
+                              className="text-xs h-7"
+                            >
+                              {periodosSelecionados.filter(p => p.ano === ano).length === 12 ? '✓ Ano Completo' : 'Selecionar Todos'}
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-6 sm:grid-cols-12 gap-1">
+                            {mesesAbreviados.map((mes, mesIndex) => (
+                              <Button
+                                key={`${ano}-${mesIndex}`}
+                                onClick={() => togglePeriodo(ano, mesIndex)}
+                                variant={periodosSelecionados.some(p => p.ano === ano && p.mes === mesIndex) ? 'default' : 'outline'}
+                                size="sm"
+                                className="h-8 text-xs"
+                              >
+                                {mes}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {periodosSelecionados.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {periodosSelecionados.length} {periodosSelecionados.length === 1 ? 'período' : 'períodos'} selecionado{periodosSelecionados.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+
               <Button onClick={() => abrirModal()} className="flex items-center gap-2 ml-auto">
                 <Plus className="h-4 w-4" />
                 Nova Movimentação
               </Button>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap mt-4">
-            <span className="text-sm text-muted-foreground">Filtrar por Mês:</span>
-            <Button onClick={() => setMesesSelecionados([])} variant={mesesSelecionados.length === 0 ? 'default' : 'outline'} size="sm">Todos</Button>
-            <div className="flex items-center gap-1 flex-wrap">
-              {mesesAbreviados.map((mes, i) => (
-                <Button key={i} onClick={() => toggleMes(i)} variant={mesesSelecionados.includes(i) ? 'default' : 'outline'} size="sm" className="w-12">
-                  {mes}
-                </Button>
-              ))}
             </div>
           </div>
         </CardHeader>

@@ -10,6 +10,7 @@ import { getMonth, getYear, parseISO, startOfYear, endOfYear } from 'date-fns';
 import { Info, X, Calendar, ChevronDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import type { Orcamento } from "@/types/types"
 
 interface Movimentacao {
   id: string;
@@ -42,10 +43,12 @@ const estimarLarguraTexto = (texto: string, fontSize: number = 11): number => {
 
 export default function DashboardFinanceiro() {
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
+  const [orcamentos, setOrcamentos] = useState<Partial<Orcamento>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [anos, setAnos] = useState<number[]>([]);
   const [periodosSelecionados, setPeriodosSelecionados] = useState<Periodo[]>([]);
   const [dialogAberto, setDialogAberto] = useState(false);
+  const [consolidarReceitasFuturas, setConsolidarReceitasFuturas] = useState(false);
 
   useEffect(() => {
     carregarDados();
@@ -54,7 +57,7 @@ export default function DashboardFinanceiro() {
   const carregarDados = async () => {
     setIsLoading(true);
     try {
-      // Carrega TODOS os dados sem filtro de data
+      // Carrega movimentações
       const { data, error } = await supabase
         .from('gastos_receitas')
         .select('id, data, tipo, categoria, sub_categoria, valor, descricao')
@@ -63,6 +66,18 @@ export default function DashboardFinanceiro() {
       if (error) throw error;
 
       setMovimentacoes(data || []);
+
+      // Carrega orçamentos com status 2 (Entregue), 3 (Cobrança) ou 4 (Em Execução)
+      const { data: orcamentosData, error: orcamentosError } = await supabase
+        .from('orcamentos')
+        .select('*')
+        .in('status', ['2', '3', '4']);
+
+      if (orcamentosError) {
+        console.error("Erro ao carregar orçamentos:", orcamentosError);
+      } else {
+        setOrcamentos(orcamentosData || []);
+      }
 
       // Extrai anos únicos dos dados
       const years = [...new Set(data.map(item => getYear(parseISO(item.data))))].sort((a, b) => b - a);
@@ -193,23 +208,128 @@ export default function DashboardFinanceiro() {
           return periodosSelecionados.some(p => p.ano === ano && p.mes === mes);
         });
 
+    // Calcula receitas futuras dos orçamentos (status 2, 3, 4)
+    const calcularValorOrcamento = (orc: Partial<Orcamento>) => {
+      // Parse itens se vier como string JSON
+      let itensObj = orc.itens;
+      if (typeof itensObj === 'string') {
+        try {
+          itensObj = JSON.parse(itensObj);
+        } catch (e) {
+          console.error('Erro ao parsear itens:', e);
+          return 0;
+        }
+      }
+
+      // Extrai o array de itens (pode estar em itens.items ou direto em itens)
+      let itens: any[] = [];
+      if (itensObj && typeof itensObj === 'object') {
+        if (Array.isArray(itensObj)) {
+          itens = itensObj;
+        } else if (itensObj.items && Array.isArray(itensObj.items)) {
+          itens = itensObj.items;
+        }
+      }
+
+      if (!itens || itens.length === 0) {
+        return 0;
+      }
+
+      const valorItens = itens.reduce((total, item) => {
+        const valorItem = (item.valorUnitario || 0) * (item.quantidade || 0);
+        return total + valorItem;
+      }, 0);
+
+      const valorTotal = valorItens + (orc.valorFrete || 0);
+      return valorTotal;
+    };
+
+    const calcularDataProjetada = (dataOrcamento: string) => {
+      const data = new Date(dataOrcamento);
+      data.setDate(data.getDate() + 90); // Adiciona 90 dias
+      return data.toISOString().split('T')[0];
+    };
+
+    const receitasFuturas = orcamentos.map(orc => {
+      const valor = calcularValorOrcamento(orc);
+
+      // Parse cliente se vier como string JSON
+      let clienteNome = 'Cliente não identificado';
+      if (orc.cliente) {
+        if (typeof orc.cliente === 'string') {
+          try {
+            const clienteObj = JSON.parse(orc.cliente);
+            clienteNome = clienteObj.nome || 'Cliente não identificado';
+          } catch (e) {
+            clienteNome = 'Cliente não identificado';
+          }
+        } else if (typeof orc.cliente === 'object') {
+          clienteNome = orc.cliente.nome || 'Cliente não identificado';
+        }
+      }
+
+      return {
+        id: orc.id || '',
+        numero: orc.numero || '',
+        dataOriginal: orc.data || '',
+        dataProjetada: calcularDataProjetada(orc.data || new Date().toISOString()),
+        valor,
+        cliente: clienteNome,
+        status: orc.status
+      };
+    });
+
+    // Filtra receitas futuras pelos períodos selecionados (se houver)
+    const receitasFuturasFiltradas = periodosSelecionados.length === 0
+      ? receitasFuturas
+      : receitasFuturas.filter(rf => {
+          const data = parseISO(rf.dataProjetada);
+          const ano = getYear(data);
+          const mes = getMonth(data);
+          return periodosSelecionados.some(p => p.ano === ano && p.mes === mes);
+        });
+
+    const receitaFutura = receitasFuturasFiltradas.reduce((acc, rf) => acc + rf.valor, 0);
+
     const receitaBruta = movs.filter(m => m.tipo === 'Receita').reduce((acc, m) => acc + m.valor, 0);
+
+    // Se consolidado, inclui receitas futuras nos cálculos de DRE
+    const receitaBrutaCalculada = consolidarReceitasFuturas ? receitaBruta + receitaFutura : receitaBruta;
+
     const cpv = Math.abs(movs.filter(m => m.categoria === 'Produção').reduce((acc, m) => acc + m.valor, 0));
-    const resultadoBruto = receitaBruta - cpv;
+    const resultadoBruto = receitaBrutaCalculada - cpv;
     const despesasOperacionais = Math.abs(movs.filter(m => ['Marketing', 'Logística', 'Estrutura'].includes(m.categoria)).reduce((acc, m) => acc + m.valor, 0));
     const resultadoOperacional = resultadoBruto - despesasOperacionais;
     const despesasFinanceiras = Math.abs(movs.filter(m => m.categoria === 'Financeiro' && m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0));
-    const resultadoLiquido = resultadoOperacional - despesasFinanceiras;
 
-    const margemBruta = receitaBruta ? (resultadoBruto / receitaBruta) * 100 : 0;
-    const margemLiquida = receitaBruta ? (resultadoLiquido / receitaBruta) * 100 : 0;
+    // Calcula todas as despesas e identifica "Outras Despesas" não categorizadas
+    const gastoTotal = movs.filter(m => m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0);
+    const despesasCategorizadas = cpv + despesasOperacionais + despesasFinanceiras;
+    const outrasDespesas = Math.abs(gastoTotal) - despesasCategorizadas;
 
-    // Cria dados mensais com ano/mês completo
+    const resultadoLiquido = resultadoOperacional - despesasFinanceiras - outrasDespesas;
+
+    const margemBruta = receitaBrutaCalculada ? (resultadoBruto / receitaBrutaCalculada) * 100 : 0;
+    const margemLiquida = receitaBrutaCalculada ? (resultadoLiquido / receitaBrutaCalculada) * 100 : 0;
+
+    // Cria dados mensais com ano/mês completo incluindo receitas futuras
     const monthlyData = periodosSelecionados.length === 0
       ? Array.from({ length: 12 }, (_, i) => {
           const receitas = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
           const despesas = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-          return { name: mesesAbreviados[i], Receita: receitas, Despesa: despesas };
+
+          // Receitas futuras para este mês (sem filtro de ano quando não há período selecionado)
+          const receitasFuturasMes = receitasFuturas.filter(rf => {
+            const data = parseISO(rf.dataProjetada);
+            return getMonth(data) === i;
+          }).reduce((acc, rf) => acc + rf.valor, 0);
+
+          // Se consolidado, soma na receita normal; senão mantém separado
+          if (consolidarReceitasFuturas) {
+            return { name: mesesAbreviados[i], Receita: receitas, 'Receita Futura': receitasFuturasMes, Despesa: despesas };
+          } else {
+            return { name: mesesAbreviados[i], Receita: receitas, Despesa: despesas, 'Receita Futura': receitasFuturasMes };
+          }
         })
       : periodosSelecionados.map(p => {
           const receitas = movs.filter(m => {
@@ -222,13 +342,24 @@ export default function DashboardFinanceiro() {
             return m.tipo === 'Despesa' && getYear(data) === p.ano && getMonth(data) === p.mes;
           }).reduce((acc, m) => acc + m.valor, 0));
 
+          // Receitas futuras para este período específico
+          const receitasFuturasMes = receitasFuturas.filter(rf => {
+            const data = parseISO(rf.dataProjetada);
+            return getYear(data) === p.ano && getMonth(data) === p.mes;
+          }).reduce((acc, rf) => acc + rf.valor, 0);
+
           // Mostra apenas mês se todos os períodos são do mesmo ano
           const anosUnicos = [...new Set(periodosSelecionados.map(p => p.ano))];
           const label = anosUnicos.length === 1
             ? mesesAbreviados[p.mes]
             : `${mesesAbreviados[p.mes]}/${String(p.ano).slice(-2)}`;
 
-          return { name: label, Receita: receitas, Despesa: despesas };
+          // Se consolidado, soma na receita normal; senão mantém separado
+          if (consolidarReceitasFuturas) {
+            return { name: label, Receita: receitas, 'Receita Futura': receitasFuturasMes, Despesa: despesas };
+          } else {
+            return { name: label, Receita: receitas, Despesa: despesas, 'Receita Futura': receitasFuturasMes };
+          }
         });
 
     // Agrupa gastos por categoria (todas as categorias de despesa)
@@ -246,6 +377,26 @@ export default function DashboardFinanceiro() {
 
     const totalCustos = composicaoCustos.reduce((acc, item) => acc + item.value, 0);
 
+    // Mapeia subcategorias por categoria para a legenda
+    const subcategoriasPorCategoria = movs
+        .filter(m => m.tipo === 'Despesa' && m.sub_categoria)
+        .reduce((acc, m) => {
+            const categoria = m.categoria || 'Outros';
+            const subcat = m.sub_categoria;
+            if (!acc[categoria]) {
+                acc[categoria] = new Set<string>();
+            }
+            acc[categoria].add(subcat);
+            return acc;
+        }, {} as Record<string, Set<string>>);
+
+    const legendaSubcategorias = Object.entries(subcategoriasPorCategoria)
+        .map(([categoria, subcats]) => ({
+            categoria,
+            subcategorias: Array.from(subcats).sort()
+        }))
+        .sort((a, b) => a.categoria.localeCompare(b.categoria));
+
     // Agrupa gastos por subcategoria
     const gastoPorSubcategoria = movs
         .filter(m => m.tipo === 'Despesa' && m.sub_categoria)
@@ -262,45 +413,17 @@ export default function DashboardFinanceiro() {
 
     const totalSubcategorias = composicaoSubcategorias.reduce((acc, item) => acc + item.value, 0);
 
-    const evolucaoMargens = periodosSelecionados.length === 0
-      ? Array.from({ length: 12 }, (_, i) => {
-          const receitasMes = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
-          const despesasMes = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-          const cpvMes = Math.abs(movs.filter(m => m.categoria === 'Produção' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-          const resultadoBrutoMes = receitasMes - cpvMes;
-          const margemBrutaMes = receitasMes ? (resultadoBrutoMes / receitasMes) * 100 : 0;
-          const resultadoLiquidoMes = resultadoBrutoMes - (despesasMes - cpvMes);
-          const margemLiquidaMes = receitasMes ? (resultadoLiquidoMes / receitasMes) * 100 : 0;
-          return { name: mesesAbreviados[i], 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
-        })
-      : periodosSelecionados.map(p => {
-          const receitasMes = movs.filter(m => {
-            const data = parseISO(m.data);
-            return m.tipo === 'Receita' && getYear(data) === p.ano && getMonth(data) === p.mes;
-          }).reduce((acc, m) => acc + m.valor, 0);
-
-          const despesasMes = Math.abs(movs.filter(m => {
-            const data = parseISO(m.data);
-            return m.tipo === 'Despesa' && getYear(data) === p.ano && getMonth(data) === p.mes;
-          }).reduce((acc, m) => acc + m.valor, 0));
-
-          const cpvMes = Math.abs(movs.filter(m => {
-            const data = parseISO(m.data);
-            return m.categoria === 'Produção' && getYear(data) === p.ano && getMonth(data) === p.mes;
-          }).reduce((acc, m) => acc + m.valor, 0));
-
-          const resultadoBrutoMes = receitasMes - cpvMes;
-          const margemBrutaMes = receitasMes ? (resultadoBrutoMes / receitasMes) * 100 : 0;
-          const resultadoLiquidoMes = resultadoBrutoMes - (despesasMes - cpvMes);
-          const margemLiquidaMes = receitasMes ? (resultadoLiquidoMes / receitasMes) * 100 : 0;
-
-          const anosUnicos = [...new Set(periodosSelecionados.map(p => p.ano))];
-          const label = anosUnicos.length === 1
-            ? mesesAbreviados[p.mes]
-            : `${mesesAbreviados[p.mes]}/${String(p.ano).slice(-2)}`;
-
-          return { name: label, 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
-        });
+    // Mapeia categoria de cada subcategoria para a legenda
+    const categoriasPorSubcategoria = movs
+        .filter(m => m.tipo === 'Despesa' && m.sub_categoria)
+        .reduce((acc, m) => {
+            const subcat = m.sub_categoria;
+            const categoria = m.categoria || 'Outros';
+            if (!acc[subcat]) {
+                acc[subcat] = categoria;
+            }
+            return acc;
+        }, {} as Record<string, string>);
 
     const fornecedores = movs.filter(m => m.tipo === 'Despesa' && m.categoria === 'Produção').reduce((acc, m) => {
         const fornecedor = m.descricao;
@@ -310,15 +433,22 @@ export default function DashboardFinanceiro() {
 
     const topFornecedores = Object.entries(fornecedores).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name, value]) => ({ name, value }));
 
+    // Agrupa receitas por cliente (usando descrição como identificador do cliente)
+    const clientes = movs.filter(m => m.tipo === 'Receita').reduce((acc, m) => {
+        const cliente = m.descricao || 'Não identificado';
+        acc[cliente] = (acc[cliente] || 0) + m.valor;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const topClientes = Object.entries(clientes).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name, value]) => ({ name, value }));
+
     const receitaPolimixEcomix = movs.filter(m => m.tipo === 'Receita' && (m.descricao.includes('Polimix') || m.descricao.includes('Ecomix'))).reduce((acc, m) => acc + m.valor, 0);
     const dependenciaCliente = receitaBruta ? (receitaPolimixEcomix / receitaBruta) * 100 : 0;
 
     const ticketMedio = movs.filter(m => m.tipo === 'Receita').length > 0 ? receitaBruta / movs.filter(m => m.tipo === 'Receita').length : 0;
 
-    const gastoTotal = movs.filter(m => m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0);
-
-    return { gastoTotal, receitaBruta, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, totalCustos, composicaoSubcategorias, totalSubcategorias, evolucaoMargens, topFornecedores, dependenciaCliente, ticketMedio };
-  }, [movimentacoes, periodosSelecionados, mesesAbreviados]);
+    return { gastoTotal, receitaBruta, receitaFutura, receitasFuturasFiltradas, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, outrasDespesas, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, totalCustos, composicaoSubcategorias, totalSubcategorias, legendaSubcategorias, categoriasPorSubcategoria, topFornecedores, topClientes, dependenciaCliente, ticketMedio };
+  }, [movimentacoes, orcamentos, periodosSelecionados, mesesAbreviados]);
 
 
   if (isLoading) {
@@ -427,24 +557,58 @@ export default function DashboardFinanceiro() {
           >
             <X className="h-4 w-4" />
           </Button>
+
+          {/* Toggle Consolidar Receitas Futuras */}
+          <div className="flex items-center gap-2 ml-4">
+            <input
+              type="checkbox"
+              id="consolidar-receitas"
+              checked={consolidarReceitasFuturas}
+              onChange={(e) => setConsolidarReceitasFuturas(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="consolidar-receitas" className="text-sm text-muted-foreground cursor-pointer">
+              Consolidar Receitas Futuras
+            </label>
+          </div>
         </div>
       </div>
 
         {/* Cards Principais */}
-        <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-                <CardHeader><CardTitle>Faturamento Total</CardTitle></CardHeader>
-                <CardContent><p className="text-3xl font-bold text-green-600">{formatarMoeda(processedData.receitaBruta)}</p></CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>Gasto Total</CardTitle></CardHeader>
-                <CardContent><p className="text-3xl font-bold text-red-600">{formatarMoeda(Math.abs(processedData.gastoTotal))}</p></CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>Saldo Líquido</CardTitle></CardHeader>
-                <CardContent><p className={`text-3xl font-bold ${processedData.receitaBruta + processedData.gastoTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatarMoeda(processedData.receitaBruta + processedData.gastoTotal)}</p></CardContent>
-            </Card>
-        </div>
+        <TooltipProvider>
+          <div className={`grid gap-6 ${consolidarReceitasFuturas ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
+              <Card>
+                  <CardHeader><CardTitle>Faturamento Total</CardTitle></CardHeader>
+                  <CardContent><p className="text-3xl font-bold text-green-600">{formatarMoeda(consolidarReceitasFuturas ? processedData.receitaBruta + processedData.receitaFutura : processedData.receitaBruta)}</p></CardContent>
+              </Card>
+              <Card>
+                  <CardHeader><CardTitle>Gasto Total</CardTitle></CardHeader>
+                  <CardContent><p className="text-3xl font-bold text-red-600">{formatarMoeda(Math.abs(processedData.gastoTotal))}</p></CardContent>
+              </Card>
+              <Card>
+                  <CardHeader><CardTitle>Saldo Líquido</CardTitle></CardHeader>
+                  <CardContent><p className={`text-3xl font-bold ${(consolidarReceitasFuturas ? processedData.receitaBruta + processedData.receitaFutura : processedData.receitaBruta) + processedData.gastoTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatarMoeda((consolidarReceitasFuturas ? processedData.receitaBruta + processedData.receitaFutura : processedData.receitaBruta) + processedData.gastoTotal)}</p></CardContent>
+              </Card>
+              {!consolidarReceitasFuturas && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle>Receita Futura</CardTitle>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                <p className="font-semibold">Receita Futura</p>
+                                <p className="text-xs">Receitas projetadas de orçamentos em Execução, Cobrança ou Entregue</p>
+                                <p className="text-xs mt-1">Data projetada: 90 dias após a data do orçamento</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </CardHeader>
+                    <CardContent><p className="text-3xl font-bold text-blue-600">{formatarMoeda(processedData.receitaFutura)}</p></CardContent>
+                </Card>
+              )}
+          </div>
+        </TooltipProvider>
 
         {/* Cards Secundários */}
         <TooltipProvider>
@@ -549,7 +713,13 @@ export default function DashboardFinanceiro() {
                       <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
                       <Legend />
                       <Line type="monotone" dataKey="Receita" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
+                      {consolidarReceitasFuturas && (
+                        <Line type="monotone" dataKey="Receita Futura" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4 }} strokeDasharray="5 5" />
+                      )}
                       <Line type="monotone" dataKey="Despesa" stroke="#EF4444" strokeWidth={2} dot={{ r: 4 }} />
+                      {!consolidarReceitasFuturas && (
+                        <Line type="monotone" dataKey="Receita Futura" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4 }} strokeDasharray="5 5" />
+                      )}
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -573,13 +743,29 @@ export default function DashboardFinanceiro() {
                       <Bar
                         dataKey="Receita"
                         fill="#10B981"
+                        stackId={consolidarReceitasFuturas ? "receita" : undefined}
                         maxBarSize={processedData.monthlyData.length > 18 ? 25 : processedData.monthlyData.length > 12 ? 35 : 50}
                       />
+                      {consolidarReceitasFuturas && (
+                        <Bar
+                          dataKey="Receita Futura"
+                          fill="#3B82F6"
+                          stackId="receita"
+                          maxBarSize={processedData.monthlyData.length > 18 ? 25 : processedData.monthlyData.length > 12 ? 35 : 50}
+                        />
+                      )}
                       <Bar
                         dataKey="Despesa"
                         fill="#EF4444"
                         maxBarSize={processedData.monthlyData.length > 18 ? 25 : processedData.monthlyData.length > 12 ? 35 : 50}
                       />
+                      {!consolidarReceitasFuturas && (
+                        <Bar
+                          dataKey="Receita Futura"
+                          fill="#3B82F6"
+                          maxBarSize={processedData.monthlyData.length > 18 ? 25 : processedData.monthlyData.length > 12 ? 35 : 50}
+                        />
+                      )}
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -607,7 +793,7 @@ export default function DashboardFinanceiro() {
                                             <p className="text-xs">Total de vendas/receitas do período</p>
                                         </TooltipContent>
                                     </Tooltip>
-                                    <span className="font-medium">{formatarMoeda(processedData.receitaBruta)}</span>
+                                    <span className="font-medium">{formatarMoeda(consolidarReceitasFuturas ? processedData.receitaBruta + processedData.receitaFutura : processedData.receitaBruta)}</span>
                                 </div>
                                 <div className="flex justify-between text-red-600">
                                     <Tooltip>
@@ -672,6 +858,19 @@ export default function DashboardFinanceiro() {
                                     </Tooltip>
                                     <span className="font-medium">{formatarMoeda(processedData.despesasFinanceiras)}</span>
                                 </div>
+                                {processedData.outrasDespesas > 0 && (
+                                    <div className="flex justify-between text-red-600">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="cursor-help underline decoration-dotted">(-) Outras Despesas</span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="text-xs">Despesas não categorizadas em Produção, Operacional ou Financeiro</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        <span className="font-medium">{formatarMoeda(processedData.outrasDespesas)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between font-bold text-lg border-t-2 pt-2 mt-2">
                                     <span>= Resultado Líquido</span>
                                     <span className={processedData.resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}>
@@ -691,7 +890,7 @@ export default function DashboardFinanceiro() {
             <Card>
                 <CardHeader><CardTitle>Gastos por Categoria</CardTitle></CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={450}>
                         <BarChart data={processedData.composicaoCustos} layout="vertical" margin={{ top: 5, right: 160, bottom: 5, left: 10 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} />
@@ -724,6 +923,19 @@ export default function DashboardFinanceiro() {
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
+
+                    {/* Legenda de Subcategorias por Categoria */}
+                    <div className="mt-4 pt-4 border-t">
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-3">Subcategorias por Categoria:</h4>
+                        <div className="space-y-2">
+                            {processedData.legendaSubcategorias.map(item => (
+                                <div key={item.categoria} className="text-xs">
+                                    <span className="font-semibold text-foreground">{item.categoria}:</span>{' '}
+                                    <span className="text-muted-foreground">{item.subcategorias.join(', ')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -731,7 +943,7 @@ export default function DashboardFinanceiro() {
             <Card>
                 <CardHeader><CardTitle>Top 10 Gastos por Subcategoria</CardTitle></CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={450}>
                         <BarChart data={processedData.composicaoSubcategorias} layout="vertical" margin={{ top: 5, right: 160, bottom: 5, left: 10 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} />
@@ -764,40 +976,26 @@ export default function DashboardFinanceiro() {
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
+
+                    {/* Legenda de Categoria por Subcategoria */}
+                    <div className="mt-4 pt-4 border-t">
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-3">Categoria de cada Subcategoria:</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            {processedData.composicaoSubcategorias.map(item => {
+                                const categoria = processedData.categoriasPorSubcategoria[item.name];
+                                return (
+                                    <div key={item.name} className="text-xs">
+                                        <span className="font-medium text-foreground">{item.name}</span>
+                                        <span className="text-muted-foreground"> ({categoria})</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>Evolução das Margens (%)</CardTitle></CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={processedData.evolucaoMargens}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><RechartsTooltip /><Legend /><Line type="monotone" dataKey="Margem Bruta" stroke="#82ca9d" /><Line type="monotone" dataKey="Margem Líquida" stroke="#8884d8" /></LineChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader><CardTitle>Principais Fornecedores</CardTitle></CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={processedData.topFornecedores} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} /><YAxis type="category" dataKey="name" width={150} /><RechartsTooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="value" fill="#FFBB28" name="Gasto" /></BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-            <Card className={processedData.dependenciaCliente > 70 ? "border-orange-500" : ""}>
-                <CardHeader><CardTitle>Dependência de Cliente</CardTitle></CardHeader>
-                <CardContent>
-                    <p className={`text-2xl font-bold ${processedData.dependenciaCliente > 70 ? "text-orange-500" : ""}`}>{processedData.dependenciaCliente.toFixed(2)}%</p>
-                    <p className="text-sm text-muted-foreground">% da receita vinda da Polimix/Ecomix</p>
-                </CardContent>
-            </Card>
-        </div>
     </div>
   );
 }
