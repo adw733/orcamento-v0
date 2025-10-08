@@ -507,6 +507,65 @@ export default function DashboardFinanceiro() {
           </div>
         </TooltipProvider>
 
+        {/* Gráfico Receita vs Despesa - Largura Total */}
+        <Card>
+            <CardHeader><CardTitle>Receita vs. Despesa (Mensal)</CardTitle></CardHeader>
+            <CardContent>
+                {/* Lógica adaptativa: Linha para muitos períodos, Barra para poucos */}
+                {processedData.monthlyData.length > 24 ? (
+                  // Gráfico de Linha para muitos períodos (>24 meses)
+                  <ResponsiveContainer width="100%" height={Math.min(450, 300 + processedData.monthlyData.length * 3)}>
+                    <LineChart data={processedData.monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        interval={0}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <YAxis tickFormatter={(value) => formatarMoeda(value as number)} />
+                      <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
+                      <Legend />
+                      <Line type="monotone" dataKey="Receita" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="Despesa" stroke="#EF4444" strokeWidth={2} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  // Gráfico de Barras para até 24 meses (≤24 meses)
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart
+                      data={processedData.monthlyData}
+                      barCategoryGap={processedData.monthlyData.length > 18 ? "5%" : processedData.monthlyData.length > 12 ? "10%" : "15%"}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={processedData.monthlyData.length > 12 ? -45 : 0}
+                        textAnchor={processedData.monthlyData.length > 12 ? "end" : "middle"}
+                        height={processedData.monthlyData.length > 12 ? 80 : 30}
+                        tick={{ fontSize: processedData.monthlyData.length > 18 ? 10 : 11 }}
+                      />
+                      <YAxis tickFormatter={(value) => formatarMoeda(value as number)} />
+                      <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
+                      <Legend />
+                      <Bar
+                        dataKey="Receita"
+                        fill="#10B981"
+                        maxBarSize={processedData.monthlyData.length > 18 ? 25 : processedData.monthlyData.length > 12 ? 35 : 50}
+                      />
+                      <Bar
+                        dataKey="Despesa"
+                        fill="#EF4444"
+                        maxBarSize={processedData.monthlyData.length > 18 ? 25 : processedData.monthlyData.length > 12 ? 35 : 50}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+            </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-6">
                 <Card>
@@ -521,46 +580,6 @@ export default function DashboardFinanceiro() {
                             <div className="flex justify-between mt-4"><span>(-) Despesas Financeiras</span> <span className="text-red-500">{formatarMoeda(processedData.despesasFinanceiras)}</span></div>
                             <div className="flex justify-between font-bold text-lg border-t-2 pt-2 mt-2"><span>= Resultado Líquido do Exercício</span> <span className={processedData.resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}>{formatarMoeda(processedData.resultadoLiquido)}</span></div>
                         </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader><CardTitle>Receita vs. Despesa (Mensal)</CardTitle></CardHeader>
-                    <CardContent>
-                        {/* Lógica adaptativa: Linha para muitos períodos, Barra para poucos */}
-                        {processedData.monthlyData.length > 8 ? (
-                          // Gráfico de Linha para muitos períodos (>8 meses)
-                          <ResponsiveContainer width="100%" height={Math.min(400, 250 + processedData.monthlyData.length * 5)}>
-                            <LineChart data={processedData.monthlyData}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis
-                                dataKey="name"
-                                angle={-45}
-                                textAnchor="end"
-                                height={80}
-                                interval={0}
-                                tick={{ fontSize: 10 }}
-                              />
-                              <YAxis tickFormatter={(value) => formatarMoeda(value as number)} />
-                              <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
-                              <Legend />
-                              <Line type="monotone" dataKey="Receita" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
-                              <Line type="monotone" dataKey="Despesa" stroke="#EF4444" strokeWidth={2} dot={{ r: 4 }} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          // Gráfico de Barras para poucos períodos (≤8 meses)
-                          <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={processedData.monthlyData}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" />
-                              <YAxis tickFormatter={(value) => formatarMoeda(value as number)} />
-                              <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
-                              <Legend />
-                              <Bar dataKey="Receita" fill="#10B981" />
-                              <Bar dataKey="Despesa" fill="#EF4444" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
                     </CardContent>
                 </Card>
             </div>
