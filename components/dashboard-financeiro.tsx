@@ -204,16 +204,32 @@ export default function DashboardFinanceiro() {
     const margemBruta = receitaBruta ? (resultadoBruto / receitaBruta) * 100 : 0;
     const margemLiquida = receitaBruta ? (resultadoLiquido / receitaBruta) * 100 : 0;
 
-    // Determina quais meses mostrar nos gráficos
-    const monthsIndices = periodosSelecionados.length === 0
-      ? Array.from({ length: 12 }, (_, i) => i)
-      : [...new Set(periodosSelecionados.map(p => p.mes))].sort((a, b) => a - b);
+    // Cria dados mensais com ano/mês completo
+    const monthlyData = periodosSelecionados.length === 0
+      ? Array.from({ length: 12 }, (_, i) => {
+          const receitas = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
+          const despesas = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
+          return { name: mesesAbreviados[i], Receita: receitas, Despesa: despesas };
+        })
+      : periodosSelecionados.map(p => {
+          const receitas = movs.filter(m => {
+            const data = parseISO(m.data);
+            return m.tipo === 'Receita' && getYear(data) === p.ano && getMonth(data) === p.mes;
+          }).reduce((acc, m) => acc + m.valor, 0);
 
-    const monthlyData = monthsIndices.map((i) => {
-        const receitas = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
-        const despesas = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-        return { name: mesesAbreviados[i], Receita: receitas, Despesa: despesas };
-    });
+          const despesas = Math.abs(movs.filter(m => {
+            const data = parseISO(m.data);
+            return m.tipo === 'Despesa' && getYear(data) === p.ano && getMonth(data) === p.mes;
+          }).reduce((acc, m) => acc + m.valor, 0));
+
+          // Mostra apenas mês se todos os períodos são do mesmo ano
+          const anosUnicos = [...new Set(periodosSelecionados.map(p => p.ano))];
+          const label = anosUnicos.length === 1
+            ? mesesAbreviados[p.mes]
+            : `${mesesAbreviados[p.mes]}/${String(p.ano).slice(-2)}`;
+
+          return { name: label, Receita: receitas, Despesa: despesas };
+        });
 
     const custosProducao = ['Tecido', 'Estampa', 'Bordado', 'Costureira', 'Aviamento', 'Embalagem'];
     const composicaoCustos = custosProducao
@@ -226,17 +242,45 @@ export default function DashboardFinanceiro() {
 
     const totalCustos = composicaoCustos.reduce((acc, item) => acc + item.value, 0);
 
-    const evolucaoMargens = monthsIndices.map((i) => {
-        const mesAbreviado = mesesAbreviados[i];
-        const receitasMes = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
-        const despesasMes = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-        const cpvMes = Math.abs(movs.filter(m => m.categoria === 'Produção' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
-        const resultadoBrutoMes = receitasMes - cpvMes;
-        const margemBrutaMes = receitasMes ? (resultadoBrutoMes / receitasMes) * 100 : 0;
-        const resultadoLiquidoMes = resultadoBrutoMes - (despesasMes - cpvMes);
-        const margemLiquidaMes = receitasMes ? (resultadoLiquidoMes / receitasMes) * 100 : 0;
-        return { name: mesAbreviado, 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
-    });
+    const evolucaoMargens = periodosSelecionados.length === 0
+      ? Array.from({ length: 12 }, (_, i) => {
+          const receitasMes = movs.filter(m => m.tipo === 'Receita' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0);
+          const despesasMes = Math.abs(movs.filter(m => m.tipo === 'Despesa' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
+          const cpvMes = Math.abs(movs.filter(m => m.categoria === 'Produção' && getMonth(parseISO(m.data)) === i).reduce((acc, m) => acc + m.valor, 0));
+          const resultadoBrutoMes = receitasMes - cpvMes;
+          const margemBrutaMes = receitasMes ? (resultadoBrutoMes / receitasMes) * 100 : 0;
+          const resultadoLiquidoMes = resultadoBrutoMes - (despesasMes - cpvMes);
+          const margemLiquidaMes = receitasMes ? (resultadoLiquidoMes / receitasMes) * 100 : 0;
+          return { name: mesesAbreviados[i], 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
+        })
+      : periodosSelecionados.map(p => {
+          const receitasMes = movs.filter(m => {
+            const data = parseISO(m.data);
+            return m.tipo === 'Receita' && getYear(data) === p.ano && getMonth(data) === p.mes;
+          }).reduce((acc, m) => acc + m.valor, 0);
+
+          const despesasMes = Math.abs(movs.filter(m => {
+            const data = parseISO(m.data);
+            return m.tipo === 'Despesa' && getYear(data) === p.ano && getMonth(data) === p.mes;
+          }).reduce((acc, m) => acc + m.valor, 0));
+
+          const cpvMes = Math.abs(movs.filter(m => {
+            const data = parseISO(m.data);
+            return m.categoria === 'Produção' && getYear(data) === p.ano && getMonth(data) === p.mes;
+          }).reduce((acc, m) => acc + m.valor, 0));
+
+          const resultadoBrutoMes = receitasMes - cpvMes;
+          const margemBrutaMes = receitasMes ? (resultadoBrutoMes / receitasMes) * 100 : 0;
+          const resultadoLiquidoMes = resultadoBrutoMes - (despesasMes - cpvMes);
+          const margemLiquidaMes = receitasMes ? (resultadoLiquidoMes / receitasMes) * 100 : 0;
+
+          const anosUnicos = [...new Set(periodosSelecionados.map(p => p.ano))];
+          const label = anosUnicos.length === 1
+            ? mesesAbreviados[p.mes]
+            : `${mesesAbreviados[p.mes]}/${String(p.ano).slice(-2)}`;
+
+          return { name: label, 'Margem Bruta': margemBrutaMes, 'Margem Líquida': margemLiquidaMes };
+        });
 
     const fornecedores = movs.filter(m => m.tipo === 'Despesa' && m.categoria === 'Produção').reduce((acc, m) => {
         const fornecedor = m.descricao;
@@ -482,9 +526,41 @@ export default function DashboardFinanceiro() {
                 <Card>
                     <CardHeader><CardTitle>Receita vs. Despesa (Mensal)</CardTitle></CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={processedData.monthlyData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis tickFormatter={(value) => formatarMoeda(value as number)} /><RechartsTooltip formatter={(value) => formatarMoeda(value as number)} /><Legend /><Bar dataKey="Receita" fill="#10B981" /><Bar dataKey="Despesa" fill="#EF4444" /></BarChart>
-                        </ResponsiveContainer>
+                        {/* Lógica adaptativa: Linha para muitos períodos, Barra para poucos */}
+                        {processedData.monthlyData.length > 8 ? (
+                          // Gráfico de Linha para muitos períodos (>8 meses)
+                          <ResponsiveContainer width="100%" height={Math.min(400, 250 + processedData.monthlyData.length * 5)}>
+                            <LineChart data={processedData.monthlyData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis
+                                dataKey="name"
+                                angle={-45}
+                                textAnchor="end"
+                                height={80}
+                                interval={0}
+                                tick={{ fontSize: 10 }}
+                              />
+                              <YAxis tickFormatter={(value) => formatarMoeda(value as number)} />
+                              <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
+                              <Legend />
+                              <Line type="monotone" dataKey="Receita" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
+                              <Line type="monotone" dataKey="Despesa" stroke="#EF4444" strokeWidth={2} dot={{ r: 4 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          // Gráfico de Barras para poucos períodos (≤8 meses)
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={processedData.monthlyData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis tickFormatter={(value) => formatarMoeda(value as number)} />
+                              <RechartsTooltip formatter={(value) => formatarMoeda(value as number)} />
+                              <Legend />
+                              <Bar dataKey="Receita" fill="#10B981" />
+                              <Bar dataKey="Despesa" fill="#EF4444" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
                     </CardContent>
                 </Card>
             </div>
