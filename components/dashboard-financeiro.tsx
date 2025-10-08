@@ -231,16 +231,36 @@ export default function DashboardFinanceiro() {
           return { name: label, Receita: receitas, Despesa: despesas };
         });
 
-    const custosProducao = ['Tecido', 'Estampa', 'Bordado', 'Costureira', 'Aviamento', 'Embalagem'];
-    const composicaoCustos = custosProducao
-        .map(custo => ({
-            name: custo,
-            value: Math.abs(movs.filter(m => m.sub_categoria === custo).reduce((acc, m) => acc + m.valor, 0))
-        }))
-        .filter(item => item.value > 0) // Remove custos zerados
+    // Agrupa gastos por categoria (todas as categorias de despesa)
+    const gastoPorCategoria = movs
+        .filter(m => m.tipo === 'Despesa')
+        .reduce((acc, m) => {
+            const categoria = m.categoria || 'Outros';
+            acc[categoria] = (acc[categoria] || 0) + Math.abs(m.valor);
+            return acc;
+        }, {} as Record<string, number>);
+
+    const composicaoCustos = Object.entries(gastoPorCategoria)
+        .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value); // Ordena do maior para o menor
 
     const totalCustos = composicaoCustos.reduce((acc, item) => acc + item.value, 0);
+
+    // Agrupa gastos por subcategoria
+    const gastoPorSubcategoria = movs
+        .filter(m => m.tipo === 'Despesa' && m.sub_categoria)
+        .reduce((acc, m) => {
+            const subcat = m.sub_categoria || 'Outros';
+            acc[subcat] = (acc[subcat] || 0) + Math.abs(m.valor);
+            return acc;
+        }, {} as Record<string, number>);
+
+    const composicaoSubcategorias = Object.entries(gastoPorSubcategoria)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10); // Top 10 subcategorias
+
+    const totalSubcategorias = composicaoSubcategorias.reduce((acc, item) => acc + item.value, 0);
 
     const evolucaoMargens = periodosSelecionados.length === 0
       ? Array.from({ length: 12 }, (_, i) => {
@@ -297,7 +317,7 @@ export default function DashboardFinanceiro() {
 
     const gastoTotal = movs.filter(m => m.tipo === 'Despesa').reduce((acc, m) => acc + m.valor, 0);
 
-    return { gastoTotal, receitaBruta, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, totalCustos, evolucaoMargens, topFornecedores, dependenciaCliente, ticketMedio };
+    return { gastoTotal, receitaBruta, cpv, resultadoBruto, despesasOperacionais, resultadoOperacional, despesasFinanceiras, resultadoLiquido, margemBruta, margemLiquida, monthlyData, composicaoCustos, totalCustos, composicaoSubcategorias, totalSubcategorias, evolucaoMargens, topFornecedores, dependenciaCliente, ticketMedio };
   }, [movimentacoes, periodosSelecionados, mesesAbreviados]);
 
 
@@ -566,33 +586,131 @@ export default function DashboardFinanceiro() {
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>DRE - {periodosSelecionados.length > 0 ? 'Período Selecionado' : 'Todos os Períodos'}</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span>Receita Operacional Bruta</span> <span>{formatarMoeda(processedData.receitaBruta)}</span></div>
-                            <div className="flex justify-between"><span>(-) Custo dos Produtos Vendidos</span> <span className="text-red-500">{formatarMoeda(processedData.cpv)}</span></div>
-                            <div className="flex justify-between font-bold border-t pt-2"><span>= Resultado Operacional Bruto</span> <span>{formatarMoeda(processedData.resultadoBruto)}</span></div>
-                            <div className="flex justify-between mt-4"><span>(-) Despesas Operacionais</span> <span className="text-red-500">{formatarMoeda(processedData.despesasOperacionais)}</span></div>
-                            <div className="flex justify-between font-bold border-t pt-2"><span>= Resultado Operacional Líquido</span> <span>{formatarMoeda(processedData.resultadoOperacional)}</span></div>
-                            <div className="flex justify-between mt-4"><span>(-) Despesas Financeiras</span> <span className="text-red-500">{formatarMoeda(processedData.despesasFinanceiras)}</span></div>
-                            <div className="flex justify-between font-bold text-lg border-t-2 pt-2 mt-2"><span>= Resultado Líquido do Exercício</span> <span className={processedData.resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}>{formatarMoeda(processedData.resultadoLiquido)}</span></div>
+        {/* DRE - Largura Total com Legendas */}
+        <Card>
+            <CardHeader>
+                <CardTitle>DRE - Demonstração do Resultado do Exercício {periodosSelecionados.length > 0 ? '(Período Selecionado)' : '(Todos os Períodos)'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <TooltipProvider>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Coluna 1: Resultado Bruto */}
+                        <div className="space-y-3">
+                            <h3 className="font-semibold text-sm text-muted-foreground mb-3">Resultado Bruto</h3>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="cursor-help underline decoration-dotted">Receita Operacional Bruta</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-xs">Total de vendas/receitas do período</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <span className="font-medium">{formatarMoeda(processedData.receitaBruta)}</span>
+                                </div>
+                                <div className="flex justify-between text-red-600">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="cursor-help underline decoration-dotted">(-) CPV</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-xs">Custo dos Produtos Vendidos - gastos diretos de produção</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <span className="font-medium">{formatarMoeda(processedData.cpv)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold border-t pt-2">
+                                    <span>= Resultado Bruto</span>
+                                    <span>{formatarMoeda(processedData.resultadoBruto)}</span>
+                                </div>
+                            </div>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>Composição dos Custos de Produção</CardTitle></CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={processedData.composicaoCustos} layout="vertical" margin={{ top: 5, right: 180, bottom: 5, left: 10 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} />
-                                <YAxis type="category" dataKey="name" width={100} />
-                                <RechartsTooltip
+
+                        {/* Coluna 2: Resultado Operacional */}
+                        <div className="space-y-3">
+                            <h3 className="font-semibold text-sm text-muted-foreground mb-3">Resultado Operacional</h3>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Resultado Bruto</span>
+                                    <span>{formatarMoeda(processedData.resultadoBruto)}</span>
+                                </div>
+                                <div className="flex justify-between text-red-600">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="cursor-help underline decoration-dotted">(-) Despesas Operacionais</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-xs">Marketing + Logística + Estrutura</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <span className="font-medium">{formatarMoeda(processedData.despesasOperacionais)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold border-t pt-2">
+                                    <span>= Resultado Operacional</span>
+                                    <span>{formatarMoeda(processedData.resultadoOperacional)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Coluna 3: Resultado Líquido */}
+                        <div className="space-y-3">
+                            <h3 className="font-semibold text-sm text-muted-foreground mb-3">Resultado Líquido</h3>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Resultado Operacional</span>
+                                    <span>{formatarMoeda(processedData.resultadoOperacional)}</span>
+                                </div>
+                                <div className="flex justify-between text-red-600">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="cursor-help underline decoration-dotted">(-) Despesas Financeiras</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-xs">Juros, taxas bancárias e outros custos financeiros</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <span className="font-medium">{formatarMoeda(processedData.despesasFinanceiras)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-lg border-t-2 pt-2 mt-2">
+                                    <span>= Resultado Líquido</span>
+                                    <span className={processedData.resultadoLiquido >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                        {formatarMoeda(processedData.resultadoLiquido)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </TooltipProvider>
+            </CardContent>
+        </Card>
+
+        {/* Gráficos de Composição de Gastos - Lado a Lado */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Gastos por Categoria */}
+            <Card>
+                <CardHeader><CardTitle>Gastos por Categoria</CardTitle></CardHeader>
+                <CardContent>
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={processedData.composicaoCustos} layout="vertical" margin={{ top: 5, right: 160, bottom: 5, left: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} />
+                            <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                            <RechartsTooltip
+                                formatter={(value: number) => {
+                                    const percentual = processedData.totalCustos > 0
+                                        ? ((value / processedData.totalCustos) * 100).toFixed(1)
+                                        : '0.0';
+                                    return `${formatarMoeda(value)} (${percentual}%)`;
+                                }}
+                            />
+                            <Bar dataKey="value" name="Gasto">
+                                <LabelList
+                                    dataKey="value"
+                                    position="right"
+                                    fill="#000000"
+                                    fontSize={10}
+                                    fontWeight="bold"
                                     formatter={(value: number) => {
                                         const percentual = processedData.totalCustos > 0
                                             ? ((value / processedData.totalCustos) * 100).toFixed(1)
@@ -600,29 +718,58 @@ export default function DashboardFinanceiro() {
                                         return `${formatarMoeda(value)} (${percentual}%)`;
                                     }}
                                 />
-                                <Legend />
-                                <Bar dataKey="value" name="Custo">
-                                    <LabelList
-                                        dataKey="value"
-                                        position="right"
-                                        fill="#000000"
-                                        fontSize={11}
-                                        fontWeight="bold"
-                                        formatter={(value: number) => {
-                                            const percentual = processedData.totalCustos > 0
-                                                ? ((value / processedData.totalCustos) * 100).toFixed(1)
-                                                : '0.0';
-                                            return `${formatarMoeda(value)} (${percentual}%)`;
-                                        }}
-                                    />
-                                    {processedData.composicaoCustos.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                                {processedData.composicaoCustos.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+
+            {/* Gastos por Subcategoria (Top 10) */}
+            <Card>
+                <CardHeader><CardTitle>Top 10 Gastos por Subcategoria</CardTitle></CardHeader>
+                <CardContent>
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={processedData.composicaoSubcategorias} layout="vertical" margin={{ top: 5, right: 160, bottom: 5, left: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" tickFormatter={(value) => formatarMoeda(value as number)} />
+                            <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                            <RechartsTooltip
+                                formatter={(value: number) => {
+                                    const percentual = processedData.totalSubcategorias > 0
+                                        ? ((value / processedData.totalSubcategorias) * 100).toFixed(1)
+                                        : '0.0';
+                                    return `${formatarMoeda(value)} (${percentual}%)`;
+                                }}
+                            />
+                            <Bar dataKey="value" name="Gasto">
+                                <LabelList
+                                    dataKey="value"
+                                    position="right"
+                                    fill="#000000"
+                                    fontSize={10}
+                                    fontWeight="bold"
+                                    formatter={(value: number) => {
+                                        const percentual = processedData.totalSubcategorias > 0
+                                            ? ((value / processedData.totalSubcategorias) * 100).toFixed(1)
+                                            : '0.0';
+                                        return `${formatarMoeda(value)} (${percentual}%)`;
+                                    }}
+                                />
+                                {processedData.composicaoSubcategorias.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
                 <Card>
                     <CardHeader><CardTitle>Evolução das Margens (%)</CardTitle></CardHeader>
                     <CardContent>
