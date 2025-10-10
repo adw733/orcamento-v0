@@ -464,3 +464,299 @@ Valor unitário: R$ 200,00
 - ✅ **Valor Total**: R$ 4.169,00
 - ✅ **Descrição**: CAMISETA POLIMIX AGREGADOS 40 ANOS, MALHA DE ALGODÃO OU MALHA PA, COR: BRANCO, ESTAMPA: PEITO ESQUERDO COM 3 CORES, BORDADO: MANGAS DIREITA E ESQUERDA 3 CORES.
 - 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #0035 - UNIFORME PAIS E FILHOS
+- ✅ **Cliente**: PAI E FILHOS REFORMAS E MANUTENÇÕES (CNPJ: 20.493.435/0001-22)
+- ✅ **Data**: 13/11/2023
+- ✅ **Produto 1**: P0008 - CAMISA OPERACIONAL ABERTA BRIM
+  - **Tamanhos**: G: 6
+  - **Quantidade**: 6 unidades
+  - **Descrição**: Camisa em Brim Leve, cor AZUL ROYAL, com estampa no bolso peito esquerdo.
+  - **Valor unitário**: R$ 80,00
+- ✅ **Produto 2**: P0002 - CALÇA OPERACIONAL BRIM
+  - **Tamanhos**: G: 6
+  - **Quantidade**: 6 unidades
+  - **Descrição**: Calça em Brim Pesado, cor AZUL ROYAL, com estampa no bolso.
+  - **Valor unitário**: R$ 80,00
+- ✅ **Quantidade Total**: 12 peças
+- ✅ **Valor Total**: R$ 960,00 (calculado)
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #0036 - MACACÃO TLS
+- ✅ **Cliente**: TLS SERVICOS INDUSTRIAIS LTDA (CNPJ: 43.226.692/0001-01)
+- ❌ **Produto**: P0036 - MACACÃO INDUSTRIAL - **a criar**
+- ❌ **Data**: 13/10/2023 (estimada)
+- ✅ **Tamanhos**: M: 6, G: 16, GG: 12, G1: 6
+- ✅ **Quantidade**: 40 unidades
+- ✅ **Valor unitário**: R$ 200,00
+- ✅ **Valor Total**: R$ 8.000,00
+- ✅ **Descrição**: MACACÃO BRIM PESADO 100% ALGODÃO, COR VERDE PETROBRAS 4360, COM BORDADOS E FAIXA REFLETIVA.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #0037 - CAMISETA POLIMIX CIPAMIN
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0278-09)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Data**: 03/11/2023 (conforme NF)
+- ✅ **Tamanhos**: P: 7, M: 44, G: 11, G1: 1
+- ✅ **Quantidade**: 63 unidades
+- ✅ **Valor unitário**: R$ 37,90
+- ✅ **Valor Total**: R$ 2.387,70
+- ✅ **Descrição**: CAMISETA em MALHA PV, COR: BRANCO, com estampa no peito esquerdo, costas e lateral.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #0038 - CAMISETAS STYLO MUV
+- ❌ **Cliente**: Stylo Muv Escola de Dança (CNPJ: 00.000.000/0038-00) - **a criar**
+- ❌ **Data**: 20/11/2023 (estimada)
+- ✅ **Produto 1**: P0021 - CAMISETA FEMININA
+  - **Tamanhos**: M: 1, G: 6, GG: 3
+  - **Quantidade**: 10 unidades
+  - **Valor unitário**: R$ 36,50
+  - **Descrição**: Baby Look em Malha Visco Lycra, cor Azul Marinho, com estampa dourada.
+- ✅ **Produto 2**: P0001 - CAMISETA
+  - **Tamanhos**: P: 3, M: 8, G: 5
+  - **Quantidade**: 16 unidades
+  - **Valor unitário**: R$ 36,50
+  - **Descrição**: Tradicional em Malha Visco Lycra, cor Azul Marinho, com estampa dourada.
+- ✅ **Quantidade Total**: 26 peças
+- ✅ **Valor Total**: R$ 949,00 (calculado)
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #0039 - UNIFORME SANTEC
+- ✅ **Cliente**: SANTEC (CNPJ: 25.195.283/0001-03)
+- ❌ **Data**: 04/12/2023 (estimada)
+- ✅ **Produto 1**: P0008 - CAMISA OPERACIONAL ABERTA BRIM
+  - **Tamanhos**: M: 9, G: 8, GG: 2, G2: 1
+  - **Quantidade**: 20 unidades
+  - **Valor unitário**: R$ 85,00
+  - **Descrição**: Camisa Operacional Brim Leve, Cor Petróleo, com estampas e faixa refletiva.
+- ✅ **Produto 2**: P0002 - CALÇA OPERACIONAL BRIM
+  - **Tamanhos**: M: 12, G: 5, GG: 2, G2: 1
+  - **Quantidade**: 20 unidades
+  - **Valor unitário**: R$ 85,00
+  - **Descrição**: Calça Operacional Brim Pesado, Cor Petróleo, com estampa e faixa refletiva.
+- ✅ **Quantidade Total**: 40 peças
+- ✅ **Valor Total**: R$ 3.400,00 (calculado)
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #039-B - UNIFORME AS CALDEIRARIA
+- ❌ **Cliente**: AS CALDEIRARIA E MONTAGEM INDUSTRIAL (CNPJ: 00.000.000/0039-01) - **a criar**
+- ❌ **Data**: 04/12/2023 (estimada)
+- ✅ **Produto 1**: P0008 - CAMISA OPERACIONAL ABERTA BRIM
+  - **Tamanhos**: M: 15, G: 15, GG: 1
+  - **Quantidade**: 31 unidades
+  - **Valor unitário**: R$ 85,00
+  - **Descrição**: Camisa Operacional Brim Leve, Cor Petróleo, com estampas e faixa refletiva.
+- ✅ **Produto 2**: P0002 - CALÇA OPERACIONAL BRIM
+  - **Tamanhos**: M: 15, G: 15, GG: 1
+  - **Quantidade**: 31 unidades
+  - **Valor unitário**: R$ 85,00
+  - **Descrição**: Calça Operacional Brim Pesado, Cor Petróleo, com estampa e faixa refletiva.
+- ✅ **Quantidade Total**: 62 peças
+- ✅ **Valor Total**: R$ 5.270,00 (calculado)
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #040 - CAMISETA PAIS E FILHOS
+- ✅ **Cliente**: PAI E FILHOS REFORMAS E MANUTENÇÕES (CNPJ: 20.493.435/0001-22)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Data**: 13/11/2023
+- ✅ **Tamanhos**: M: 4, G: 12, GG: 8
+- ✅ **Quantidade**: 24 unidades
+- ✅ **Valor unitário**: R$ 28,90
+- ✅ **Valor Total**: R$ 693,60
+- ✅ **Descrição**: Camiseta em malha PA (Algodão/Poliéster), cor Branca, com estampa no peito esquerdo.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #042 - UNIFORMES POLIMIX (EDVANIA)
+
+### Orçamento #042-A (IRE)
+- ❌ **Cliente**: IRE AGREGADOS LTDA (CNPJ: 27.202.325/0003-75) - **a criar**
+- ✅ **Data**: 27/02/2024 (conforme NF)
+- ❌ **Tamanhos**: A verificar
+- ✅ **Produto 1**: P0008 - CAMISA OPERACIONAL ABERTA BRIM
+  - **Quantidade**: 15 unidades
+- ✅ **Produto 2**: P0002 - CALÇA OPERACIONAL BRIM
+  - **Quantidade**: 15 unidades
+- ✅ **Quantidade Total**: 30 peças (15 conjuntos)
+- ✅ **Valor unitário (por peça)**: R$ 79,00 (calculado)
+- ✅ **Valor Total**: R$ 2.370,00
+- ✅ **Descrição**: Conjunto de uniforme de brim (camisa e calça) em Brim Leve/Pesado, cor Cinza Escuro.
+
+### Orçamento #042-C (PXE)
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0404-90)
+- ✅ **Data**: 29/01/2024 (conforme NF)
+- ✅ **Produto 1**: P0008 - CAMISA OPERACIONAL ABERTA BRIM
+  - **Tamanhos**: P: 15, M: 30, G: 54, GG: 51, G1: 15, G2: 15, G3: 15
+  - **Quantidade**: 195 unidades
+- ✅ **Produto 2**: P0002 - CALÇA OPERACIONAL BRIM
+  - **Tamanhos**: P: 15, M: 30, G: 54, GG: 51, G1: 15, G2: 15, G3: 15
+  - **Quantidade**: 195 unidades
+- ✅ **Quantidade Total**: 390 peças (195 conjuntos)
+- ✅ **Valor unitário (por peça)**: R$ 81,90
+- ✅ **Valor Total**: R$ 31.941,00
+- ✅ **Descrição**: Conjunto de uniforme de brim (camisa e calça), cor Cinza Escuro.
+
+### Orçamento #042-D (PXE 2)
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0094-95)
+- ✅ **Data**: 15/04/2024 (conforme NF)
+- ✅ **Produto 1**: P0006 - JAQUETA DE NYLON
+  - **Quantidade**: 5 unidades
+  - **Valor unitário**: R$ 171,00
+- ✅ **Produto 2**: P0008 - CAMISA OPERACIONAL ABERTA BRIM
+  - **Quantidade**: 7 unidades
+  - **Valor unitário**: R$ 75,00
+- ✅ **Produto 3**: P0002 - CALÇA OPERACIONAL BRIM
+  - **Quantidade**: 4 unidades
+  - **Valor unitário**: R$ 75,00
+- ❌ **Tamanhos**: A verificar
+- ✅ **Quantidade Total**: 16 peças
+- ✅ **Valor Total**: R$ 1.680,00
+- ✅ **Descrição**: Uniformes diversos (Jaqueta, Camisa, Calça).
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #043 - CAMISAS POLO POLIMIX E CLIC
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0094-95)
+- ✅ **Data**: 11/01/2024 (conforme NF)
+- ✅ **Produto 1**: P0003 - CAMISA POLO (Polimix)
+  - **Tamanhos**: M: 3, G: 15, G2: 3
+  - **Quantidade**: 21 unidades
+- ✅ **Produto 2**: P0021 - CAMISETA FEMININA (Polo Polimix)
+  - **Tamanhos**: M: 2
+  - **Quantidade**: 2 unidades
+- ✅ **Produto 3**: P0003 - CAMISA POLO (Clic)
+  - **Tamanhos**: G: 3
+  - **Quantidade**: 3 unidades
+- ✅ **Quantidade Total**: 26 peças
+- ✅ **Valor unitário**: R$ 44,00
+- ✅ **Valor Total**: R$ 1.144,00
+- ✅ **Descrição**: Camisas Polo em Malha Piquet, cor Branca, para Polimix e Clic Equipamentos.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #045 - CAMISA SOCIAL FEMININA MIZU
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0052-36)
+- ❌ **Produto**: P0045 - CAMISA SOCIAL FEMININA - **a criar**
+- ✅ **Data**: 22/12/2023 (conforme NF)
+- ❌ **Tamanhos**: A verificar
+- ✅ **Quantidade**: 2 unidades
+- ✅ **Valor unitário**: R$ 110,00 (calculado)
+- ✅ **Valor Total**: R$ 220,00
+- ✅ **Descrição**: Camisa Social Personalizada.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #046 - CAMISETAS BRIGADA
+
+### Orçamento #046-A (PXE)
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0094-95)
+- ✅ **Data**: 12/03/2024 (conforme NF)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Tamanhos**: P: 1, M: 5, G: 6, GG: 4, G1: 1, G2: 1
+- ✅ **Quantidade**: 18 unidades
+- ✅ **Valor unitário**: R$ 34,00 (calculado)
+- ✅ **Valor Total**: R$ 612,00
+- ✅ **Descrição**: Camiseta Brigadista em Malha PV, cor Vermelha.
+
+### Orçamento #046-B (AE)
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0094-95)
+- ✅ **Data**: 12/03/2024 (conforme NF)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Tamanhos**: P: 1, M: 2, G: 6, GG: 1
+- ✅ **Quantidade**: 10 unidades
+- ✅ **Valor unitário**: R$ 34,00 (calculado)
+- ✅ **Valor Total**: R$ 340,00
+- ✅ **Descrição**: Camiseta Brigadista em Malha Piquet, cor Branca.
+
+### Orçamento #046-C (MBA)
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0094-95)
+- ✅ **Data**: 12/03/2024 (conforme NF)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Tamanhos**: P: 1, M: 4, G: 11, GG: 1, G1: 1
+- ✅ **Quantidade**: 18 unidades
+- ✅ **Valor unitário**: R$ 34,00 (calculado)
+- ✅ **Valor Total**: R$ 612,00
+- ✅ **Descrição**: Camiseta Brigadista em Malha Piquet, cor Branca.
+
+### Orçamento #046-D (MCC)
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0278-09)
+- ✅ **Data**: 12/03/2024 (conforme NF)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Tamanhos**: M: 6, G: 6, GG: 2
+- ✅ **Quantidade**: 14 unidades
+- ✅ **Valor unitário**: R$ 34,00 (calculado)
+- ✅ **Valor Total**: R$ 476,00
+- ✅ **Descrição**: Camiseta Brigadista em Malha Piquet, cor Branca.
+
+### Orçamento #046-E (IRO)
+- ❌ **Cliente**: IRO INDUSTRIA DE RECICLAGEM E COMERCIO DE MATERIAIS DE CONSTRUCAO LTDA (CNPJ: 02.126.014/0002-62) - **a criar**
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Data**: 12/03/2024 (conforme NF)
+- ✅ **Tamanhos**: P: 3, M: 8, G: 7, GG: 2
+- ✅ **Quantidade**: 21 unidades
+- ✅ **Valor unitário**: R$ 34,00 (calculado)
+- ✅ **Valor Total**: R$ 714,00
+- ✅ **Descrição**: Camiseta Brigadista em Malha Piquet, cor Branca.
+- ⚠️ **Observação**: A soma dos tamanhos no orçamento (20) não bate com a quantidade da NF (21).
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #047 - CAMISA POLO POLIMIX 2
+- ✅ **Cliente**: POLIMIX CONCRETO LTDA (CNPJ: 29.067.113/0332-80)
+- ✅ **Produto**: P0003 - CAMISA POLO
+- ✅ **Data**: 12/03/2024 (conforme NF)
+- ❌ **Tamanhos**: A verificar
+- ✅ **Quantidade**: 4 unidades
+- ✅ **Valor unitário**: R$ 44,00 (calculado)
+- ✅ **Valor Total**: R$ 176,00
+- ✅ **Descrição**: Camisa Polo.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #049 - CAMISETAS STYLO MUV
+- ✅ **Cliente**: Stylo Muv Escola de Dança (CNPJ: 00.000.000/0038-00)
+- ❌ **Data**: 25/11/2023 (estimada)
+- ✅ **Produto 1**: P0021 - CAMISETA FEMININA
+  - **Tamanhos**: P: 2, M: 4, G: 6
+  - **Quantidade**: 12 unidades
+- ✅ **Produto 2**: P0001 - CAMISETA
+  - **Tamanhos**: P: 4, M: 2, G: 2
+  - **Quantidade**: 8 unidades
+- ✅ **Quantidade Total**: 20 peças
+- ❌ **Valor unitário**: R$ 36,50 (estimado)
+- ❌ **Valor Total**: R$ 730,00 (calculado)
+- ✅ **Descrição**: Camisetas para escola de dança em Malha Visco Lycra, cor rosa.
+- 🔄 **Status**: Aguardando autorização
+
+---
+
+## 📄 ORÇAMENTO #051 - CAMISETAS GLADIS STUDIO
+- ❌ **Cliente**: Gladis Studio & Elisangela Oliveira (CNPJ: 00.000.000/0051-00) - **a criar**
+- ❌ **Data**: 01/12/2023 (estimada)
+- ✅ **Produto**: P0001 - CAMISETA
+- ✅ **Tamanhos**: G: 3, GG: 3
+- ✅ **Quantidade**: 6 unidades
+- ❌ **Valor unitário**: R$ 38,00 (estimado)
+- ❌ **Valor Total**: R$ 228,00 (calculado)
+- ✅ **Descrição**: Camiseta em Malha Visco Lycra, cor Preto, com estampa em branco.
+- 🔄 **Status**: Aguardando autorização
