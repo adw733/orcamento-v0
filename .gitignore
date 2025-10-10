@@ -25,3 +25,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Temporary files
+nul
+
+# Sistema de versão (não commitar)
+sistema-versao/
+*.bat
+*.py
+README_CORRECOES.md
