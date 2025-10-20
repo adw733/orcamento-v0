@@ -803,28 +803,32 @@ export default function TabelaProdutos() {
       conteudoImpressao.appendChild(dataGeracao)
 
       // Agrupar produtos com base no modo de visualização
+      // IMPORTANTE: Manter a ordem original de produtosFiltrados
       const agrupamentos: { [key: string]: ProdutoOrcamento[] } = {}
+      const ordemGrupos: string[] = [] // Para manter a ordem dos grupos
 
       if (modoVisualizacao === "orcamento") {
-        // Agrupar por orçamento
+        // Agrupar por orçamento mantendo a ordem
         produtosFiltrados.forEach((produto) => {
           if (!agrupamentos[produto.orcamentoId]) {
             agrupamentos[produto.orcamentoId] = []
+            ordemGrupos.push(produto.orcamentoId)
           }
           agrupamentos[produto.orcamentoId].push(produto)
         })
       } else {
-        // Agrupar por tipo de produto
+        // Agrupar por tipo de produto mantendo a ordem
         produtosFiltrados.forEach((produto) => {
           if (!agrupamentos[produto.produtoNome]) {
             agrupamentos[produto.produtoNome] = []
+            ordemGrupos.push(produto.produtoNome)
           }
           agrupamentos[produto.produtoNome].push(produto)
         })
       }
 
-      // Processar cada grupo
-      Object.keys(agrupamentos).forEach((chaveGrupo, grupoIndex) => {
+      // Processar cada grupo na ordem em que aparecem em produtosFiltrados
+      ordemGrupos.forEach((chaveGrupo, grupoIndex) => {
         const produtosDoGrupo = agrupamentos[chaveGrupo]
         const primeiroItem = produtosDoGrupo[0]
 
@@ -864,30 +868,12 @@ export default function TabelaProdutos() {
         // Criar corpo da tabela
         const tbody = document.createElement("tbody")
 
-        // Ordenar os produtos com base no modo
-        const produtosOrdenados = [...produtosDoGrupo]
-
-        if (modoVisualizacao === "orcamento") {
-          // Respeitar a sequência original (ordemItem) e, dentro do item, ordenar tamanhos
-          produtosOrdenados.sort((a, b) => {
-            const comparacaoOrdemItem = (a.ordemItem ?? 0) - (b.ordemItem ?? 0)
-            if (comparacaoOrdemItem !== 0) return comparacaoOrdemItem
-            return ordenarTamanhos(a.tamanho, b.tamanho)
-          })
-        } else {
-          // Ordenar por número de orçamento e depois por tamanho
-          produtosOrdenados.sort((a, b) => {
-            const comparacaoOrcamento = a.orcamentoNumero.localeCompare(b.orcamentoNumero)
-            if (comparacaoOrcamento !== 0) return comparacaoOrcamento
-            return ordenarTamanhos(a.tamanho, b.tamanho)
-          })
-        }
-
+        // Usar os produtos na ordem em que já estão (produtosFiltrados já está ordenado corretamente)
         let orcamentoAnterior = ""
         let totalQuantidade = 0
 
         // Adicionar linhas de produtos
-        produtosOrdenados.forEach((produto, index) => {
+        produtosDoGrupo.forEach((produto, index) => {
           // Verificar se é um novo orçamento no modo produto
           const isNovoOrcamentoNoProduto =
             modoVisualizacao === "produto" && orcamentoAnterior !== "" && orcamentoAnterior !== produto.orcamentoId
