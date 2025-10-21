@@ -15,7 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
-import type { Cliente, Produto, Orcamento, ItemOrcamento, Tecido, Estampa } from "@/types/types"
+import VisualizacaoDocumento from "@/components/visualizacao-documento"
+import type { Cliente, Produto, Orcamento, ItemOrcamento, Tecido, Estampa, DadosEmpresa } from "@/types/types"
 
 // Helper para gerar UUID
 const generateUUID = () => {
@@ -63,6 +64,16 @@ export default function OrcamentoRapido() {
   const [searchProduto, setSearchProduto] = useState("")
   const [itemDetalhesAberto, setItemDetalhesAberto] = useState<string | null>(null)
   const [popoverTamanhosAberto, setPopoverTamanhosAberto] = useState<string | null>(null)
+  
+  // Estados para Preview e PDF
+  const [mostrarPreview, setMostrarPreview] = useState(false)
+  const [modoVisualizacao, setModoVisualizacao] = useState<"orcamento" | "ficha" | "completo">("completo")
+  const [dadosEmpresa, setDadosEmpresa] = useState<DadosEmpresa | undefined>(undefined)
+  
+  // Estados para carregar orçamentos
+  const [mostrarListaOrcamentos, setMostrarListaOrcamentos] = useState(false)
+  const [orcamentosSalvos, setOrcamentosSalvos] = useState<Orcamento[]>([])
+  const [carregandoOrcamentos, setCarregandoOrcamentos] = useState(false)
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -147,11 +158,31 @@ export default function OrcamentoRapido() {
       )
 
       setProdutos(produtosCompletos)
+      
+      // Carregar dados da empresa
+      const { data: empresaData } = await supabase
+        .from("empresa")
+        .select("*")
+        .limit(1)
+        .single()
+      
+      if (empresaData) {
+        setDadosEmpresa({
+          id: empresaData.id,
+          nome: empresaData.nome || "",
+          razaoSocial: empresaData.razao_social || "",
+          cnpj: empresaData.cnpj || "",
+          telefone: empresaData.telefone || "",
+          email: empresaData.email || "",
+          endereco: empresaData.endereco || "",
+          logo: empresaData.logo || "",
+        })
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error)
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados. Tente novamente.",
+        description: "Não foi possível carregar os dados.",
         variant: "destructive",
       })
     } finally {
@@ -428,6 +459,137 @@ export default function OrcamentoRapido() {
     setOrcamentoAtualId(null)
     setTemAlteracoes(false)
   }
+  
+  // Carregar lista de orçamentos
+  const carregarOrcamentos = async () => {
+    try {
+      setCarregandoOrcamentos(true)
+      
+      const { data: orcamentosData, error } = await supabase
+        .from("orcamentos")
+        .select(`
+          *,
+          cliente:clientes(*)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(50)
+      
+      if (error) throw error
+      
+      const orcamentosFormatados: Orcamento[] = await Promise.all(
+        (orcamentosData || []).map(async (orc) => {
+          // Carregar itens do orçamento
+          const { data: itensData } = await supabase
+            .from("itens_orcamento")
+            .select("*")
+            .eq("orcamento_id", orc.id)
+          
+          return {
+            id: orc.id,
+            numero: orc.numero,
+            data: orc.data,
+            dataEntrega: orc.data_entrega || "",
+            cliente: orc.cliente || { id: "", nome: "", cnpj: "", telefone: "", email: "", endereco: "" },
+            itens: (itensData || []).map(item => ({
+              id: item.id,
+              produtoId: item.produto_id,
+              quantidade: item.quantidade,
+              valorUnitario: Number(item.valor_unitario),
+              tamanhos: item.tamanhos || {},
+              estampas: item.estampas || [],
+              observacaoComercial: item.observacao_comercial || "",
+              observacaoTecnica: item.observacao_tecnica || "",
+              imagem: item.imagem,
+            })),
+            condicoesPagamento: orc.condicoes_pagamento,
+            prazoEntrega: orc.prazo_entrega,
+            validadeOrcamento: orc.validade_orcamento,
+            observacoes: orc.observacoes || "",
+            valorFrete: Number(orc.valor_frete) || 0,
+            nomeContato: orc.nome_contato || "",
+            telefoneContato: orc.telefone_contato || "",
+            status: orc.status,
+            createdAt: orc.created_at,
+            updatedAt: orc.updated_at,
+          }
+        })
+      )
+      
+      setOrcamentosSalvos(orcamentosFormatados)
+    } catch (error) {
+      console.error("Erro ao carregar orçamentos:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os orçamentos.",
+        variant: "destructive",
+      })
+    } finally {
+      setCarregandoOrcamentos(false)
+    }
+  }
+  
+  // Abrir lista de orçamentos
+  const abrirListaOrcamentos = () => {
+    carregarOrcamentos()
+    setMostrarListaOrcamentos(true)
+  }
+  
+  // Carregar orçamento selecionado
+  const carregarOrcamentoSelecionado = async (orcamentoId: string) => {
+    try {
+      const orcamento = orcamentosSalvos.find(o => o.id === orcamentoId)
+      if (!orcamento) return
+      
+      // Carregar dados completos dos itens
+      const itensCompletos: ItemOrcamento[] = await Promise.all(
+        orcamento.itens.map(async (item) => {
+          const produto = produtos.find(p => p.id === item.produtoId)
+          return {
+            id: item.id,
+            produtoId: item.produtoId,
+            quantidade: item.quantidade,
+            valorUnitario: item.valorUnitario,
+            tamanhos: item.tamanhos || {},
+            estampas: item.estampas || [],
+            observacaoComercial: item.observacaoComercial || "",
+            observacaoTecnica: item.observacaoTecnica || "",
+            imagem: item.imagem,
+            produto: produto,
+            tecidoSelecionado: produto?.tecidos?.[0] || undefined,
+            corSelecionada: produto?.cores?.[0] || "",
+          }
+        })
+      )
+      
+      // Preencher formulário
+      setClienteSelecionado(orcamento.cliente?.id || "")
+      setData(orcamento.data)
+      setCondicoesPagamento(orcamento.condicoesPagamento)
+      setPrazoEntrega(orcamento.prazoEntrega)
+      setValidadeOrcamento(orcamento.validadeOrcamento)
+      setObservacoes(orcamento.observacoes || "")
+      setValorFrete(orcamento.valorFrete || 0)
+      setNomeContato(orcamento.nomeContato || "")
+      setTelefoneContato(orcamento.telefoneContato || "")
+      setItens(itensCompletos)
+      setOrcamentoAtualId(orcamento.id ? orcamento.id : null)
+      setTemAlteracoes(false)
+      
+      setMostrarListaOrcamentos(false)
+      
+      toast({
+        title: "✅ Orçamento Carregado",
+        description: `Orçamento ${orcamento.numero} carregado com sucesso.`,
+      })
+    } catch (error) {
+      console.error("Erro ao carregar orçamento:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o orçamento.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const copiarOrcamento = () => {
     setOrcamentoAtualId(null)
@@ -451,51 +613,59 @@ export default function OrcamentoRapido() {
   }
 
   const gerarPDFOrcamento = async () => {
-    if (!orcamentoAtualId) {
+    if (itens.length === 0) {
       toast({
         title: "⚠️ Aviso",
-        description: "Salve o orçamento antes de gerar o PDF.",
+        description: "Adicione itens ao orçamento para gerar o PDF.",
         variant: "destructive",
       })
       return
     }
     
-    toast({
-      title: "📄 Gerando PDF do Orçamento...",
-      description: "O PDF do orçamento está sendo gerado.",
-    })
-    
-    // TODO: Implementar geração real do PDF
-    setTimeout(() => {
+    if (!clienteSelecionado) {
       toast({
-        title: "✅ PDF Gerado!",
-        description: "PDF do orçamento pronto para download.",
+        title: "⚠️ Aviso",
+        description: "Selecione um cliente para gerar o PDF.",
+        variant: "destructive",
       })
-    }, 2000)
+      return
+    }
+    
+    setModoVisualizacao("orcamento")
+    setMostrarPreview(true)
+    
+    toast({
+      title: "📄 PDF do Orçamento",
+      description: "Use o botão 'Exportar PDF' na janela de visualização.",
+    })
   }
 
   const gerarPDFFichaTecnica = async () => {
-    if (!orcamentoAtualId) {
+    if (itens.length === 0) {
       toast({
         title: "⚠️ Aviso",
-        description: "Salve o orçamento antes de gerar a ficha técnica.",
+        description: "Adicione itens ao orçamento para gerar a ficha técnica.",
         variant: "destructive",
       })
       return
     }
     
-    toast({
-      title: "📋 Gerando Ficha Técnica...",
-      description: "A ficha técnica está sendo gerada.",
-    })
-    
-    // TODO: Implementar geração real da ficha
-    setTimeout(() => {
+    if (!clienteSelecionado) {
       toast({
-        title: "✅ Ficha Gerada!",
-        description: "Ficha técnica pronta para download.",
+        title: "⚠️ Aviso",
+        description: "Selecione um cliente para gerar a ficha técnica.",
+        variant: "destructive",
       })
-    }, 2000)
+      return
+    }
+    
+    setModoVisualizacao("ficha")
+    setMostrarPreview(true)
+    
+    toast({
+      title: "📋 Ficha Técnica",
+      description: "Use o botão 'Exportar PDF' na janela de visualização.",
+    })
   }
 
   const abrirPreview = () => {
@@ -517,30 +687,35 @@ export default function OrcamentoRapido() {
       return
     }
     
-    // Abrir em nova janela/tab o preview do orçamento
-    const cliente = clientes.find((c) => c.id === clienteSelecionado)
-    if (!cliente) {
-      toast({
-        title: "⚠️ Erro",
-        description: "Cliente não encontrado.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    toast({
-      title: "👁️ Preview do Orçamento",
-      description: `Visualizando orçamento para ${cliente.nome}`,
-    })
+    setModoVisualizacao("completo")
+    setMostrarPreview(true)
+  }
+  
+  // Função para criar objeto Orcamento compatível com VisualizacaoDocumento
+  const criarOrcamentoParaVisualizacao = (): Orcamento => {
+    const cliente = clientes.find(c => c.id === clienteSelecionado)
     
-    // Por enquanto, mostrar informações no toast
-    setTimeout(() => {
-      const total = calcularTotal()
-      toast({
-        title: "📋 Resumo do Orçamento",
-        description: `Cliente: ${cliente.nome} | ${itens.length} ${itens.length === 1 ? 'item' : 'itens'} | Total: R$ ${total.toFixed(2)}`,
-      })
-    }, 500)
+    return {
+      id: orcamentoAtualId || generateUUID(),
+      numero: orcamentoAtualId ? `ORÇ-${orcamentoAtualId.slice(0, 8).toUpperCase()}` : "PREVIEW",
+      data: data,
+      dataEntrega: "",
+      cliente: cliente || { id: "", nome: "", cnpj: "", telefone: "", email: "", endereco: "" },
+      itens: itens.map(item => ({
+        ...item,
+        produto: item.produto || { id: "", nome: "", valorBase: 0, tecidos: [], cores: [], tamanhosDisponiveis: [] }
+      })),
+      condicoesPagamento: condicoesPagamento,
+      prazoEntrega: prazoEntrega,
+      validadeOrcamento: validadeOrcamento,
+      observacoes: observacoes,
+      valorFrete: valorFrete,
+      nomeContato: nomeContato,
+      telefoneContato: telefoneContato,
+      status: "5 - Proposta",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
   }
 
   const produtosFiltrados = produtos.filter((p) =>
@@ -565,9 +740,9 @@ export default function OrcamentoRapido() {
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Novo
               </Button>
-              <Button variant="outline" size="sm" onClick={copiarOrcamento} disabled={!orcamentoAtualId}>
+              <Button variant="outline" size="sm" onClick={abrirListaOrcamentos}>
                 <Copy className="h-3 w-3 mr-1" />
-                Copiar
+                {orcamentoAtualId ? "Copiar" : "Carregar"}
               </Button>
               <Button variant="outline" size="sm" onClick={atualizarOrcamento} disabled={!orcamentoAtualId}>
                 <RefreshCw className="h-3 w-3 mr-1" />
@@ -1146,6 +1321,89 @@ export default function OrcamentoRapido() {
               />
             </CardContent>
           </Card>
+          
+          {/* Dialog de Preview/PDF */}
+          <Dialog open={mostrarPreview} onOpenChange={setMostrarPreview}>
+            <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto p-0">
+              <div className="sticky top-0 z-10 bg-white border-b p-4 flex items-center justify-between">
+                <DialogTitle>
+                  {modoVisualizacao === "orcamento" && "Orçamento"}
+                  {modoVisualizacao === "ficha" && "Ficha Técnica"}
+                  {modoVisualizacao === "completo" && "Preview Completo"}
+                </DialogTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMostrarPreview(false)}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Fechar
+                </Button>
+              </div>
+              <div className="p-6">
+                <VisualizacaoDocumento
+                  orcamento={criarOrcamentoParaVisualizacao()}
+                  calcularTotal={calcularTotal}
+                  dadosEmpresa={dadosEmpresa}
+                  modoExportacao={modoVisualizacao}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Dialog de Lista de Orçamentos */}
+          <Dialog open={mostrarListaOrcamentos} onOpenChange={setMostrarListaOrcamentos}>
+            <DialogContent className="max-w-4xl max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Carregar Orçamento Salvo</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                {carregandoOrcamentos ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : orcamentosSalvos.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum orçamento salvo encontrado.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {orcamentosSalvos.map((orc) => (
+                      <Card 
+                        key={orc.id} 
+                        className="cursor-pointer hover:bg-primary/5 transition-colors"
+                        onClick={() => carregarOrcamentoSelecionado(orc.id || "")}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Badge className="bg-primary">{orc.numero}</Badge>
+                                <h3 className="font-semibold">{orc.cliente?.nome || "Cliente não especificado"}</h3>
+                              </div>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <p>📅 {new Date(orc.data).toLocaleDateString("pt-BR")}</p>
+                                <p>📦 {orc.itens.length} {orc.itens.length === 1 ? "item" : "itens"}</p>
+                                <p className="font-medium text-primary">
+                                  R$ {(orc.itens.reduce((sum, item) => sum + (item.quantidade * item.valorUnitario), 0) + (orc.valorFrete || 0)).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <Badge variant="outline" className="ml-4">
+                                {orc.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
     </div>
   )
 }
