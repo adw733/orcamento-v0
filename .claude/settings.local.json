@@ -16,7 +16,8 @@
       "mcp__supabase__get_advisors",
       "mcp__supabase__execute_sql",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   },
   "mcpServers": {

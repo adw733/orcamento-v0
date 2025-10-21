@@ -82,6 +82,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       icon: FileText,
       items: [
         { id: "orcamento", label: "Edição Orçamento", icon: FileText },
+        { id: "orcamento-rapido", label: "✨ Orçamento Rápido", icon: TrendingUp },
         { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
         { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
         { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },
@@ -224,17 +225,24 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
                 )}
                 
                 <div className="space-y-1">
-                  {section.items.map((item) => {
+                  {section.items.map((item: any) => {
                     const IconComponent = item.icon
                     const isActive = abaAtiva === item.id
                     const isDestructive = item.variant === "destructive"
+                    const isExternal = item.isExternal === true
                     
                     return (
                       <Button
                         key={item.id}
                         variant={isActive ? "default" : "ghost"}
                         size="sm"
-                        onClick={() => handleMenuItemClick(item.id)}
+                        onClick={() => {
+                          if (isExternal) {
+                            window.location.href = `/${item.id}`
+                          } else {
+                            handleMenuItemClick(item.id)
+                          }
+                        }}
                         className={`w-full ${expandido ? "justify-start" : "justify-center px-0"} ${
                           isDestructive && !isActive ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""
                         } ${isActive && isDestructive ? "bg-destructive hover:bg-destructive" : ""}`}

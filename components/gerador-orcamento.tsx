@@ -34,6 +34,9 @@ import * as ReactDOM from "react-dom/client"
 import { Loader2 } from "lucide-react"
 // Adicionar os imports necessários para o modal no início do arquivo:
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+// Importar a página de orçamento rápido
+import dynamic from 'next/dynamic'
+const OrcamentoRapido = dynamic(() => import('@/app/orcamento-rapido/page'), { ssr: false })
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -2901,6 +2904,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             }
 
             switch (abaAtiva) {
+              case "orcamento-rapido":
+                return <OrcamentoRapido />
               case "orcamento":
                 return (
                   <div className="space-y-3">
