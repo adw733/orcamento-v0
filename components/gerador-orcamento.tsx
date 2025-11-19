@@ -37,6 +37,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 // Importar a página de orçamento rápido
 import dynamic from 'next/dynamic'
 const OrcamentoRapido = dynamic(() => import('@/app/orcamento-rapido/page'), { ssr: false })
+const OrcamentoOtimizado = dynamic(() => import('@/app/orcamento-otimizado/page'), { ssr: false })
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -95,6 +96,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [acaoPendente, setAcaoPendente] = useState<(() => void) | null>(null)
   const [inicializacaoCompleta, setInicializacaoCompleta] = useState(false)
   const [carregandoOrcamento, setCarregandoOrcamento] = useState(false)
+  // Estado para ID do orçamento otimizado
+  const [orcamentoOtimizadoId, setOrcamentoOtimizadoId] = useState<string | null>(null)
 
   const documentoRef = useRef<HTMLDivElement>(null)
   const orcamentoRef = useRef<HTMLDivElement>(null)
@@ -665,8 +668,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       if (orcamentoError) throw orcamentoError
 
-      // Salvar itens individuais
-      for (const item of orcamento.itens) {
+      // Salvar itens individuais com posição
+      for (let index = 0; index < orcamento.itens.length; index++) {
+        const item = orcamento.itens[index]
         const { data: itemData, error: itemError } = await supabase
           .from("itens_orcamento")
           .insert({
@@ -681,6 +685,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             observacao_comercial: item.observacaoComercial,
             observacao_tecnica: item.observacaoTecnica,
             imagem: item.imagem,
+            posicao: index + 1, // Adicionar posição baseada no índice do array
           })
           .select()
           .single()
@@ -792,8 +797,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         .delete()
         .eq("orcamento_id", orcamentoSalvo)
 
-      // Inserir itens atualizados
-      for (const item of orcamento.itens) {
+      // Inserir itens atualizados com posição
+      for (let index = 0; index < orcamento.itens.length; index++) {
+        const item = orcamento.itens[index]
         const { data: itemData, error: itemError } = await supabase
           .from("itens_orcamento")
           .insert({
@@ -808,6 +814,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             observacao_comercial: item.observacaoComercial,
             observacao_tecnica: item.observacaoTecnica,
             imagem: item.imagem,
+            posicao: index + 1, // Adicionar posição baseada no índice do array
           })
           .select()
           .single()
@@ -984,11 +991,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       if (error) throw error
 
-      // Carregar itens do orçamento
+      // Carregar itens do orçamento ordenados por posição
       const { data: itensData, error: itensError } = await supabase
         .from("itens_orcamento")
         .select("*, produto:produto_id(*)")
         .eq("orcamento_id", orcamentoId)
+        .order("posicao", { ascending: true })
 
       if (itensError) throw itensError
 
@@ -1836,8 +1844,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       if (data && data[0]) {
         const novoOrcamentoId = data[0].id
 
-        // Salvar os itens do orçamento
-        for (const item of orcamento.itens) {
+        // Salvar os itens do orçamento com posição
+        for (let index = 0; index < orcamento.itens.length; index++) {
+          const item = orcamento.itens[index]
           // Verificar se o produto existe no banco de dados
           const { data: produtoExiste, error: produtoError } = await supabase
             .from("produtos")
@@ -1868,7 +1877,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             }
           }
 
-          // Inserir o item com um novo ID
+          // Inserir o item com um novo ID e posição
           const novoItemId = generateUUID()
           const { data: itemInserido, error: itemError } = await supabase
             .from("itens_orcamento")
@@ -1883,6 +1892,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               cor_selecionada: item.corSelecionada,
               tamanhos: item.tamanhos,
               imagem: item.imagem,
+              posicao: index + 1, // Adicionar posição baseada no índice do array
               // Remover o campo observacao que está causando o erro
             })
             .select()
@@ -2231,11 +2241,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         throw new Error("Cliente não encontrado para este orçamento")
       }
 
-      // Carregar itens do orçamento
+      // Carregar itens do orçamento ordenados por posição
       const { data: itensData, error: itensError } = await supabase
         .from("itens_orcamento")
         .select("*, produto:produto_id(*)")
         .eq("orcamento_id", orcamentoId)
+        .order("posicao", { ascending: true })
 
       if (itensError) throw itensError
 
@@ -2604,6 +2615,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
+  // Função para abrir orçamento na visualização otimizada
+  const abrirOrcamentoOtimizado = (orcamentoId: string) => {
+    setOrcamentoOtimizadoId(orcamentoId)
+    setAbaAtiva("orcamento-otimizado")
+  }
+
   // Adicionar uma nova função para excluir permanentemente
   const excluirOrcamentoPermanentemente = async (orcamentoId) => {
     try {
@@ -2756,6 +2773,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Títulos para as abas
   const titulosAbas: { [key: string]: { title: string; subtitle: string } } = {
     orcamento: { title: "Gerador de Orçamento", subtitle: "Crie orçamentos profissionais para uniformes industriais" },
+    "orcamento-otimizado": { title: "Gerador de Orçamento", subtitle: "Crie orçamentos profissionais para uniformes industriais" },
     orcamentos: { title: "Todos os Orçamentos", subtitle: "Visualize e gerencie todos os seus orçamentos" },
     "orcamentos-propostas": { title: "Propostas", subtitle: "Visualize e gerencie suas propostas comerciais" },
     "orcamentos-execucao": { title: "Orçamentos em Execução", subtitle: "Acompanhe os orçamentos que estão em produção" },
@@ -2821,7 +2839,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   <Button
                     onClick={orcamentoSalvo ? copiarOrcamento : salvarNovoOrcamento}
                     disabled={isLoading || !orcamento.cliente}
-                    className="flex items-center gap-1.5 bg-secondary hover:bg-secondary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {orcamentoSalvo ? "Copiar" : "Salvar"}
@@ -2831,7 +2849,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                     <Button
                       onClick={atualizarOrcamentoExistente}
                       disabled={isLoading || !orcamento.cliente}
-                      className="flex items-center gap-1.5 bg-success hover:bg-success/80 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+                      className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                     >
                       <Save className="h-4 w-4" />
                       {isLoading ? "Atualizando..." : "Atualizar"}
@@ -2845,7 +2863,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       }
                     }}
                     disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
-                    className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                   >
                     <FileDown className="h-4 w-4" />
                     {isLoading ? "Gerando..." : "PDF Orçamento"}
@@ -2858,7 +2876,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       }
                     }}
                     disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
-                    className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
                   >
                     <FileDown className="h-4 w-4" />
                     {isLoading ? "Gerando..." : "PDF Ficha"}
@@ -2895,6 +2913,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       onDeleteOrcamento={excluirOrcamento}
                       onUpdateStatus={atualizarStatusOrcamento}
                       onExportOrcamento={exportarOrcamento}
+                      onAbrirOtimizado={abrirOrcamentoOtimizado}
                       reloadRef={recarregarOrcamentosRef}
                       filtroStatus={statusMap[abaAtiva]}
                     />
@@ -2906,6 +2925,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             switch (abaAtiva) {
               case "orcamento-rapido":
                 return <OrcamentoRapido />
+              case "orcamento-otimizado":
+                return (
+                  <div className="h-full overflow-hidden">
+                    <OrcamentoOtimizado id={orcamentoOtimizadoId || undefined} />
+                  </div>
+                )
               case "orcamento":
                 return (
                   <div className="space-y-3">

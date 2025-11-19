@@ -82,7 +82,8 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       icon: FileText,
       items: [
         { id: "orcamento", label: "Edição Orçamento", icon: FileText },
-        { id: "orcamento-rapido", label: "✨ Orçamento Rápido", icon: TrendingUp },
+        { id: "orcamento-rapido", label: "Orçamento Rápido", icon: TrendingUp },
+        { id: "orcamento-otimizado", label: "Orçamento Otimizado", icon: FileText },
         { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
         { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
         { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },

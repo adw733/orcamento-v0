@@ -20,6 +20,12 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabase"
 import type { Orcamento } from "@/types/types"
 
@@ -29,6 +35,7 @@ interface ListaOrcamentosProps {
   onDeleteOrcamento: (orcamentoId: string) => Promise<void>
   onUpdateStatus?: (orcamentoId: string, status: string) => Promise<void>
   onExportOrcamento?: (orcamentoId: string, tipoExportacao: "completo" | "ficha") => Promise<void>
+  onAbrirOtimizado?: (orcamentoId: string) => void
   reloadRef?: React.MutableRefObject<(() => Promise<void>) | null>
   filtroStatus?: string
 }
@@ -40,6 +47,7 @@ export default function ListaOrcamentos({
   reloadRef,
   onUpdateStatus,
   onExportOrcamento,
+  onAbrirOtimizado,
   filtroStatus,
 }: ListaOrcamentosProps) {
   const [orcamentos, setOrcamentos] = useState<Partial<Orcamento>[]>([])
@@ -953,15 +961,32 @@ export default function ListaOrcamentos({
                       </TableCell>
                       <TableCell className="px-2 sm:px-4 py-3 align-middle">
                         <div className="flex justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => orcamento.id && onSelectOrcamento(orcamento.id)}
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
-                            title="Visualizar orçamento"
-                          >
-                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
+                                title="Opções de Visualização"
+                              >
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => orcamento.id && onSelectOrcamento(orcamento.id)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Abrir Original
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                if (orcamento.id && onAbrirOtimizado) {
+                                  onAbrirOtimizado(orcamento.id)
+                                }
+                              }}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Visualização Otimizada (A4)
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
 
                           {onExportOrcamento && (
                             <div className="relative hidden sm:block">

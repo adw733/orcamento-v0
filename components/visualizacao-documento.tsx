@@ -966,45 +966,6 @@ export default function VisualizacaoDocumento({
       <style>{pdfStyles}</style>
       <style>{imageStyles}</style>
       
-      {/* Botão Exportar PDF Pro */}
-      <div className="flex flex-col items-center mb-4 gap-3">
-        <button
-          onClick={gerarPDFPro}
-          disabled={exportandoPDF}
-          className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {exportandoPDF ? (
-            <>
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Gerando PDF Pro... {Math.round(progressoPDF)}%
-            </>
-          ) : (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14,2 14,8 20,8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10,9 9,9 8,9"></polyline>
-              </svg>
-              Exportar PDF Pro
-            </>
-          )}
-        </button>
-        
-        {exportandoPDF && (
-          <div className="w-64 bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-green-600 h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${progressoPDF}%` }}
-            ></div>
-          </div>
-        )}
-      </div>
-
       {/* Orçamento - Renderizar apenas se for modo completo ou modo orçamento */}
       {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
         <div className="border border-gray-300 rounded-md overflow-hidden shadow-sm page-break-inside-avoid pdf-section orcamento-principal">
