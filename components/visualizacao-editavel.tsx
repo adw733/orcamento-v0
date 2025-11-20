@@ -736,37 +736,37 @@ export default function VisualizacaoEditavel({
                           }}
                         >
                           {modoEdicao && (
-                            <td className="p-2 align-middle text-center print:hidden">
-                              <div className="flex flex-col items-center gap-0.5">
+                            <td className="py-0.5 px-1 align-middle text-center print:hidden">
+                              <div className="flex flex-col items-center gap-0">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => moverItemParaCima(idx)}
                                   disabled={idx === 0}
-                                  className="h-5 w-5 rounded-full hover:bg-primary/10"
+                                  className="h-4 w-4 rounded-full hover:bg-primary/10"
                                   title="Mover para cima"
                                 >
-                                  <ChevronUp className="h-3 w-3" />
+                                  <ChevronUp className="h-2.5 w-2.5" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => moverItemParaBaixo(idx)}
                                   disabled={idx >= orcamento.itens.length - 1}
-                                  className="h-5 w-5 rounded-full hover:bg-primary/10"
+                                  className="h-4 w-4 rounded-full hover:bg-primary/10 mt-0.5"
                                   title="Mover para baixo"
                                 >
-                                  <ChevronDown className="h-3 w-3" />
+                                  <ChevronDown className="h-2.5 w-2.5" />
                                 </Button>
                               </div>
                             </td>
                           )}
-                          <td className="p-2 align-middle text-center font-semibold text-gray-600">
+                          <td className="py-0.5 px-1 align-middle text-center font-semibold text-gray-600">
                             {idx + 1}
                           </td>
-                          <td className="p-2 align-top">
+                          <td className="py-0.5 px-2 align-top">
                             {modoEdicao ? (
-                              <div className="relative">
+                              <div className="relative leading-tight">
                                 <Popover open={openProduto === item.id} onOpenChange={o => setOpenProduto(o ? item.id : null)}>
                                   <PopoverTrigger asChild>
                                     <div className="font-bold cursor-pointer hover:text-primary hover:underline">
@@ -791,12 +791,12 @@ export default function VisualizacaoEditavel({
                                     </Command>
                                   </PopoverContent>
                                 </Popover>
-                                <TextareaTransparente
+                                <InputTransparente
                                   key={`obs-comercial-${item.id}`}
                                   value={item.observacaoComercial || ""}
                                   onChange={e => updateItem(item.id, 'observacaoComercial', e.target.value)}
                                   placeholder="Obs. Comercial"
-                                  className="text-[10px] text-gray-500 italic w-full mt-1"
+                                  className="text-[10px] text-gray-500 italic w-full mt-0.5 h-5 px-0"
                                 />
                                 <Button
                                   variant="ghost"
@@ -816,8 +816,8 @@ export default function VisualizacaoEditavel({
                               </div>
                             )}
                           </td>
-                          <td className="p-2 align-top">
-                            <div className="flex flex-wrap gap-1">
+                          <td className="py-0.5 px-2 align-top">
+                            <div className="flex flex-wrap gap-0.5 leading-tight">
                               {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, quantidade]) => (
                                 <span
                                   key={tamanho}
@@ -829,10 +829,10 @@ export default function VisualizacaoEditavel({
                               ))}
                             </div>
                           </td>
-                          <td className="p-2 text-center align-middle font-bold">
+                          <td className="py-0.5 px-2 text-center align-middle font-bold">
                             {item.quantidade}
                           </td>
-                          <td className="p-2 text-right align-middle">
+                          <td className="py-0.5 px-2 text-right align-middle">
                             {modoEdicao ? (
                               <InputTransparente
                                 type="number"
@@ -845,7 +845,7 @@ export default function VisualizacaoEditavel({
                               <span>R$ {item.valorUnitario.toFixed(2)}</span>
                             )}
                           </td>
-                          <td className="p-2 text-right align-middle font-bold text-primary">
+                          <td className="py-0.5 px-2 text-right align-middle font-bold text-primary">
                             R$ {(item.quantidade * item.valorUnitario).toFixed(2)}
                           </td>
                         </tr>
