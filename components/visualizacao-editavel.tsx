@@ -14,6 +14,9 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
+import { pdf } from '@react-pdf/renderer'
+import { PDFOrcamento } from './pdf-orcamento'
+import { PDFTodasFichasTecnicas } from './pdf-ficha-tecnica'
 import { supabase } from "@/lib/supabase"
 import { type TipoTamanho, tipoTamanhoService } from "@/lib/services-materiais"
 
@@ -237,70 +240,103 @@ export default function VisualizacaoEditavel({
     setOrcamento({ ...orcamento, itens: novosItens })
   }
 
-  // PDF Generator (Mesma lógica do original, ajustada)
-  const gerarPDFPro = async () => {
-    if (!pdfContainerRef.current) return
+  // Função para gerar PDF do Orçamento
+  const gerarPDFOrcamento = async () => {
+    console.log('🎯 INICIANDO GERAÇÃO DE PDF DO ORÇAMENTO')
     setExportandoPDF(true)
+    setProgressoPDF(30)
     try {
-      const container = pdfContainerRef.current
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const pageWidth = 210
-      const pageHeight = 297
-      const margin = 10
-      const contentWidth = pageWidth - (margin * 2)
-
-      const captureSection = async (element: HTMLElement) => {
-        // Temporariamente remover bordas de input e backgrounds de foco para o print
-        const inputs = element.querySelectorAll('input, textarea')
-        inputs.forEach((input: any) => {
-          input.style.backgroundColor = 'transparent'
-          input.style.border = 'none'
-        })
-
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          width: element.scrollWidth,
-          height: element.scrollHeight
-        })
-        return canvas
-      }
-
-      const sections = container.querySelectorAll('.orcamento-principal, .ficha-tecnica')
-
-      for (let i = 0; i < sections.length; i++) {
-        setProgressoPDF(((i + 1) / sections.length) * 100)
-        const section = sections[i] as HTMLElement
-        const canvas = await captureSection(section)
-
-        const imgHeight = (canvas.height * contentWidth) / canvas.width
-        let heightLeft = imgHeight
-        let position = 0
-
-        if (i > 0) pdf.addPage()
-
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin + position, contentWidth, imgHeight)
-        heightLeft -= (pageHeight - (margin * 2))
-
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight
-          pdf.addPage()
-          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin + position, contentWidth, imgHeight)
-          heightLeft -= (pageHeight - (margin * 2))
-        }
-      }
-
-      pdf.save(`orcamento-${orcamento.numero}.pdf`)
+      console.log('📄 Criando documento PDF...', { orcamento, dadosEmpresa })
+      const doc = <PDFOrcamento orcamento={orcamento} dadosEmpresa={dadosEmpresa} calcularTotal={calcularTotal} />
+      setProgressoPDF(60)
+      
+      console.log('🔄 Convertendo para PDF...')
+      const asPdf = pdf(doc)
+      setProgressoPDF(80)
+      
+      console.log('💾 Gerando blob...')
+      const blob = await asPdf.toBlob()
+      console.log('✅ Blob gerado:', blob.size, 'bytes')
+      setProgressoPDF(90)
+      
+      // Criar link de download e forçar download do arquivo
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const fileName = `orcamento-${orcamento.numero.replace(/\s+/g, '-')}.pdf`
+      link.download = fileName
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      console.log('📥 Iniciando download:', fileName)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setProgressoPDF(100)
+      console.log('✅ PDF GERADO COM SUCESSO!')
+      
+      // Feedback de sucesso
+      setTimeout(() => {
+        alert('✅ PDF do orçamento gerado com sucesso! Verifique sua pasta de Downloads.')
+      }, 300)
     } catch (err) {
-      console.error(err)
-      alert("Erro ao gerar PDF")
+      console.error('❌ ERRO ao gerar PDF do orçamento:', err)
+      console.error('Stack:', (err as Error).stack)
+      alert("❌ Erro ao gerar PDF: " + (err as Error).message + "\n\nVerifique o console para mais detalhes.")
     } finally {
-      setExportandoPDF(false)
-      setProgressoPDF(0)
+      setTimeout(() => {
+        setExportandoPDF(false)
+        setProgressoPDF(0)
+      }, 500)
+    }
+  }
+
+  // Função para gerar PDF das Fichas Técnicas
+  const gerarPDFFichasTecnicas = async () => {
+    console.log('🎯 INICIANDO GERAÇÃO DE PDF DAS FICHAS TÉCNICAS')
+    setExportandoPDF(true)
+    setProgressoPDF(30)
+    try {
+      console.log('📄 Criando documento PDF das fichas...', { orcamento, dadosEmpresa })
+      const doc = <PDFTodasFichasTecnicas orcamento={orcamento} dadosEmpresa={dadosEmpresa} />
+      setProgressoPDF(60)
+      
+      console.log('🔄 Convertendo para PDF...')
+      const asPdf = pdf(doc)
+      setProgressoPDF(80)
+      
+      console.log('💾 Gerando blob...')
+      const blob = await asPdf.toBlob()
+      console.log('✅ Blob gerado:', blob.size, 'bytes')
+      setProgressoPDF(90)
+      
+      // Criar link de download e forçar download do arquivo
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const fileName = `fichas-tecnicas-${orcamento.numero.replace(/\s+/g, '-')}.pdf`
+      link.download = fileName
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      console.log('📥 Iniciando download:', fileName)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setProgressoPDF(100)
+      console.log('✅ PDF DAS FICHAS GERADO COM SUCESSO!')
+      
+      // Feedback de sucesso
+      setTimeout(() => {
+        alert('✅ PDF das fichas técnicas gerado com sucesso! Verifique sua pasta de Downloads.')
+      }, 300)
+    } catch (err) {
+      console.error('❌ ERRO ao gerar PDF das fichas:', err)
+      console.error('Stack:', (err as Error).stack)
+      alert("❌ Erro ao gerar PDF: " + (err as Error).message + "\n\nVerifique o console para mais detalhes.")
+    } finally {
+      setTimeout(() => {
+        setExportandoPDF(false)
+        setProgressoPDF(0)
+      }, 500)
     }
   }
 
@@ -360,29 +396,21 @@ export default function VisualizacaoEditavel({
           </Button>
 
           <Button
-            onClick={async () => {
-              if (orcamento.id && exportarOrcamento) {
-                await exportarOrcamento(orcamento.id, "orcamento")
-              }
-            }}
-            disabled={!orcamento.cliente || orcamento.itens.length === 0}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs px-3 py-2 h-8"
+            onClick={gerarPDFOrcamento}
+            disabled={!orcamento.cliente || orcamento.itens.length === 0 || exportandoPDF}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
           >
             <FileDown className="h-4 w-4" />
-            PDF Orçamento
+            {exportandoPDF && progressoPDF > 0 && progressoPDF < 50 ? 'Gerando...' : 'PDF Orçamento'}
           </Button>
 
           <Button
-            onClick={async () => {
-              if (orcamento.id && exportarOrcamento) {
-                await exportarOrcamento(orcamento.id, "ficha")
-              }
-            }}
-            disabled={!orcamento.cliente || orcamento.itens.length === 0}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white transition-all shadow-sm text-xs px-3 py-2 h-8"
+            onClick={gerarPDFFichasTecnicas}
+            disabled={!orcamento.cliente || orcamento.itens.length === 0 || exportandoPDF}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
           >
             <FileDown className="h-4 w-4" />
-            PDF Ficha Técnica
+            {exportandoPDF && progressoPDF >= 50 ? 'Gerando...' : 'PDF Ficha'}
           </Button>
         </div>
       )}

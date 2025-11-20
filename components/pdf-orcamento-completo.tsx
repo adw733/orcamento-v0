@@ -1,0 +1,515 @@
+import React from 'react'
+import { Document, Page, Text, View, StyleSheet, Image, Svg, Path } from '@react-pdf/renderer'
+import type { Orcamento, DadosEmpresa, ItemOrcamento } from '@/types/types'
+
+interface PDFOrcamentoCompletoProps {
+  orcamento: Orcamento
+  dadosEmpresa?: DadosEmpresa
+  calcularTotal: () => number
+}
+
+// Importar estilos e funções auxiliares
+const ordenarTamanhos = (tamanhos: Record<string, number>) => {
+  const ordem = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'EG', 'EXG', 'X1', 'G1', 'G2', 'G3', 'G4', 'G5']
+  return Object.entries(tamanhos)
+    .sort(([a], [b]) => {
+      const indexA = ordem.indexOf(a.toUpperCase())
+      const indexB = ordem.indexOf(b.toUpperCase())
+      if (indexA === -1 && indexB === -1) return a.localeCompare(b)
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      return indexA - indexB
+    })
+}
+
+const getCorHex = (cor: string): string => {
+  const coresMap: Record<string, string> = {
+    'Preto': '#000000',
+    'Branco': '#FFFFFF',
+    'Azul': '#0000FF',
+    'Vermelho': '#FF0000',
+    'Verde': '#00FF00',
+    'Amarelo': '#FFFF00',
+    'Laranja': '#FFA500',
+    'Rosa': '#FFC0CB',
+    'Roxo': '#800080',
+    'Cinza': '#808080',
+    'Marrom': '#A52A2A',
+  }
+  return coresMap[cor] || '#CCCCCC'
+}
+
+// Componente que combina Orçamento + Fichas Técnicas em um único documento
+// Reimplementação inline para evitar problemas de composição
+export const PDFOrcamentoCompleto: React.FC<PDFOrcamentoCompletoProps> = ({ 
+  orcamento, 
+  dadosEmpresa, 
+  calcularTotal 
+}) => {
+  const total = calcularTotal()
+  const totalComFrete = total + (orcamento.valorFrete || 0)
+
+  // Estilos (copiados do componente original)
+  const styles = StyleSheet.create({
+    page: {
+      padding: 30,
+      fontSize: 10,
+      fontFamily: 'Helvetica',
+      backgroundColor: '#ffffff',
+    },
+    header: {
+      backgroundColor: '#0f4c81',
+      padding: 15,
+      marginBottom: 15,
+      borderRadius: 4,
+    },
+    headerContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    logoContainer: {
+      width: 50,
+      height: 50,
+      backgroundColor: '#ffffff',
+      borderRadius: 4,
+      padding: 5,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#ffffff',
+      marginBottom: 3,
+    },
+    headerSubtitle: {
+      fontSize: 10,
+      color: '#e0e0e0',
+    },
+    headerRight: {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      padding: 8,
+      borderRadius: 4,
+      alignItems: 'flex-end',
+    },
+    companyName: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: '#ffffff',
+      marginBottom: 2,
+    },
+    companyInfo: {
+      fontSize: 8,
+      color: '#e0e0e0',
+      marginBottom: 1,
+    },
+    section: {
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 11,
+      fontWeight: 'bold',
+      color: '#0f4c81',
+      marginBottom: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: '#0f4c81',
+      paddingBottom: 3,
+    },
+    clientBox: {
+      backgroundColor: '#f0f4f8',
+      padding: 10,
+      borderRadius: 4,
+    },
+    clientRow: {
+      flexDirection: 'row',
+      marginBottom: 3,
+    },
+    clientLabel: {
+      fontWeight: 'bold',
+      marginRight: 5,
+      fontSize: 9,
+    },
+    clientValue: {
+      fontSize: 9,
+    },
+    table: {
+      marginTop: 8,
+    },
+    tableHeader: {
+      flexDirection: 'row',
+      backgroundColor: '#0f4c81',
+      color: '#ffffff',
+      padding: 6,
+      fontWeight: 'bold',
+      fontSize: 9,
+      borderTopLeftRadius: 4,
+      borderTopRightRadius: 4,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e5e7eb',
+      padding: 6,
+      fontSize: 9,
+    },
+    tableRowAlt: {
+      backgroundColor: '#f9fafb',
+    },
+    colNum: {
+      width: '5%',
+      textAlign: 'center',
+    },
+    colProduto: {
+      width: '30%',
+    },
+    colQtd: {
+      width: '10%',
+      textAlign: 'center',
+    },
+    colValorUnit: {
+      width: '15%',
+      textAlign: 'right',
+    },
+    colTotal: {
+      width: '15%',
+      textAlign: 'right',
+    },
+    totalSection: {
+      backgroundColor: '#f0f4f8',
+      padding: 8,
+      marginTop: 8,
+    },
+    totalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+      fontSize: 9,
+    },
+    totalLabel: {
+      fontWeight: 'bold',
+    },
+    totalValue: {
+      fontWeight: 'bold',
+    },
+    totalFinal: {
+      borderTopWidth: 2,
+      borderTopColor: '#0f4c81',
+      paddingTop: 6,
+      marginTop: 4,
+      fontSize: 11,
+      color: '#0f4c81',
+    },
+    observacoesBox: {
+      backgroundColor: '#f0f4f8',
+      padding: 10,
+      borderRadius: 4,
+      marginTop: 8,
+    },
+    observacoesText: {
+      fontSize: 9,
+      lineHeight: 1.4,
+    },
+    footerGrid: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 10,
+    },
+    footerBox: {
+      flex: 1,
+      backgroundColor: '#f0f4f8',
+      padding: 8,
+      borderRadius: 4,
+    },
+    footerBoxTitle: {
+      fontSize: 9,
+      fontWeight: 'bold',
+      color: '#0f4c81',
+      marginBottom: 4,
+    },
+    footerBoxText: {
+      fontSize: 8,
+      lineHeight: 1.3,
+    },
+    dateBox: {
+      fontSize: 9,
+      backgroundColor: '#f0f4f8',
+      padding: 6,
+      borderRadius: 15,
+      textAlign: 'center',
+      alignSelf: 'flex-end',
+      marginBottom: 8,
+    },
+    // Estilos para fichas técnicas
+    productTitle: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: '#0f4c81',
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    productImage: {
+      width: 200,
+      height: 200,
+      objectFit: 'contain',
+      alignSelf: 'center',
+      marginBottom: 15,
+    },
+    specSection: {
+      marginBottom: 10,
+    },
+    specTitle: {
+      fontSize: 11,
+      fontWeight: 'bold',
+      color: '#0f4c81',
+      marginBottom: 5,
+    },
+    specText: {
+      fontSize: 10,
+      marginBottom: 3,
+    },
+    colorBox: {
+      width: 20,
+      height: 20,
+      border: '1 solid #000',
+      marginRight: 5,
+    },
+    colorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 5,
+    },
+  })
+
+  return (
+    <Document>
+      {/* PÁGINA DO ORÇAMENTO */}
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <View style={styles.logoContainer}>
+                <Svg width="40" height="40" viewBox="0 0 24 24">
+                  <Path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5"/>
+                  <Path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                  <Path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                </Svg>
+              </View>
+              <View>
+                <Text style={styles.headerTitle}>
+                  ORÇAMENTO - {orcamento.numero.split(" - ")[0]}
+                </Text>
+                <Text style={styles.headerSubtitle}>
+                  {orcamento.cliente?.nome || "CLIENTE"} - {orcamento.nomeContato || "CONTATO"}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.companyName}>{dadosEmpresa?.nome || "OneBase Uniformes"}</Text>
+              <Text style={styles.companyInfo}>CNPJ: {dadosEmpresa?.cnpj || "57.855.073/0001-82"}</Text>
+              <Text style={styles.companyInfo}>{dadosEmpresa?.email || "onebase.store@gmail.com"}</Text>
+              <Text style={styles.companyInfo}>{dadosEmpresa?.telefone || "(11) 99541-6072"}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Dados do Cliente */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DADOS DO CLIENTE</Text>
+          <View style={styles.clientInfo}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Cliente:</Text>
+              <Text>{orcamento.cliente?.nome || "-"}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>CNPJ:</Text>
+              <Text>{orcamento.cliente?.cnpj || "-"}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Telefone:</Text>
+              <Text>{orcamento.cliente?.telefone || "-"}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Email:</Text>
+              <Text>{orcamento.cliente?.email || "-"}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Endereço:</Text>
+              <Text>{orcamento.cliente?.endereco || "-"}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Itens do Orçamento */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ITENS DO ORÇAMENTO</Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={styles.col1}>#</Text>
+              <Text style={styles.col2}>Produto</Text>
+              <Text style={styles.col3}>Qtd</Text>
+              <Text style={styles.col4}>Valor Unit.</Text>
+              <Text style={styles.col5}>Subtotal</Text>
+            </View>
+            {orcamento.itens.map((item, idx) => (
+              <View key={idx} style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}>
+                <Text style={styles.col1}>{idx + 1}</Text>
+                <Text style={styles.col2}>{item.produto?.nome || "Produto"}</Text>
+                <Text style={styles.col3}>{item.quantidade}</Text>
+                <Text style={styles.col4}>R$ {item.valorUnitario.toFixed(2)}</Text>
+                <Text style={styles.col5}>R$ {(item.quantidade * item.valorUnitario).toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Totais */}
+        <View style={styles.totalsSection}>
+          <View style={styles.totalRow}>
+            <Text>Subtotal:</Text>
+            <Text>R$ {total.toFixed(2)}</Text>
+          </View>
+          {(orcamento.valorFrete || 0) > 0 && (
+            <View style={styles.totalRow}>
+              <Text>Frete:</Text>
+              <Text>R$ {(orcamento.valorFrete || 0).toFixed(2)}</Text>
+            </View>
+          )}
+          <View style={[styles.totalRow, styles.totalRowFinal]}>
+            <Text>TOTAL:</Text>
+            <Text>R$ {totalComFrete.toFixed(2)}</Text>
+          </View>
+        </View>
+
+        {/* Observações */}
+        {orcamento.observacoes && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>OBSERVAÇÕES</Text>
+            <Text style={styles.specText}>{orcamento.observacoes}</Text>
+          </View>
+        )}
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text>Orçamento gerado em {new Date().toLocaleDateString('pt-BR')}</Text>
+          <Text>Validade: {orcamento.validadeOrcamento || "30 dias"} | Prazo de Entrega: {orcamento.prazoEntrega || "A combinar"}</Text>
+        </View>
+      </Page>
+
+      {/* PÁGINAS DAS FICHAS TÉCNICAS */}
+      {orcamento.itens.map((item, idx) => {
+        const tamanhosOrdenados = ordenarTamanhos(item.tamanhos || {})
+        
+        return (
+          <Page key={`ficha-${idx}`} size="A4" style={styles.page}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerContent}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.logoContainer}>
+                    <Svg width="40" height="40" viewBox="0 0 24 24">
+                      <Path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5"/>
+                      <Path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                      <Path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                    </Svg>
+                  </View>
+                  <View>
+                    <Text style={styles.headerTitle}>
+                      FICHA TÉCNICA - {orcamento.numero.split(" - ")[0]}
+                    </Text>
+                    <Text style={styles.headerSubtitle}>
+                      {orcamento.cliente?.nome || "EMPRESA"} - {orcamento.nomeContato || "CONTATO"}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.headerRight}>
+                  <Text style={styles.companyName}>{dadosEmpresa?.nome || "OneBase Uniformes"}</Text>
+                  <Text style={styles.companyInfo}>CNPJ: {dadosEmpresa?.cnpj || "57.855.073/0001-82"}</Text>
+                  <Text style={styles.companyInfo}>{dadosEmpresa?.email || "onebase.store@gmail.com"}</Text>
+                  <Text style={styles.companyInfo}>{dadosEmpresa?.telefone || "(11) 99541-6072"}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Título do Produto */}
+            <Text style={styles.productTitle}>{item.produto?.nome || "Produto"}</Text>
+
+            {/* Imagem do Produto */}
+            {item.imagem && (
+              <Image src={item.imagem} style={styles.productImage} />
+            )}
+
+            {/* Especificações */}
+            <View style={styles.specSection}>
+              <Text style={styles.specTitle}>TECIDO</Text>
+              <Text style={styles.specText}>
+                {item.tecidoSelecionado?.nome || "Não especificado"}
+              </Text>
+              {item.tecidoSelecionado?.composicao && (
+                <Text style={styles.specText}>Composição: {item.tecidoSelecionado.composicao}</Text>
+              )}
+            </View>
+
+            <View style={styles.specSection}>
+              <Text style={styles.specTitle}>COR</Text>
+              <View style={styles.colorRow}>
+                <View style={[styles.colorBox, { backgroundColor: getCorHex(item.corSelecionada || '') }]} />
+                <Text style={styles.specText}>{item.corSelecionada || "Não especificada"}</Text>
+              </View>
+            </View>
+
+            {item.estampas && item.estampas.length > 0 && (
+              <View style={styles.specSection}>
+                <Text style={styles.specTitle}>ARTES/ESTAMPAS</Text>
+                {item.estampas.map((estampa, i) => (
+                  <Text key={i} style={styles.specText}>
+                    {estampa.posicao}: {(estampa as any).descricao || estampa.tipo || 'Estampa'}
+                  </Text>
+                ))}
+              </View>
+            )}
+
+            {/* Tabela de Tamanhos */}
+            <View style={styles.specSection}>
+              <Text style={styles.specTitle}>GRADE DE TAMANHOS</Text>
+              <View style={styles.table}>
+                <View style={styles.tableHeader}>
+                  <Text style={{ width: '50%' }}>Tamanho</Text>
+                  <Text style={{ width: '50%' }}>Quantidade</Text>
+                </View>
+                {tamanhosOrdenados.map(([tamanho, qtd], i) => (
+                  <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}>
+                    <Text style={{ width: '50%' }}>{tamanho}</Text>
+                    <Text style={{ width: '50%' }}>{qtd}</Text>
+                  </View>
+                ))}
+                <View style={[styles.tableRow, { backgroundColor: '#0f4c81', color: 'white', fontWeight: 'bold' }]}>
+                  <Text style={{ width: '50%' }}>TOTAL</Text>
+                  <Text style={{ width: '50%' }}>{item.quantidade}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Observações Técnicas */}
+            {item.observacaoTecnica && (
+              <View style={styles.specSection}>
+                <Text style={styles.specTitle}>OBSERVAÇÕES TÉCNICAS</Text>
+                <Text style={styles.specText}>{item.observacaoTecnica}</Text>
+              </View>
+            )}
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text>Ficha Técnica - Item {idx + 1} de {orcamento.itens.length}</Text>
+              <Text>Gerado em {new Date().toLocaleDateString('pt-BR')}</Text>
+            </View>
+          </Page>
+        )
+      })}
+    </Document>
+  )
+}

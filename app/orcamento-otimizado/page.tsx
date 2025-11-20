@@ -14,6 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import VisualizacaoEditavel from "@/components/visualizacao-editavel"
 import { useSearchParams } from "next/navigation"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, DadosEmpresa } from "@/types/types"
+import { pdf } from '@react-pdf/renderer'
+import { PDFOrcamento } from '@/components/pdf-orcamento'
+import { PDFTodasFichasTecnicas } from '@/components/pdf-ficha-tecnica'
 
 // Helper para gerar UUID
 const generateUUID = () => {
@@ -64,6 +67,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
   const [mostrarListaOrcamentos, setMostrarListaOrcamentos] = useState(false)
   const [orcamentosSalvos, setOrcamentosSalvos] = useState<Orcamento[]>([])
   const [carregandoOrcamentos, setCarregandoOrcamentos] = useState(false)
+  const [exportandoPDF, setExportandoPDF] = useState(false)
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -321,6 +325,147 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
   const calcularTotal = () => {
     return orcamento.itens.reduce((total, item) => total + (item.quantidade * item.valorUnitario), 0)
+  }
+
+  // Função para gerar PDF do Orçamento COMPLETO (com fichas técnicas)
+  const gerarPDFOrcamento = async () => {
+    console.log('🎯 INICIANDO GERAÇÃO DE PDF DO ORÇAMENTO COMPLETO')
+    setExportandoPDF(true)
+    try {
+      console.log('📄 Criando documento PDF completo...', { orcamento, dadosEmpresa })
+      
+      // Gerar nome do arquivo: 01 - ORCAMENTO_0187_MIZU_CIMENTOS_DANIELLE
+      const numeroOrcamento = orcamento.numero.split(' - ')[0] || orcamento.numero
+      const nomeCliente = (orcamento.cliente?.nome || 'CLIENTE')
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      const nomeContato = (orcamento.nomeContato || '')
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      
+      const fileName = `01 - ORCAMENTO_${numeroOrcamento}_${nomeCliente}${nomeContato ? '_' + nomeContato : ''}.pdf`
+      
+      // Gerar os dois PDFs separadamente e combinar
+      const docOrcamento = <PDFOrcamento orcamento={orcamento} dadosEmpresa={dadosEmpresa} calcularTotal={calcularTotal} />
+      const docFichas = <PDFTodasFichasTecnicas orcamento={orcamento} dadosEmpresa={dadosEmpresa} />
+      
+      // Gerar blobs
+      const blobOrcamento = await pdf(docOrcamento).toBlob()
+      const blobFichas = await pdf(docFichas).toBlob()
+      
+      // Combinar os PDFs usando pdf-lib
+      const { PDFDocument } = await import('pdf-lib')
+      const pdfDoc = await PDFDocument.create()
+      
+      // Carregar o PDF do orçamento
+      const pdfOrcamento = await PDFDocument.load(await blobOrcamento.arrayBuffer())
+      const pagesOrcamento = await pdfDoc.copyPages(pdfOrcamento, pdfOrcamento.getPageIndices())
+      pagesOrcamento.forEach((page: any) => pdfDoc.addPage(page))
+      
+      // Carregar o PDF das fichas
+      const pdfFichas = await PDFDocument.load(await blobFichas.arrayBuffer())
+      const pagesFichas = await pdfDoc.copyPages(pdfFichas, pdfFichas.getPageIndices())
+      pagesFichas.forEach((page: any) => pdfDoc.addPage(page))
+      
+      // Salvar o PDF combinado
+      const pdfBytes = await pdfDoc.save()
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      
+      console.log('✅ PDF combinado gerado:', blob.size, 'bytes')
+      
+      // Criar link de download e forçar download do arquivo
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      console.log('📥 Iniciando download:', fileName)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      console.log('✅ PDF COMPLETO GERADO COM SUCESSO!')
+      
+      toast({
+        title: "✅ PDF Gerado",
+        description: "Orçamento completo (com fichas técnicas) baixado com sucesso!",
+      })
+    } catch (err) {
+      console.error('❌ ERRO ao gerar PDF do orçamento:', err)
+      console.error('Stack:', (err as Error).stack)
+      toast({
+        title: "❌ Erro",
+        description: "Erro ao gerar PDF: " + (err as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setExportandoPDF(false)
+    }
+  }
+
+  // Função para gerar PDF APENAS das Fichas Técnicas
+  const gerarPDFFichasTecnicas = async () => {
+    console.log('🎯 INICIANDO GERAÇÃO DE PDF DAS FICHAS TÉCNICAS')
+    setExportandoPDF(true)
+    try {
+      console.log('📄 Criando documento PDF das fichas...', { orcamento, dadosEmpresa })
+      
+      // Gerar nome do arquivo: 02 - FICHA_TECNICA_0187_MIZU_CIMENTOS_DANIELLE
+      const numeroOrcamento = orcamento.numero.split(' - ')[0] || orcamento.numero
+      const nomeCliente = (orcamento.cliente?.nome || 'CLIENTE')
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      const nomeContato = (orcamento.nomeContato || '')
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      
+      const fileName = `02 - FICHA_TECNICA_${numeroOrcamento}_${nomeCliente}${nomeContato ? '_' + nomeContato : ''}.pdf`
+      
+      const doc = <PDFTodasFichasTecnicas orcamento={orcamento} dadosEmpresa={dadosEmpresa} />
+      
+      console.log('🔄 Convertendo para PDF...')
+      const asPdf = pdf(doc)
+      
+      console.log('💾 Gerando blob...')
+      const blob = await asPdf.toBlob()
+      console.log('✅ Blob gerado:', blob.size, 'bytes')
+      
+      // Criar link de download e forçar download do arquivo
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      console.log('📥 Iniciando download:', fileName)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      console.log('✅ PDF DAS FICHAS GERADO COM SUCESSO!')
+      
+      toast({
+        title: "✅ PDF Gerado",
+        description: "Fichas técnicas baixadas com sucesso!",
+      })
+    } catch (err) {
+      console.error('❌ ERRO ao gerar PDF das fichas:', err)
+      console.error('Stack:', (err as Error).stack)
+      toast({
+        title: "❌ Erro",
+        description: "Erro ao gerar PDF: " + (err as Error).message,
+        variant: "destructive",
+      })
+    } finally {
+      setExportandoPDF(false)
+    }
   }
 
   const salvarOrcamento = async () => {
@@ -637,19 +782,125 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
           <Button
             size="sm"
-            onClick={() => {
-              if (orcamento.id) {
-                setOrcamento({ ...orcamento, id: undefined, numero: "PREVIEW" })
-                setTemAlteracoes(true)
+            onClick={async () => {
+              if (!orcamento.id) {
                 toast({
-                  title: "📋 Copiado!",
-                  description: "Orçamento copiado. Altere o que precisar e salve.",
+                  title: "⚠️ Aviso",
+                  description: "Salve o orçamento antes de copiá-lo.",
+                  variant: "destructive",
                 })
+                return
+              }
+
+              try {
+                setIsSaving(true)
+
+                // Buscar próximo número disponível
+                const { data: ultimoOrcamento } = await supabase
+                  .from("orcamentos")
+                  .select("numero")
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+
+                let proximoNumero = "0001"
+                if (ultimoOrcamento && ultimoOrcamento.length > 0) {
+                  const numeroAtual = Number.parseInt(ultimoOrcamento[0].numero.split(" - ")[0], 10)
+                  if (!isNaN(numeroAtual)) {
+                    proximoNumero = (numeroAtual + 1).toString().padStart(4, "0")
+                  }
+                }
+
+                const primeiroItem = orcamento.itens[0]?.produto?.nome || "Item"
+                const nomeCliente = orcamento.cliente?.nome || "CLIENTE"
+                const numeroCompleto = `${proximoNumero} - ${primeiroItem} - ${nomeCliente} - ${orcamento.nomeContato || ""}`
+
+                // Criar novo orçamento no banco
+                const dadosOrcamento = {
+                  numero: numeroCompleto,
+                  data: new Date().toISOString().split('T')[0],
+                  cliente_id: orcamento.cliente?.id && orcamento.cliente.id.length > 10 ? orcamento.cliente.id : null,
+                  observacoes: orcamento.observacoes,
+                  condicoes_pagamento: orcamento.condicoesPagamento,
+                  prazo_entrega: orcamento.prazoEntrega,
+                  validade_orcamento: orcamento.validadeOrcamento,
+                  status: orcamento.status || "5 - Proposta",
+                  itens: JSON.stringify({
+                    items: orcamento.itens.map((item) => ({
+                      id: item.id,
+                      produtoId: item.produtoId,
+                      quantidade: item.quantidade,
+                      valorUnitario: item.valorUnitario,
+                      tecidoSelecionado: item.tecidoSelecionado,
+                      corSelecionada: item.corSelecionada,
+                      tamanhos: item.tamanhos,
+                      estampas: item.estampas,
+                      observacaoComercial: item.observacaoComercial,
+                      observacaoTecnica: item.observacaoTecnica,
+                      imagem: item.imagem,
+                    })),
+                    metadados: {
+                      valorFrete: orcamento.valorFrete,
+                      nomeContato: orcamento.nomeContato,
+                      telefoneContato: orcamento.telefoneContato,
+                    },
+                  }),
+                }
+
+                // Inserir orçamento
+                const { data: novoOrcamento, error: orcamentoError } = await supabase
+                  .from("orcamentos")
+                  .insert(dadosOrcamento)
+                  .select()
+                  .single()
+
+                if (orcamentoError) throw orcamentoError
+
+                // Inserir itens
+                for (let index = 0; index < orcamento.itens.length; index++) {
+                  const item = orcamento.itens[index]
+                  const dadosItem = {
+                    orcamento_id: novoOrcamento.id,
+                    produto_id: item.produtoId && item.produtoId.length > 5 ? item.produtoId : null,
+                    quantidade: item.quantidade,
+                    valor_unitario: item.valorUnitario,
+                    tecido_nome: item.tecidoSelecionado?.nome,
+                    tecido_composicao: item.tecidoSelecionado?.composicao,
+                    cor_selecionada: item.corSelecionada,
+                    tamanhos: item.tamanhos,
+                    observacao_comercial: item.observacaoComercial,
+                    observacao_tecnica: item.observacaoTecnica,
+                    imagem: item.imagem,
+                    posicao: index,
+                  }
+
+                  const { error: itemError } = await supabase.from("itens_orcamento").insert(dadosItem)
+                  if (itemError) {
+                    console.error("Erro ao inserir item:", itemError)
+                  }
+                }
+
+                toast({
+                  title: "✅ Orçamento Copiado!",
+                  description: `Novo orçamento ${proximoNumero} criado com sucesso.`,
+                })
+
+                // Redirecionar para o novo orçamento
+                window.location.href = `/orcamento-otimizado?id=${novoOrcamento.id}`
+              } catch (error) {
+                console.error("Erro ao copiar orçamento:", error)
+                toast({
+                  title: "Erro",
+                  description: "Não foi possível copiar o orçamento.",
+                  variant: "destructive",
+                })
+              } finally {
+                setIsSaving(false)
               }
             }}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            disabled={isSaving}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 disabled:bg-gray-400"
           >
-            <Copy className="h-4 w-4" /> Copiar
+            <Copy className="h-4 w-4" /> {isSaving ? "Copiando..." : "Copiar"}
           </Button>
 
             <Button
@@ -680,11 +931,12 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
                   })
                   return
                 }
-                window.print()
+                await gerarPDFOrcamento()
               }}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+              disabled={exportandoPDF}
+              className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 disabled:opacity-50"
             >
-              <FileDown className="h-4 w-4" /> PDF Orçamento
+              <FileDown className="h-4 w-4" /> {exportandoPDF ? 'Gerando...' : 'PDF Orçamento'}
             </Button>
 
             <Button
@@ -698,12 +950,12 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
                   })
                   return
                 }
-                setModoVisualizacao("ficha")
-                setTimeout(() => window.print(), 100)
+                await gerarPDFFichasTecnicas()
               }}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+              disabled={exportandoPDF}
+              className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 disabled:opacity-50"
             >
-              <FileDown className="h-4 w-4" /> PDF Ficha
+              <FileDown className="h-4 w-4" /> {exportandoPDF ? 'Gerando...' : 'PDF Ficha'}
             </Button>
           </div>
         </div>
