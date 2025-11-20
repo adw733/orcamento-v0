@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, Plus, Search, Save, Copy, RefreshCw, Eye, Edit3, FileDown, Hash, Calendar, Building2, DollarSign, User, Phone } from "lucide-react"
+import { Loader2, Plus, Search, Save, Copy, RefreshCw, Eye, Edit3, FileDown, Hash, Calendar, Building2, DollarSign, User, Phone, AlertCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -558,13 +558,36 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
   return (
     <div className="h-full flex flex-col bg-gray-50">
 
-      {/* Header com layout igual ao GeradorOrcamento */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
-        <div>
-          <h1 className="text-lg md:text-xl font-bold text-primary">Orçamento Otimizado</h1>
-          <p className="text-gray-500 mt-0.5 text-xs md:text-sm">Orçamento: {orcamento.numero.split(" - ")[0]}</p>
-        </div>
-        <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
+      {/* Wrapper superior igual ao GeradorOrcamento (padding + espaçamento vertical) */}
+      <div className="p-2 md:p-4 space-y-2 md:space-y-3">
+        {/* Banner de alterações não salvas - mesmo estilo do GeradorOrcamento */}
+        {modoEdicao && temAlteracoes && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between print:hidden">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <span className="text-sm text-yellow-800 font-medium">
+                Há alterações não salvas neste orçamento
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+              onClick={salvarOrcamento}
+            >
+              <Save className="h-3 w-3 mr-1" />
+              Salvar
+            </Button>
+          </div>
+        )}
+
+        {/* Header com layout igual ao GeradorOrcamento */}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
+          <div>
+            <h1 className="text-lg md:text-xl font-bold text-primary">Orçamento Otimizado</h1>
+            <p className="text-gray-500 mt-0.5 text-xs md:text-sm">Orçamento: {orcamento.numero.split(" - ")[0]}</p>
+          </div>
+          <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
           <div className="flex border border-primary/20 rounded-md overflow-hidden">
             <Button
               variant="ghost"
@@ -629,59 +652,60 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
             <Copy className="h-4 w-4" /> Copiar
           </Button>
 
-          <Button
-            size="sm"
-            onClick={salvarOrcamento}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 disabled:bg-gray-400"
-          >
-            {orcamento.id ? (
-              <>
-                <RefreshCw className="h-4 w-4" /> Atualizar
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" /> Salvar
-              </>
-            )}
-          </Button>
+            <Button
+              size="sm"
+              onClick={salvarOrcamento}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 disabled:bg-gray-400"
+            >
+              {orcamento.id ? (
+                <>
+                  <RefreshCw className="h-4 w-4" /> Atualizar
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" /> Salvar
+                </>
+              )}
+            </Button>
 
-          <Button
-            size="sm"
-            onClick={async () => {
-              if (!orcamento.cliente || orcamento.itens.length === 0) {
-                toast({
-                  title: "⚠️ Aviso",
-                  description: "Complete o orçamento para gerar PDF.",
-                  variant: "destructive",
-                })
-                return
-              }
-              window.print()
-            }}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-          >
-            <FileDown className="h-4 w-4" /> PDF Orçamento
-          </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                if (!orcamento.cliente || orcamento.itens.length === 0) {
+                  toast({
+                    title: "⚠️ Aviso",
+                    description: "Complete o orçamento para gerar PDF.",
+                    variant: "destructive",
+                  })
+                  return
+                }
+                window.print()
+              }}
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            >
+              <FileDown className="h-4 w-4" /> PDF Orçamento
+            </Button>
 
-          <Button
-            size="sm"
-            onClick={async () => {
-              if (!orcamento.cliente || orcamento.itens.length === 0) {
-                toast({
-                  title: "⚠️ Aviso",
-                  description: "Complete o orçamento para gerar ficha técnica.",
-                  variant: "destructive",
-                })
-                return
-              }
-              setModoVisualizacao("ficha")
-              setTimeout(() => window.print(), 100)
-            }}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-          >
-            <FileDown className="h-4 w-4" /> PDF Ficha
-          </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                if (!orcamento.cliente || orcamento.itens.length === 0) {
+                  toast({
+                    title: "⚠️ Aviso",
+                    description: "Complete o orçamento para gerar ficha técnica.",
+                    variant: "destructive",
+                  })
+                  return
+                }
+                setModoVisualizacao("ficha")
+                setTimeout(() => window.print(), 100)
+              }}
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            >
+              <FileDown className="h-4 w-4" /> PDF Ficha
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -738,20 +762,22 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         )}
 
         {/* Visualização Editável - Centralizada */}
-        <VisualizacaoEditavel
-          orcamento={orcamento}
-          setOrcamento={setOrcamento}
-          dadosEmpresa={dadosEmpresa}
-          setDadosEmpresa={setDadosEmpresa}
-          calcularTotal={calcularTotal}
-          modoExportacao={modoVisualizacao}
-          clientes={clientes}
-          produtos={produtos}
-          onSave={salvarOrcamento}
-          temAlteracoes={temAlteracoes}
-          mostrarBarraBotoes={false}
-          modoEdicaoExterno={modoEdicao}
-        />
+        <div className="max-w-[210mm] mx-auto">
+          <VisualizacaoEditavel
+            orcamento={orcamento}
+            setOrcamento={setOrcamento}
+            dadosEmpresa={dadosEmpresa}
+            setDadosEmpresa={setDadosEmpresa}
+            calcularTotal={calcularTotal}
+            modoExportacao={modoVisualizacao}
+            clientes={clientes}
+            produtos={produtos}
+            onSave={salvarOrcamento}
+            temAlteracoes={false}
+            mostrarBarraBotoes={false}
+            modoEdicaoExterno={modoEdicao}
+          />
+        </div>
       </div>
 
       {/* Dialog Lista */}

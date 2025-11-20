@@ -1,7 +1,7 @@
 "use client"
 
 import type { Orcamento, DadosEmpresa, ItemOrcamento, Cliente, Produto } from "@/types/types"
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -34,6 +34,34 @@ interface VisualizacaoEditavelProps {
   modoEdicaoExterno?: boolean
 }
 
+// Componentes de input FORA do componente principal para evitar recriação
+const InputTransparente = memo(({ className, ...props }: React.ComponentProps<typeof Input>) => (
+  <Input
+    className={cn(
+      "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 h-auto py-0 rounded-sm transition-colors",
+      className
+    )}
+    {...props}
+  />
+))
+InputTransparente.displayName = "InputTransparente"
+
+const TextareaTransparente = memo(({ className, ...props }: React.ComponentProps<typeof Textarea>) => (
+  <Textarea
+    className={cn(
+      "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 py-0 min-h-[1.5em] resize-none rounded-sm transition-colors overflow-hidden",
+      className
+    )}
+    {...props}
+    onInput={(e) => {
+      const target = e.target as HTMLTextAreaElement
+      target.style.height = "auto"
+      target.style.height = `${target.scrollHeight}px`
+    }}
+  />
+))
+TextareaTransparente.displayName = "TextareaTransparente"
+
 export default function VisualizacaoEditavel({
   orcamento,
   setOrcamento,
@@ -53,6 +81,12 @@ export default function VisualizacaoEditavel({
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const [progressoPDF, setProgressoPDF] = useState(0)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
+  
+  // Ref para manter referência estável do orcamento
+  const orcamentoRef = useRef(orcamento)
+  useEffect(() => {
+    orcamentoRef.current = orcamento
+  }, [orcamento])
 
   // Estado para controlar modo edição/visualização
   const [modoEdicaoInterno, setModoEdicaoInterno] = useState(true)
@@ -79,45 +113,19 @@ export default function VisualizacaoEditavel({
     carregarTiposTamanho()
   }, [])
 
-  // Helper para inputs transparentes
-  const InputTransparente = ({ className, ...props }: React.ComponentProps<typeof Input>) => (
-    <Input
-      className={cn(
-        "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 h-auto py-0 rounded-sm transition-colors",
-        className
-      )}
-      {...props}
-    />
-  )
+  // Funções de atualização - memoizadas com useCallback SEM dependência de orcamento
+  const updateOrcamentoField = useCallback((field: keyof Orcamento, value: any) => {
+    setOrcamento({ ...orcamentoRef.current, [field]: value })
+  }, [setOrcamento])
 
-  const TextareaTransparente = ({ className, ...props }: React.ComponentProps<typeof Textarea>) => (
-    <Textarea
-      className={cn(
-        "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 py-0 min-h-[1.5em] resize-none rounded-sm transition-colors overflow-hidden",
-        className
-      )}
-      {...props}
-      onInput={(e) => {
-        const target = e.target as HTMLTextAreaElement
-        target.style.height = "auto"
-        target.style.height = `${target.scrollHeight}px`
-      }}
-    />
-  )
+  const updateClienteField = useCallback((field: keyof Cliente, value: any) => {
+    if (!orcamentoRef.current.cliente) return
+    const novoCliente = { ...orcamentoRef.current.cliente, [field]: value }
+    setOrcamento({ ...orcamentoRef.current, cliente: novoCliente })
+  }, [setOrcamento])
 
-  // Funções de atualização
-  const updateOrcamentoField = (field: keyof Orcamento, value: any) => {
-    setOrcamento({ ...orcamento, [field]: value })
-  }
-
-  const updateClienteField = (field: keyof Cliente, value: any) => {
-    if (!orcamento.cliente) return
-    const novoCliente = { ...orcamento.cliente, [field]: value }
-    setOrcamento({ ...orcamento, cliente: novoCliente })
-  }
-
-  const updateItem = (itemId: string, field: keyof ItemOrcamento, value: any) => {
-    const novosItens = orcamento.itens.map(item => {
+  const updateItem = useCallback((itemId: string, field: keyof ItemOrcamento, value: any) => {
+    const novosItens = orcamentoRef.current.itens.map(item => {
       if (item.id !== itemId) return item
 
       // Lógica especial para produto
@@ -139,19 +147,19 @@ export default function VisualizacaoEditavel({
 
       return { ...item, [field]: value }
     })
-    setOrcamento({ ...orcamento, itens: novosItens })
-  }
+    setOrcamento({ ...orcamentoRef.current, itens: novosItens })
+  }, [setOrcamento, produtos])
 
-  const updateTamanho = (itemId: string, tamanho: string, qtd: number) => {
-    const item = orcamento.itens.find(i => i.id === itemId)
+  const updateTamanho = useCallback((itemId: string, tamanho: string, qtd: number) => {
+    const item = orcamentoRef.current.itens.find(i => i.id === itemId)
     if (!item) return
     const novosTamanhos = { ...item.tamanhos, [tamanho]: qtd }
     // Recalcular quantidade total
-    const novaQuantidade = Object.values(novosTamanhos).reduce((a, b) => a + b, 0)
+    const novaQuantidade = Object.values(novosTamanhos).reduce((a, b) => (a as number) + (b as number), 0)
 
-    const novosItens = orcamento.itens.map(i => i.id === itemId ? { ...i, tamanhos: novosTamanhos, quantidade: novaQuantidade } : i)
-    setOrcamento({ ...orcamento, itens: novosItens })
-  }
+    const novosItens = orcamentoRef.current.itens.map(i => i.id === itemId ? { ...i, tamanhos: novosTamanhos, quantidade: novaQuantidade } : i)
+    setOrcamento({ ...orcamentoRef.current, itens: novosItens })
+  }, [setOrcamento])
 
   const addItem = () => {
     const novoItem: ItemOrcamento = {
@@ -996,18 +1004,18 @@ export default function VisualizacaoEditavel({
                       }
                       
                       return tamanhosParaMostrar.length > 0 ? (
-                        <table className="w-full border-collapse" style={{ fontSize: "0.9rem" }}>
+                        <table className="w-full border-collapse" style={{ fontSize: "0.9rem", tableLayout: "fixed" }}>
                           <tbody>
                             <tr>
                               <th className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
                                 Tam.
                               </th>
                               {tamanhosParaMostrar.map(t => (
-                                <th key={`header-${t}`} className="p-2 text-center bg-gray-100 border border-gray-200 font-medium text-primary">
+                                <th key={`header-${t}`} className="p-2 text-center bg-gray-100 border border-gray-200 font-medium text-primary" style={{ minWidth: "50px", width: `${100 / (tamanhosParaMostrar.length + 2)}%` }}>
                                   {t}
                                 </th>
                               ))}
-                              <th className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "80px", minWidth: "80px", maxWidth: "80px" }}>
+                              <th className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
                                 TOTAL
                               </th>
                             </tr>
@@ -1016,22 +1024,22 @@ export default function VisualizacaoEditavel({
                                 Qtd.
                               </td>
                               {tamanhosParaMostrar.map(t => (
-                                <td key={`qty-${t}`} className="p-2 text-center border border-gray-200">
+                                <td key={`qty-${t}`} className="p-1 text-center border border-gray-200">
                                   {modoEdicao ? (
                                     <input
                                       type="number"
                                       min="0"
                                       value={item.tamanhos[t] || 0}
                                       onChange={e => updateTamanho(item.id, t, Number(e.target.value))}
-                                      className="w-full text-center bg-transparent border-none focus:bg-white focus:ring-1 focus:ring-primary/30 rounded px-1 font-medium"
-                                      style={{ fontSize: "0.9rem" }}
+                                      className="w-full text-center bg-transparent border-none focus:bg-white focus:ring-1 focus:ring-primary/30 rounded font-medium"
+                                      style={{ fontSize: "0.85rem", padding: "2px 0" }}
                                     />
                                   ) : (
                                     <span className="font-medium">{item.tamanhos[t] || 0}</span>
                                   )}
                                 </td>
                               ))}
-                              <td className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "80px", minWidth: "80px", maxWidth: "80px" }}>
+                              <td className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
                                 {item.quantidade}
                               </td>
                             </tr>

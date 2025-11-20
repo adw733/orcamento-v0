@@ -537,9 +537,9 @@ export default function VisualizacaoDocumento({
       font-weight: bold !important;
       color: #0369a1 !important;
       text-align: center !important;
-      width: 80px; /* Largura fixa para a coluna "TOTAL" */
-      min-width: 80px;
-      max-width: 80px;
+      width: 60px; /* Largura fixa para a coluna "TOTAL" */
+      min-width: 60px;
+      max-width: 60px;
     }
 
     .pdf-observacoes-comercial, .pdf-observacoes-tecnica {
