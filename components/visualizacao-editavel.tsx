@@ -20,6 +20,26 @@ import { PDFTodasFichasTecnicas } from './pdf-ficha-tecnica'
 import { supabase } from "@/lib/supabase"
 import { type TipoTamanho, tipoTamanhoService } from "@/lib/services-materiais"
 
+// Opções predefinidas para artes
+const POSICOES_ARTE = [
+  "PEITO",
+  "PEITO ESQUERDO",
+  "PEITO DIREITO",
+  "MANGA ESQUERDA",
+  "MANGA DIREITA",
+  "COSTAS",
+  "BOLSO ESQUERDO",
+  "BOLSO DIREITO"
+] as const
+
+const TIPOS_ARTE = [
+  "SILK",
+  "DTF",
+  "BORDADO",
+  "TRANSFER",
+  "SUBLIMAÇÃO"
+] as const
+
 interface VisualizacaoEditavelProps {
   orcamento: Orcamento
   setOrcamento: (orcamento: Orcamento) => void
@@ -38,31 +58,81 @@ interface VisualizacaoEditavelProps {
 }
 
 // Componentes de input FORA do componente principal para evitar recriação
-const InputTransparente = memo(({ className, ...props }: React.ComponentProps<typeof Input>) => (
-  <Input
-    className={cn(
-      "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 h-auto py-0 rounded-sm transition-colors",
-      className
-    )}
-    {...props}
-  />
-))
+const InputTransparente = memo(({ className, onChange, value, type, ...props }: React.ComponentProps<typeof Input>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Transformar para maiúsculas apenas em campos de texto (não em números)
+    if (type !== 'number' && type !== 'date' && onChange) {
+      const newValue = e.target.value.toUpperCase()
+      e.target.value = newValue
+    }
+    if (onChange) {
+      onChange(e)
+    }
+  }
+
+  return (
+    <Input
+      className={cn(
+        "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 h-auto py-0 rounded-sm transition-colors uppercase",
+        className
+      )}
+      type={type}
+      value={value}
+      onChange={handleChange}
+      {...props}
+    />
+  )
+})
 InputTransparente.displayName = "InputTransparente"
 
-const TextareaTransparente = memo(({ className, ...props }: React.ComponentProps<typeof Textarea>) => (
-  <Textarea
-    className={cn(
-      "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 py-0 min-h-[1.5em] resize-none rounded-sm transition-colors overflow-hidden",
-      className
-    )}
-    {...props}
-    onInput={(e) => {
-      const target = e.target as HTMLTextAreaElement
-      target.style.height = "auto"
-      target.style.height = `${target.scrollHeight}px`
-    }}
-  />
-))
+const TextareaTransparente = memo(({ className, onChange, value, ...props }: React.ComponentProps<typeof Textarea>) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const resizeTimeoutRef = useRef<number | null>(null)
+
+  const adjustHeight = useCallback(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto"
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+    }
+  }, [])
+
+  useEffect(() => {
+    // Ajustar altura inicial e quando o valor muda externamente
+    adjustHeight()
+  }, [value, adjustHeight])
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Transformar para maiúsculas
+    const newValue = e.target.value.toUpperCase()
+    e.target.value = newValue
+    
+    // Ajustar altura com requestAnimationFrame para melhor performance
+    if (resizeTimeoutRef.current !== null) {
+      cancelAnimationFrame(resizeTimeoutRef.current)
+    }
+    resizeTimeoutRef.current = requestAnimationFrame(() => {
+      adjustHeight()
+    })
+    
+    // Chamar onChange original
+    if (onChange) {
+      onChange(e)
+    }
+  }
+
+  return (
+    <Textarea
+      ref={textareaRef}
+      className={cn(
+        "bg-transparent border-transparent shadow-none hover:bg-white/20 focus:bg-white/50 focus:border-primary/30 px-1 py-0 min-h-[1.5em] resize-none rounded-sm transition-colors overflow-hidden uppercase",
+        className
+      )}
+      value={value}
+      onChange={handleChange}
+      {...props}
+    />
+  )
+})
 TextareaTransparente.displayName = "TextareaTransparente"
 
 export default function VisualizacaoEditavel({
@@ -85,11 +155,22 @@ export default function VisualizacaoEditavel({
   const [progressoPDF, setProgressoPDF] = useState(0)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   
-  // Ref para manter referência estável do orcamento
+  // Refs para manter referências estáveis
   const orcamentoRef = useRef(orcamento)
+  const produtosRef = useRef(produtos)
+  const setOrcamentoRef = useRef(setOrcamento)
+  
   useEffect(() => {
     orcamentoRef.current = orcamento
   }, [orcamento])
+  
+  useEffect(() => {
+    produtosRef.current = produtos
+  }, [produtos])
+  
+  useEffect(() => {
+    setOrcamentoRef.current = setOrcamento
+  }, [setOrcamento])
 
   // Estado para controlar modo edição/visualização
   const [modoEdicaoInterno, setModoEdicaoInterno] = useState(true)
@@ -116,16 +197,16 @@ export default function VisualizacaoEditavel({
     carregarTiposTamanho()
   }, [])
 
-  // Funções de atualização - memoizadas com useCallback SEM dependência de orcamento
+  // Funções de atualização - memoizadas com useCallback SEM dependências que mudam
   const updateOrcamentoField = useCallback((field: keyof Orcamento, value: any) => {
-    setOrcamento({ ...orcamentoRef.current, [field]: value })
-  }, [setOrcamento])
+    setOrcamentoRef.current({ ...orcamentoRef.current, [field]: value })
+  }, [])
 
   const updateClienteField = useCallback((field: keyof Cliente, value: any) => {
     if (!orcamentoRef.current.cliente) return
     const novoCliente = { ...orcamentoRef.current.cliente, [field]: value }
-    setOrcamento({ ...orcamentoRef.current, cliente: novoCliente })
-  }, [setOrcamento])
+    setOrcamentoRef.current({ ...orcamentoRef.current, cliente: novoCliente })
+  }, [])
 
   const updateItem = useCallback((itemId: string, field: keyof ItemOrcamento, value: any) => {
     const novosItens = orcamentoRef.current.itens.map(item => {
@@ -133,7 +214,7 @@ export default function VisualizacaoEditavel({
 
       // Lógica especial para produto
       if (field === 'produtoId') {
-        const produto = produtos.find(p => p.id === value)
+        const produto = produtosRef.current.find(p => p.id === value)
         if (produto) {
           return {
             ...item,
@@ -150,8 +231,8 @@ export default function VisualizacaoEditavel({
 
       return { ...item, [field]: value }
     })
-    setOrcamento({ ...orcamentoRef.current, itens: novosItens })
-  }, [setOrcamento, produtos])
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
 
   const updateTamanho = useCallback((itemId: string, tamanho: string, qtd: number) => {
     const item = orcamentoRef.current.itens.find(i => i.id === itemId)
@@ -161,10 +242,10 @@ export default function VisualizacaoEditavel({
     const novaQuantidade = Object.values(novosTamanhos).reduce((a, b) => (a as number) + (b as number), 0)
 
     const novosItens = orcamentoRef.current.itens.map(i => i.id === itemId ? { ...i, tamanhos: novosTamanhos, quantidade: novaQuantidade } : i)
-    setOrcamento({ ...orcamentoRef.current, itens: novosItens })
-  }, [setOrcamento])
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
 
-  const addItem = () => {
+  const addItem = useCallback(() => {
     const novoItem: ItemOrcamento = {
       id: crypto.randomUUID(),
       produtoId: "",
@@ -175,12 +256,12 @@ export default function VisualizacaoEditavel({
       observacaoComercial: "",
       observacaoTecnica: ""
     }
-    setOrcamento({ ...orcamento, itens: [...orcamento.itens, novoItem] })
-  }
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: [...orcamentoRef.current.itens, novoItem] })
+  }, [])
 
-  const removeItem = (id: string) => {
-    setOrcamento({ ...orcamento, itens: orcamento.itens.filter(i => i.id !== id) })
-  }
+  const removeItem = useCallback((id: string) => {
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: orcamentoRef.current.itens.filter(i => i.id !== id) })
+  }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, itemId: string) => {
     if (e.target.files && e.target.files[0]) {
@@ -191,6 +272,31 @@ export default function VisualizacaoEditavel({
         }
       }
       reader.readAsDataURL(e.target.files[0])
+    }
+  }
+
+  const handleImagePaste = (e: React.ClipboardEvent, itemId: string) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      
+      // Verificar se é uma imagem
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault()
+        const blob = item.getAsFile()
+        if (blob) {
+          const reader = new FileReader()
+          reader.onload = (ev) => {
+            if (ev.target?.result) {
+              updateItem(itemId, 'imagem', ev.target.result as string)
+            }
+          }
+          reader.readAsDataURL(blob)
+        }
+        break
+      }
     }
   }
 
@@ -207,38 +313,38 @@ export default function VisualizacaoEditavel({
   }
 
   // Funções de reordenação dos itens
-  const moverItemParaCima = (index: number) => {
+  const moverItemParaCima = useCallback((index: number) => {
     if (index === 0) return // Já está no topo
-    const novosItens = [...orcamento.itens]
+    const novosItens = [...orcamentoRef.current.itens]
     const temp = novosItens[index]
     novosItens[index] = novosItens[index - 1]
     novosItens[index - 1] = temp
-    setOrcamento({ ...orcamento, itens: novosItens })
-  }
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
 
-  const moverItemParaBaixo = (index: number) => {
-    if (index === orcamento.itens.length - 1) return // Já está no final
-    const novosItens = [...orcamento.itens]
+  const moverItemParaBaixo = useCallback((index: number) => {
+    if (index === orcamentoRef.current.itens.length - 1) return // Já está no final
+    const novosItens = [...orcamentoRef.current.itens]
     const temp = novosItens[index]
     novosItens[index] = novosItens[index + 1]
     novosItens[index + 1] = temp
-    setOrcamento({ ...orcamento, itens: novosItens })
-  }
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
 
-  const moverItemParaPosicao = (itemId: string, novaPosicao: number) => {
-    const indexAtual = orcamento.itens.findIndex(i => i.id === itemId)
+  const moverItemParaPosicao = useCallback((itemId: string, novaPosicao: number) => {
+    const indexAtual = orcamentoRef.current.itens.findIndex(i => i.id === itemId)
     if (indexAtual === -1) return
 
     // Ajustar para índice baseado em 0 (usuário digita 1, 2, 3...)
     const novoIndex = novaPosicao - 1
 
-    if (novoIndex < 0 || novoIndex >= orcamento.itens.length || novoIndex === indexAtual) return
+    if (novoIndex < 0 || novoIndex >= orcamentoRef.current.itens.length || novoIndex === indexAtual) return
 
-    const novosItens = [...orcamento.itens]
+    const novosItens = [...orcamentoRef.current.itens]
     const [itemMovido] = novosItens.splice(indexAtual, 1)
     novosItens.splice(novoIndex, 0, itemMovido)
-    setOrcamento({ ...orcamento, itens: novosItens })
-  }
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
 
   // Função para gerar PDF do Orçamento
   const gerarPDFOrcamento = async () => {
@@ -472,7 +578,7 @@ export default function VisualizacaoEditavel({
                             <CommandGroup>
                               {clientes.map(cliente => (
                                 <CommandItem key={cliente.id} onSelect={() => {
-                                  setOrcamento({ ...orcamento, cliente: cliente, nomeContato: cliente.contato || "", telefoneContato: cliente.telefone || "" })
+                                  setOrcamentoRef.current({ ...orcamentoRef.current, cliente: cliente, nomeContato: cliente.contato || "", telefoneContato: cliente.telefone || "" })
                                   setOpenCliente(false)
                                 }}>
                                   {cliente.nome}
@@ -618,14 +724,14 @@ export default function VisualizacaoEditavel({
                             e.preventDefault()
                             setDragOverItemId(null)
                             const draggedItemId = e.dataTransfer.getData("text/plain")
-                            const draggedIndex = orcamento.itens.findIndex((i) => i.id === draggedItemId)
+                            const draggedIndex = orcamentoRef.current.itens.findIndex((i) => i.id === draggedItemId)
                             const targetIndex = idx
 
                             if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
-                              const novosItens = [...orcamento.itens]
+                              const novosItens = [...orcamentoRef.current.itens]
                               const [itemRemovido] = novosItens.splice(draggedIndex, 1)
                               novosItens.splice(targetIndex, 0, itemRemovido)
-                              setOrcamento({ ...orcamento, itens: novosItens })
+                              setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
                             }
                           }}
                         >
@@ -646,7 +752,7 @@ export default function VisualizacaoEditavel({
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => moverItemParaBaixo(idx)}
-                                  disabled={idx === orcamento.itens.length - 1}
+                                  disabled={idx >= orcamento.itens.length - 1}
                                   className="h-5 w-5 rounded-full hover:bg-primary/10"
                                   title="Mover para baixo"
                                 >
@@ -686,7 +792,8 @@ export default function VisualizacaoEditavel({
                                   </PopoverContent>
                                 </Popover>
                                 <TextareaTransparente
-                                  value={item.observacaoComercial}
+                                  key={`obs-comercial-${item.id}`}
+                                  value={item.observacaoComercial || ""}
                                   onChange={e => updateItem(item.id, 'observacaoComercial', e.target.value)}
                                   placeholder="Obs. Comercial"
                                   className="text-[10px] text-gray-500 italic w-full mt-1"
@@ -787,10 +894,11 @@ export default function VisualizacaoEditavel({
                   <h3 className="font-bold mb-1 text-primary text-sm">OBSERVAÇÕES</h3>
                   {modoEdicao ? (
                     <TextareaTransparente
-                      value={orcamento.observacoes}
+                      key={`obs-orcamento-${orcamento.id || 'new'}`}
+                      value={orcamento.observacoes || ""}
                       onChange={e => updateOrcamentoField('observacoes', e.target.value)}
                       className="text-xs bg-accent p-2 rounded-md w-full min-h-[40px]"
-                      placeholder="Adicione observações gerais..."
+                      placeholder="Observações gerais do orçamento..."
                     />
                   ) : (
                     <p className="text-xs bg-accent p-2 rounded-md" style={{ minHeight: "24px" }}>
@@ -859,23 +967,28 @@ export default function VisualizacaoEditavel({
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              <h3 className="font-bold text-lg mb-4 text-primary border-b-2 border-primary pb-2 flex justify-between">
+            <div className="p-4 space-y-3">
+              <h3 className="font-bold text-base mb-2 text-primary border-b border-primary pb-1 flex justify-between">
                 {item.produto?.nome}
-                <span className="text-sm font-normal text-gray-500">Item {idx + 1}</span>
+                <span className="text-xs font-normal text-gray-500">Item {idx + 1}</span>
               </h3>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* Imagem Upload */}
-                <div className={cn("text-center border-2 border-dashed border-gray-200 rounded-lg p-4 relative", modoEdicao && "hover:bg-gray-50 transition-colors group")}>
+                <div 
+                  className={cn("text-center border-2 border-dashed border-gray-200 rounded-lg p-2 relative", modoEdicao && "hover:bg-gray-50 transition-colors group")}
+                  tabIndex={modoEdicao ? 0 : -1}
+                  onPaste={modoEdicao ? (e) => handleImagePaste(e, item.id) : undefined}
+                  title={modoEdicao ? "Clique para selecionar ou cole uma imagem (Ctrl+V)" : undefined}
+                >
                   <img
                     src={item.imagem || "/placeholder.svg"}
-                    className="max-h-[400px] max-w-[70%] mx-auto object-contain"
+                    className="max-h-[280px] max-w-[65%] mx-auto object-contain"
                   />
                   {modoEdicao && (
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity cursor-pointer">
                       <div className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2">
-                        <Upload className="w-4 h-4" /> Alterar Imagem
+                        <Upload className="w-4 h-4" /> Alterar Imagem (ou Ctrl+V)
                       </div>
                       <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleImageUpload(e, item.id)} />
                     </div>
@@ -883,111 +996,130 @@ export default function VisualizacaoEditavel({
                 </div>
 
                 {/* Specs Grid */}
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Tecido */}
-                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card">
-                    <div className="bg-primary/10 p-2 border-b border-primary/10 font-medium text-primary">Tecido</div>
-                    <div className="p-3 space-y-2">
-                      {modoEdicao ? (
-                        <>
-                          <Select value={item.tecidoSelecionado?.nome} onValueChange={val => {
-                            const t = item.produto?.tecidos.find(x => x.nome === val)
-                            if (t) updateItem(item.id, 'tecidoSelecionado', t)
-                          }}>
-                            <SelectTrigger className="h-8 text-xs bg-transparent border-none p-0 font-bold"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>{item.produto?.tecidos.map(t => <SelectItem key={t.nome} value={t.nome}>{t.nome}</SelectItem>)}</SelectContent>
-                          </Select>
-                          <p className="text-xs text-gray-500">{item.tecidoSelecionado?.composicao || "Composição..."}</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-bold text-xs">{item.tecidoSelecionado?.nome || "Não selecionado"}</p>
-                          <p className="text-xs text-gray-500">{item.tecidoSelecionado?.composicao || "Composição não especificada"}</p>
-                        </>
-                      )}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Tecido + Cor */}
+                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card col-span-1">
+                    <div className="bg-primary/10 p-1.5 border-b border-primary/10 font-medium text-primary text-xs flex justify-between items-center">
+                      <span>Tecido / Cor</span>
+                    </div>
+                    <div className="p-2 space-y-1.5">
+                      {/* Tecido */}
+                      <div>
+                        <p className="text-[10px] text-gray-600 mb-0.5">Tecido</p>
+                        {modoEdicao ? (
+                          <>
+                            <Select value={item.tecidoSelecionado?.nome} onValueChange={val => {
+                              const t = item.produto?.tecidos.find(x => x.nome === val)
+                              if (t) updateItem(item.id, 'tecidoSelecionado', t)
+                            }}>
+                              <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                              <SelectContent>{item.produto?.tecidos.map((t, tIdx) => <SelectItem key={`${item.id}-tecido-${tIdx}`} value={t.nome}>{t.nome}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-gray-500 mt-0.5">{item.tecidoSelecionado?.composicao || "Composição..."}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-bold text-[10px]">{item.tecidoSelecionado?.nome || "Não selecionado"}</p>
+                            <p className="text-[10px] text-gray-500">{item.tecidoSelecionado?.composicao || "Composição não especificada"}</p>
+                          </>
+                        )}
+                      </div>
+                      {/* Cor */}
+                      <div className="pt-1 border-t border-primary/5">
+                        <p className="text-[10px] text-gray-600 mb-0.5">Cor</p>
+                        {modoEdicao ? (
+                          <div className="flex items-center gap-2">
+                            <Select value={item.corSelecionada} onValueChange={val => updateItem(item.id, 'corSelecionada', val)}>
+                              <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold min-w-[80px]"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                              <SelectContent>{item.produto?.cores.map((c, cIdx) => <SelectItem key={`${item.id}-cor-${cIdx}`} value={c}>{c}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-[10px]">{item.corSelecionada || "Não selecionada"}</p>
+                            <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  {/* Cor */}
-                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card">
-                    <div className="bg-primary/10 p-2 border-b border-primary/10 font-medium text-primary">Cor</div>
-                    <div className="p-3">
-                      {modoEdicao ? (
-                        <>
-                          <Select value={item.corSelecionada} onValueChange={val => updateItem(item.id, 'corSelecionada', val)}>
-                            <SelectTrigger className="h-8 text-xs bg-transparent border-none p-0 font-bold"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>{item.produto?.cores.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                          </Select>
-                          <div className="w-6 h-6 rounded-full border mt-2" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-bold text-xs mb-2">{item.corSelecionada || "Não selecionada"}</p>
-                          <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {/* Artes - Simplificado para Textarea por enquanto ou lista editavel */}
-                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card">
-                    <div className="bg-primary/10 p-2 border-b border-primary/10 font-medium text-primary flex justify-between items-center">
-                      Artes
+                  {/* Artes - ocupa duas colunas, com mais largura */}
+                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card col-span-2">
+                    <div className="bg-primary/10 p-1.5 border-b border-primary/10 font-medium text-primary flex justify-between items-center">
+                      <span className="text-xs">Artes</span>
                       {modoEdicao && (
-                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
-                          const novasEstampas = [...(item.estampas || []), { id: crypto.randomUUID(), tipo: "Silk", posicao: "Frente", largura: 10, comprimento: 10 }]
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
+                          const novasEstampas = [...(item.estampas || []), { id: crypto.randomUUID(), tipo: TIPOS_ARTE[0], posicao: POSICOES_ARTE[0], largura: 10, comprimento: 10 }]
                           updateItem(item.id, 'estampas', novasEstampas)
                         }}><Plus className="h-3 w-3" /></Button>
                       )}
                     </div>
-                    <div className="p-3 space-y-2 max-h-[150px] overflow-y-auto">
+                    <div className="p-1.5 space-y-0.5">
                       {item.estampas?.map((est, i) => (
-                        <div key={est.id} className={cn("text-xs border-b pb-1 mb-1", modoEdicao && "relative group")}>
-                          <div className="font-bold flex gap-1">
-                            <span className="bg-primary/10 text-primary rounded-full w-4 h-4 flex items-center justify-center text-[10px]">{i + 1}</span>
-                            {modoEdicao ? (
-                              <InputTransparente value={est.posicao} onChange={e => {
-                                const news = item.estampas!.map(x => x.id === est.id ? { ...x, posicao: e.target.value } : x)
-                                updateItem(item.id, 'estampas', news)
-                              }} className="font-bold w-full p-0 h-auto" />
-                            ) : (
-                              <span className="font-bold">{est.posicao}</span>
-                            )}
-                          </div>
-                          <div className="flex gap-1 text-[10px] text-gray-500">
+                        <div key={est.id} className={cn("text-[10px]", modoEdicao && "relative group pr-5")}> 
+                          <div className="flex items-center gap-1">
+                            <span className="bg-primary/10 text-primary rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px] flex-shrink-0">{i + 1}</span>
                             {modoEdicao ? (
                               <>
-                                <InputTransparente value={est.tipo} onChange={e => {
-                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, tipo: e.target.value } : x)
+                                <Select value={est.posicao} onValueChange={val => {
+                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, posicao: val } : x)
                                   updateItem(item.id, 'estampas', news)
-                                }} className="w-12 p-0 h-auto" /> -
+                                }}>
+                                  <SelectTrigger className="h-5 text-[9px] bg-transparent border-none p-0 font-bold w-[110px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {POSICOES_ARTE.map(pos => (
+                                      <SelectItem key={pos} value={pos} className="text-[10px]">{pos}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select value={est.tipo} onValueChange={val => {
+                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, tipo: val } : x)
+                                  updateItem(item.id, 'estampas', news)
+                                }}>
+                                  <SelectTrigger className="h-5 text-[9px] bg-transparent border-none p-0 w-[70px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {TIPOS_ARTE.map(tipo => (
+                                      <SelectItem key={tipo} value={tipo} className="text-[10px]">{tipo}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <span>-</span>
                                 <InputTransparente type="number" value={est.largura} onChange={e => {
                                   const news = item.estampas!.map(x => x.id === est.id ? { ...x, largura: Number(e.target.value) } : x)
                                   updateItem(item.id, 'estampas', news)
-                                }} className="w-8 p-0 h-auto text-center" />x
+                                }} className="w-8 p-0 h-5 text-center text-[9px]" />
+                                <span>x</span>
                                 <InputTransparente type="number" value={est.comprimento} onChange={e => {
                                   const news = item.estampas!.map(x => x.id === est.id ? { ...x, comprimento: Number(e.target.value) } : x)
                                   updateItem(item.id, 'estampas', news)
-                                }} className="w-8 p-0 h-auto text-center" /> cm
+                                }} className="w-8 p-0 h-5 text-center text-[9px]" />
+                                <span>cm</span>
                               </>
                             ) : (
-                              <span>{est.tipo} - {est.largura}x{est.comprimento} cm</span>
+                              <span className="ml-1">{est.posicao} • {est.tipo} • {est.largura}x{est.comprimento} cm</span>
                             )}
                           </div>
                           {modoEdicao && (
                             <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-4 w-4 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => {
                               updateItem(item.id, 'estampas', item.estampas!.filter(x => x.id !== est.id))
-                            }}><Trash2 className="w-3 h-3" /></Button>
+                            }}><Trash2 className="w-2.5 h-2.5" /></Button>
                           )}
                         </div>
                       ))}
-                      {(!item.estampas || item.estampas.length === 0) && <p className="text-gray-400 italic text-xs">Sem artes.</p>}
+                      {(!item.estampas || item.estampas.length === 0) && <p className="text-gray-400 italic text-[10px]">Sem artes.</p>}
                     </div>
                   </div>
                 </div>
 
                 {/* Tabela Tamanhos Item */}
-                <div className="mt-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-bold text-primary">Tabela de Tamanhos</h4>
+                <div className="mt-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <h4 className="font-bold text-primary text-sm">Tabela de Tamanhos</h4>
                     {modoEdicao && tiposTamanho.length > 0 && (
                       <Select
                         value={item.tipoTamanhoSelecionado || ""}
@@ -1084,16 +1216,17 @@ export default function VisualizacaoEditavel({
 
                 {/* Obs Tecnica */}
                 <div>
-                  <h4 className="font-bold mb-1 text-primary text-sm">Observações Técnicas</h4>
+                  <h4 className="font-bold mb-0.5 text-primary text-xs">Observações Técnicas</h4>
                   {modoEdicao ? (
                     <TextareaTransparente
-                      value={item.observacaoTecnica}
+                      key={`obs-tecnica-${item.id}`}
+                      value={item.observacaoTecnica || ""}
                       onChange={e => updateItem(item.id, 'observacaoTecnica', e.target.value)}
-                      className="text-xs bg-accent p-3 rounded-md w-full min-h-[60px]"
+                      className="text-[10px] bg-accent p-2 rounded-md w-full min-h-[40px]"
                       placeholder="Detalhes técnicos de produção..."
                     />
                   ) : (
-                    <p className="text-xs bg-accent p-3 rounded-md" style={{ whiteSpace: "pre-wrap" }}>
+                    <p className="text-[10px] bg-accent p-2 rounded-md" style={{ whiteSpace: "pre-wrap" }}>
                       {item.observacaoTecnica || "Nenhuma observação técnica."}
                     </p>
                   )}

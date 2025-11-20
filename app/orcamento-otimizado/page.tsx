@@ -69,6 +69,11 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
   const [carregandoOrcamentos, setCarregandoOrcamentos] = useState(false)
   const [exportandoPDF, setExportandoPDF] = useState(false)
 
+  // Estados para edição do número do orçamento
+  const [editandoNumero, setEditandoNumero] = useState(false)
+  const [numeroTemp, setNumeroTemp] = useState("")
+  const [erroNumero, setErroNumero] = useState("")
+
   // Carregar dados iniciais
   useEffect(() => {
     carregarDados()
@@ -468,6 +473,54 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
     }
   }
 
+  // Validar e atualizar número do orçamento
+  const validarEAtualizarNumero = async (novoNumero: string) => {
+    try {
+      // Validar formato (deve ser 4 dígitos)
+      const numeroLimpo = novoNumero.trim().padStart(4, "0")
+      if (!/^\d{4}$/.test(numeroLimpo)) {
+        setErroNumero("Número deve ter 4 dígitos")
+        return false
+      }
+
+      // Verificar se o número já existe (exceto se for o próprio orçamento)
+      const { data: orcamentosExistentes } = await supabase
+        .from("orcamentos")
+        .select("id, numero")
+        .is("deleted_at", null)
+        .ilike("numero", `${numeroLimpo} - %`)
+
+      if (orcamentosExistentes && orcamentosExistentes.length > 0) {
+        // Se encontrou, verificar se não é o próprio orçamento
+        const numeroExiste = orcamentosExistentes.some((orc) => orc.id !== orcamento.id)
+        if (numeroExiste) {
+          setErroNumero(`Número ${numeroLimpo} já existe`)
+          return false
+        }
+      }
+
+      // Atualizar o número mantendo o restante do formato
+      const partesNumero = orcamento.numero.split(" - ")
+      const novoNumeroCompleto = `${numeroLimpo} - ${partesNumero.slice(1).join(" - ")}`
+      
+      setOrcamento({ ...orcamento, numero: novoNumeroCompleto })
+      setTemAlteracoes(true)
+      setErroNumero("")
+      setEditandoNumero(false)
+      
+      toast({
+        title: "✅ Número atualizado",
+        description: `Número alterado para ${numeroLimpo}. Salve o orçamento para confirmar.`,
+      })
+      
+      return true
+    } catch (error) {
+      console.error("Erro ao validar número:", error)
+      setErroNumero("Erro ao validar número")
+      return false
+    }
+  }
+
   const salvarOrcamento = async () => {
     try {
       setIsSaving(true)
@@ -488,6 +541,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         const { data: ultimoOrcamento } = await supabase
           .from("orcamentos")
           .select("numero")
+          .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(1)
 
@@ -558,7 +612,8 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
       // Salvar itens com segurança: primeiro salvar novos, depois deletar antigos
       const novosItensIds: string[] = []
       
-      for (const item of orcamento.itens) {
+      for (let index = 0; index < orcamento.itens.length; index++) {
+        const item = orcamento.itens[index]
         const dadosItem = {
           orcamento_id: orcamentoId,
           produto_id: item.produtoId && item.produtoId.length > 5 ? item.produtoId : null,
@@ -571,6 +626,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           observacao_comercial: item.observacaoComercial,
           observacao_tecnica: item.observacaoTecnica,
           imagem: item.imagem,
+          posicao: index,
         }
 
         // Se o item já tem ID, tentar atualizar; se não, inserir novo
@@ -730,7 +786,66 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
           <div>
             <h1 className="text-lg md:text-xl font-bold text-primary">Orçamento Otimizado</h1>
-            <p className="text-gray-500 mt-0.5 text-xs md:text-sm">Orçamento: {orcamento.numero.split(" - ")[0]}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              {!editandoNumero ? (
+                <p 
+                  className="text-gray-500 text-xs md:text-sm cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => {
+                    if (orcamento.id) { // Só permite editar se já foi salvo
+                      setEditandoNumero(true)
+                      setNumeroTemp(orcamento.numero.split(" - ")[0])
+                      setErroNumero("")
+                    }
+                  }}
+                  title={orcamento.id ? "Clique para editar" : "Salve o orçamento antes de editar o número"}
+                >
+                  Orçamento: {orcamento.numero.split(" - ")[0]} {orcamento.id && <Edit3 className="inline h-3 w-3 ml-1" />}
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={numeroTemp}
+                    onChange={(e) => setNumeroTemp(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        validarEAtualizarNumero(numeroTemp)
+                      } else if (e.key === "Escape") {
+                        setEditandoNumero(false)
+                        setErroNumero("")
+                      }
+                    }}
+                    className="w-20 h-7 text-xs"
+                    placeholder="0000"
+                    maxLength={4}
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => validarEAtualizarNumero(numeroTemp)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    OK
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditandoNumero(false)
+                      setErroNumero("")
+                    }}
+                    className="h-7 px-2 text-xs"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+              {erroNumero && (
+                <span className="text-red-500 text-xs flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {erroNumero}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
           <div className="flex border border-primary/20 rounded-md overflow-hidden">
@@ -799,6 +914,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
                 const { data: ultimoOrcamento } = await supabase
                   .from("orcamentos")
                   .select("numero")
+                  .is("deleted_at", null)
                   .order("created_at", { ascending: false })
                   .limit(1)
 
