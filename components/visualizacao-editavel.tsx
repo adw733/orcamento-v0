@@ -368,87 +368,34 @@ export default function VisualizacaoEditavel({
         {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
           <div className="border border-gray-300 rounded-md overflow-hidden shadow-sm orcamento-principal bg-white pdf-section">
             {/* Header */}
-            <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full text-white">
+            <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  {modoEdicao ? (
-                    <div className="relative group cursor-pointer">
-                      <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center w-[50px] h-[50px] overflow-hidden">
-                        <img src={dadosEmpresa?.logo_url || "/placeholder.svg"} className="max-w-full max-h-full object-contain" />
-                      </div>
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-md transition-opacity">
-                        <Upload className="w-4 h-4 text-white" />
-                        <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center w-[50px] h-[50px] overflow-hidden">
-                      <img src={dadosEmpresa?.logo_url || "/placeholder.svg"} className="max-w-full max-h-full object-contain" />
-                    </div>
-                  )}
+                  <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center" style={{ width: '50px', height: '50px' }}>
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5"/>
+                      <path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                      <path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                    </svg>
+                  </div>
                   <div>
-                    <h1 className="text-xl font-bold font-sans tracking-tight uppercase flex items-center gap-2">
-                      ORÇAMENTO - {modoEdicao ? (
-                        <InputTransparente
-                          value={orcamento.numero}
-                          onChange={e => updateOrcamentoField('numero', e.target.value)}
-                          className="text-white font-bold w-40 text-xl p-0 border-none focus:ring-white/30 h-auto"
-                        />
-                      ) : (
-                        <span>{orcamento.numero.split(" - ")[0]}</span>
-                      )}
-                    </h1>
-                    <p className="text-white/90 text-sm uppercase">
-                      {modoEdicao ? (
-                        <span className="flex gap-1 items-center">
-                          <InputTransparente
-                            value={orcamento.cliente?.nome || ""}
-                            onChange={e => updateClienteField('nome', e.target.value)}
-                            className="text-white/90 text-sm uppercase w-auto min-w-[100px] p-0 h-auto font-normal border-none focus:ring-white/30"
-                            placeholder="CLIENTE"
-                          />
-                          -
-                          <InputTransparente
-                            value={orcamento.nomeContato || ""}
-                            onChange={e => updateOrcamentoField('nomeContato', e.target.value)}
-                            className="text-white/90 text-sm uppercase w-auto min-w-[100px] p-0 h-auto font-normal border-none focus:ring-white/30"
-                            placeholder="CONTATO"
-                          />
-                        </span>
-                      ) : (
-                        <span>
-                          {orcamento.cliente?.nome || "EMPRESA"} - {orcamento.nomeContato || orcamento.cliente?.contato || "CONTATO"}
-                        </span>
-                      )}
-                    </p>
+                    <div>
+                      <h1 className="text-xl font-bold text-white font-sans tracking-tight uppercase">
+                        ORÇAMENTO - {orcamento.numero.split(" - ")[0]}
+                      </h1>
+                      <p className="text-white/90 text-sm uppercase">
+                        {orcamento.cliente?.nome || "CLIENTE"} - {orcamento.nomeContato || "CONTATO"}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Dados Empresa (Direita) */}
                 <div className="text-right bg-white/10 p-2 rounded-md backdrop-blur-sm">
-                  {modoEdicao ? (
-                    <>
-                      <InputTransparente
-                        value={dadosEmpresa?.nome || ""}
-                        onChange={e => setDadosEmpresa && dadosEmpresa && setDadosEmpresa({ ...dadosEmpresa, nome: e.target.value })}
-                        className="text-right text-white font-bold text-lg p-0 h-auto border-none focus:ring-white/30 placeholder:text-white/50"
-                      />
-                      <div className="text-white/80 text-xs space-y-0.5">
-                        <div className="flex justify-end items-center gap-1">
-                          CNPJ: <InputTransparente value={dadosEmpresa?.cnpj || ""} onChange={e => setDadosEmpresa && dadosEmpresa && setDadosEmpresa({ ...dadosEmpresa, cnpj: e.target.value })} className="text-right w-32 text-xs p-0 h-auto border-none focus:ring-white/30 text-white/80" />
-                        </div>
-                        <InputTransparente value={dadosEmpresa?.email || ""} onChange={e => setDadosEmpresa && dadosEmpresa && setDadosEmpresa({ ...dadosEmpresa, email: e.target.value })} className="text-right w-full text-xs p-0 h-auto border-none focus:ring-white/30 text-white/80" />
-                        <InputTransparente value={dadosEmpresa?.telefone || ""} onChange={e => setDadosEmpresa && dadosEmpresa && setDadosEmpresa({ ...dadosEmpresa, telefone: e.target.value })} className="text-right w-full text-xs p-0 h-auto border-none focus:ring-white/30 text-white/80" />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome || "ONEBASE"}</h2>
-                      <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj || "12.345.678/0001-90"}</p>
-                      <p className="text-white/80 text-xs">{dadosEmpresa?.email || "contato@onebase.com.br"}</p>
-                      <p className="text-white/80 text-xs">{dadosEmpresa?.telefone || "(11) 4321-1234"}</p>
-                    </>
-                  )}
+                  <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome || "OneBase Uniformes"}</h2>
+                  <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj || "57.855.073/0001-82"}</p>
+                  <p className="text-white/80 text-xs">{dadosEmpresa?.email || "onebase.store@gmail.com"}</p>
+                  <p className="text-white/80 text-xs">{dadosEmpresa?.telefone || "(11) 99541-6072"}</p>
                 </div>
               </div>
             </div>
@@ -837,20 +784,28 @@ export default function VisualizacaoEditavel({
         {(modoExportacao === "completo" || modoExportacao === "ficha") && orcamento.itens.map((item, idx) => (
           <div key={item.id} className="border border-gray-300 rounded-md overflow-hidden shadow-sm ficha-tecnica bg-white page-break-before pdf-section mt-8">
             {/* Header Ficha */}
-            <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full text-white">
+            <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-md w-[50px] h-[50px] flex items-center justify-center">
+                  <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center w-[50px] h-[50px] overflow-hidden">
                     <img src={dadosEmpresa?.logo_url || "/placeholder.svg"} className="max-w-full max-h-full object-contain" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold uppercase">FICHA TÉCNICA - {orcamento.numero.split(" - ")[0]}</h1>
-                    <p className="text-white/90 text-sm uppercase">{orcamento.cliente?.nome} - {orcamento.nomeContato}</p>
+                    <div>
+                      <h1 className="text-xl font-bold text-white font-sans tracking-tight uppercase">
+                        FICHA TÉCNICA - {orcamento.numero.split(" - ")[0]}
+                      </h1>
+                      <p className="text-white/90 text-sm uppercase">
+                        {orcamento.cliente?.nome || "EMPRESA"} - {orcamento.nomeContato || orcamento.cliente?.contato || "CONTATO"}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="text-right bg-white/10 p-2 rounded-md backdrop-blur-sm">
-                  <h2 className="text-lg font-bold">{dadosEmpresa?.nome}</h2>
-                  <p className="text-xs text-white/80">CNPJ: {dadosEmpresa?.cnpj}</p>
+                  <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome}</h2>
+                  <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj}</p>
+                  <p className="text-white/80 text-xs">{dadosEmpresa?.email}</p>
+                  <p className="text-white/80 text-xs">{dadosEmpresa?.telefone}</p>
                 </div>
               </div>
             </div>

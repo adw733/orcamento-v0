@@ -18,6 +18,7 @@ import {
   ChevronDown,
   FileDown,
   AlertCircle,
+  Edit3,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -34,6 +35,7 @@ interface ListaOrcamentosProps {
   onNovoOrcamento: () => void
   onDeleteOrcamento: (orcamentoId: string) => Promise<void>
   onUpdateStatus?: (orcamentoId: string, status: string) => Promise<void>
+  onExportOrcamento?: (orcamentoId: string, tipoExportacao: "completo" | "ficha") => Promise<void>
   onExportOrcamento?: (orcamentoId: string, tipoExportacao: "completo" | "ficha") => Promise<void>
   onAbrirOtimizado?: (orcamentoId: string) => void
   reloadRef?: React.MutableRefObject<(() => Promise<void>) | null>
@@ -223,10 +225,10 @@ export default function ListaOrcamentos({
           prazoEntrega: orcamento.prazo_entrega || "30 DIAS", // Incluir o prazo de entrega
           cliente: orcamento.cliente
             ? {
-                id: orcamento.cliente.id,
-                nome: orcamento.cliente.nome,
-                cnpj: orcamento.cliente.cnpj || "",
-              }
+              id: orcamento.cliente.id,
+              nome: orcamento.cliente.nome,
+              cnpj: orcamento.cliente.cnpj || "",
+            }
             : null,
           itens: Array.isArray(itensParseados) ? itensParseados : [],
           created_at: orcamento.created_at,
@@ -319,7 +321,7 @@ export default function ListaOrcamentos({
           .toLowerCase()
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "");
-        
+
         return terms.every(term => searchableContent.includes(term));
       });
     }
@@ -642,7 +644,7 @@ export default function ListaOrcamentos({
           onClick={onNovoOrcamento}
           className="bg-primary hover:bg-primary-dark text-white transition-colors w-full lg:w-auto whitespace-nowrap"
         >
-          <PlusCircle className="h-4 w-4 mr-2" /> 
+          <PlusCircle className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Novo Orçamento</span>
           <span className="sm:hidden">Novo</span>
         </Button>
@@ -662,11 +664,10 @@ export default function ListaOrcamentos({
           variant={statusFilter === "6" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("6")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "6"
-              ? "bg-red-500 text-white"
-              : "text-red-500 border-red-500 hover:bg-red-50"
-          }`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "6"
+            ? "bg-red-500 text-white"
+            : "text-red-500 border-red-500 hover:bg-red-50"
+            }`}
         >
           <span className="hidden sm:inline">6 - Recusada</span>
           <span className="sm:hidden">6</span>
@@ -675,11 +676,10 @@ export default function ListaOrcamentos({
           variant={statusFilter === "5" || statusFilter === "proposta" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("5")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "5" || statusFilter === "proposta"
-              ? "bg-blue-500 text-white"
-              : "text-blue-500 border-blue-500 hover:bg-blue-50"
-          }`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "5" || statusFilter === "proposta"
+            ? "bg-blue-500 text-white"
+            : "text-blue-500 border-blue-500 hover:bg-blue-50"
+            }`}
         >
           <span className="hidden sm:inline">5 - Proposta</span>
           <span className="sm:hidden">5</span>
@@ -688,11 +688,10 @@ export default function ListaOrcamentos({
           variant={statusFilter === "4" || statusFilter === "execucao" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("4")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "4" || statusFilter === "execucao"
-              ? "bg-amber-500 text-white"
-              : "text-amber-500 border-amber-500 hover:bg-amber-50"
-          }`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "4" || statusFilter === "execucao"
+            ? "bg-amber-500 text-white"
+            : "text-amber-500 border-amber-500 hover:bg-amber-50"
+            }`}
         >
           <span className="hidden sm:inline">4 - Execução</span>
           <span className="sm:hidden">4</span>
@@ -701,11 +700,10 @@ export default function ListaOrcamentos({
           variant={statusFilter === "3" || statusFilter === "cobranca" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("3")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "3" || statusFilter === "cobranca"
-              ? "bg-red-500 text-white"
-              : "text-red-500 border-red-500 hover:bg-red-50"
-          }`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "3" || statusFilter === "cobranca"
+            ? "bg-red-500 text-white"
+            : "text-red-500 border-red-500 hover:bg-red-50"
+            }`}
         >
           <span className="hidden sm:inline">3 - Cobrança</span>
           <span className="sm:hidden">3</span>
@@ -714,11 +712,10 @@ export default function ListaOrcamentos({
           variant={statusFilter === "2" || statusFilter === "entregue" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("2")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "2" || statusFilter === "entregue"
-              ? "bg-purple-500 text-white"
-              : "text-purple-500 border-purple-500 hover:bg-purple-50"
-          }`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "2" || statusFilter === "entregue"
+            ? "bg-purple-500 text-white"
+            : "text-purple-500 border-purple-500 hover:bg-purple-50"
+            }`}
         >
           <span className="hidden sm:inline">2 - Entregue</span>
           <span className="sm:hidden">2</span>
@@ -727,11 +724,10 @@ export default function ListaOrcamentos({
           variant={statusFilter === "1" || statusFilter === "finalizado" ? "default" : "outline"}
           size="sm"
           onClick={() => setStatusFilter("1")}
-          className={`text-xs whitespace-nowrap ${
-            statusFilter === "1" || statusFilter === "finalizado"
-              ? "bg-green-500 text-white"
-              : "text-green-500 border-green-500 hover:bg-green-50"
-          }`}
+          className={`text-xs whitespace-nowrap ${statusFilter === "1" || statusFilter === "finalizado"
+            ? "bg-green-500 text-white"
+            : "text-green-500 border-green-500 hover:bg-green-50"
+            }`}
         >
           <span className="hidden sm:inline">1 - Finalizada</span>
           <span className="sm:hidden">1</span>

@@ -64,12 +64,20 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     nomeContato: "",
     telefoneContato: "",
   }
-  
+
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [orcamento, setOrcamento] = useState<Orcamento>(orcamentoInicial)
   const [isPrinting, setIsPrinting] = useState(false)
-  const [abaAtiva, setAbaAtiva] = useState<string>(abaAtivaInicial)
+  const [abaAtiva, setAbaAtiva] = useState<string>(() => {
+    // Ler da URL primeiro, depois usar abaAtivaInicial como fallback
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '')
+      const [aba] = hash.split('?')
+      if (aba) return aba
+    }
+    return abaAtivaInicial
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [orcamentoSalvo, setOrcamentoSalvo] = useState<string | null>(null)
   // Adicionar um novo estado para controlar se estamos criando um novo orçamento
@@ -88,7 +96,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [exportandoFichaTecnica, setExportandoFichaTecnica] = useState(false)
   // Adicionar um estado para controlar o modal de visualização após os outros estados:
   const [modalVisualizacaoAberto, setModalVisualizacaoAberto] = useState(false)
-  
+
   // Estados para controle de mudanças não salvas
   const [temAlteracoes, setTemAlteracoes] = useState(false)
   const [orcamentoOriginal, setOrcamentoOriginal] = useState<Orcamento | null>(orcamentoInicial)
@@ -99,10 +107,47 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Estado para ID do orçamento otimizado
   const [orcamentoOtimizadoId, setOrcamentoOtimizadoId] = useState<string | null>(null)
 
+  // Efeito para inicializar estado baseado na URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '')
+      const [aba, queryString] = hash.split('?')
+      const params = new URLSearchParams(queryString)
+      const id = params.get('id')
+
+      if (aba) {
+        setAbaAtiva(aba)
+      }
+
+      if (aba === 'orcamento-otimizado' && id) {
+        setOrcamentoOtimizadoId(id)
+      }
+    }
+  }, [])
+
+  // Efeito para atualizar URL quando estado muda
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let newHash = `#${abaAtiva}`
+
+      if (abaAtiva === 'orcamento-otimizado' && orcamentoOtimizadoId) {
+        newHash += `?id=${orcamentoOtimizadoId}`
+      }
+
+      if (window.location.hash !== newHash) {
+        window.history.pushState({}, "", newHash)
+      }
+    }
+  }, [abaAtiva, orcamentoOtimizadoId])
+
+  const handleOrcamentoOtimizadoChange = (id: string) => {
+    setOrcamentoOtimizadoId(id || null)
+  }
+
   const documentoRef = useRef<HTMLDivElement>(null)
   const orcamentoRef = useRef<HTMLDivElement>(null)
   const fichasTecnicasRef = useRef<HTMLDivElement[]>([])
-  
+
   // Estado para controlar o loading do PDF profissional
   const [gerandoPDFProfissional, setGerandoPDFProfissional] = useState(false)
 
@@ -122,7 +167,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     if (!orcamentoRef) return false // Se não há referência, não há alterações para comparar
 
     // Comparar campos principais
-    const alteracoesDetectadas = 
+    const alteracoesDetectadas =
       orcamentoAtual.numero !== orcamentoRef.numero ||
       orcamentoAtual.data !== orcamentoRef.data ||
       orcamentoAtual.cliente?.id !== orcamentoRef.cliente?.id ||
@@ -142,9 +187,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     for (let i = 0; i < orcamentoAtual.itens.length; i++) {
       const itemAtual = orcamentoAtual.itens[i]
       const itemRef = orcamentoRef.itens[i]
-      
+
       if (!itemRef) return true
-      
+
       // Comparar apenas campos essenciais que realmente importam
       if (
         itemAtual.produtoId !== itemRef.produtoId ||
@@ -165,9 +210,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         for (let j = 0; j < itemAtual.estampas.length; j++) {
           const estampaAtual = itemAtual.estampas[j]
           const estampaRef = itemRef.estampas[j]
-          
+
           if (!estampaRef) return true
-          
+
           if (
             (estampaAtual.posicao || '') !== (estampaRef.posicao || '') ||
             (estampaAtual.tipo || '') !== (estampaRef.tipo || '') ||
@@ -196,7 +241,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     } else {
       await salvarNovoOrcamento()
     }
-    
+
     setModalConfirmacaoAberto(false)
     if (acaoPendente) {
       acaoPendente()
@@ -218,7 +263,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   useEffect(() => {
     // Não detectar durante carregamento de orçamento ou inicialização
     if (!inicializacaoCompleta || carregandoOrcamento) return
-    
+
     const alteracoes = verificarAlteracoes(orcamento, orcamentoOriginal)
     setTemAlteracoes(alteracoes)
   }, [orcamento, orcamentoOriginal, inicializacaoCompleta, carregandoOrcamento])
@@ -271,22 +316,22 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       // Incrementar e formatar com zeros à esquerda
       let proximoNumero = (maiorNumero + 1).toString().padStart(4, "0")
-      
+
       // Verificar se o número já existe (segurança adicional)
-      const numeroExiste = todosOrcamentos.some(orc => 
+      const numeroExiste = todosOrcamentos.some(orc =>
         orc.numero && orc.numero.startsWith(proximoNumero)
       )
-      
+
       // Se o número já existir, incrementar até encontrar um livre
       while (numeroExiste) {
         maiorNumero++
         proximoNumero = maiorNumero.toString().padStart(4, "0")
-        const novoNumeroExiste = todosOrcamentos.some(orc => 
+        const novoNumeroExiste = todosOrcamentos.some(orc =>
           orc.numero && orc.numero.startsWith(proximoNumero)
         )
         if (!novoNumeroExiste) break
       }
-      
+
       return proximoNumero
     } catch (error) {
       console.error("Erro ao obter próximo número de orçamento:", error)
@@ -330,7 +375,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       // Converter para pontos (1mm = 2.834645669 pt)
       const a4Width = 210 * 2.834645669  // 595.28 pt
       const a4Height = 297 * 2.834645669 // 841.89 pt
-      
+
       // Margens em pontos (10mm = 28.35pt de cada lado)
       const margin = 28.35
       const usableWidth = a4Width - (margin * 2)
@@ -339,7 +384,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       // Calcular dimensões da imagem mantendo proporção
       const imgWidthPx = canvas.width
       const imgHeightPx = canvas.height
-      
+
       // Calcular escala para ajustar à largura utilizável
       const scaleToFit = usableWidth / imgWidthPx
       const finalWidth = imgWidthPx * scaleToFit
@@ -347,43 +392,43 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       // Criar PDF
       const pdf = new jsPDF('portrait', 'pt', 'a4')
-      
+
       // Se a altura da imagem for maior que uma página
       if (finalHeight > usableHeight) {
         let yPosition = 0
         let pageNumber = 1
-        
+
         while (yPosition < finalHeight) {
           if (pageNumber > 1) {
             pdf.addPage()
           }
-          
+
           // Calcular quanto da imagem cabe nesta página
           const remainingHeight = finalHeight - yPosition
           const heightForThisPage = Math.min(usableHeight, remainingHeight)
-          
+
           // Criar um canvas temporário para esta seção
           const pageCanvas = document.createElement('canvas')
           const pageCtx = pageCanvas.getContext('2d')
-          
+
           // Configurar dimensões do canvas da página
           const scaleFactor = 2 // Mesma escala do html2canvas
           pageCanvas.width = finalWidth * scaleFactor
           pageCanvas.height = heightForThisPage * scaleFactor
-          
+
           // Desenhar a seção correspondente da imagem original
           pageCtx.drawImage(
             canvas,
-            0, 
+            0,
             (yPosition / scaleToFit) * scaleFactor, // posição Y na imagem original
-            imgWidthPx * scaleFactor, 
+            imgWidthPx * scaleFactor,
             (heightForThisPage / scaleToFit) * scaleFactor, // altura na imagem original
-            0, 
-            0, 
-            pageCanvas.width, 
+            0,
+            0,
+            pageCanvas.width,
             pageCanvas.height
           )
-          
+
           // Converter para imagem e adicionar ao PDF
           const pageImgData = pageCanvas.toDataURL('image/png', 1.0)
           pdf.addImage(
@@ -394,7 +439,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             finalWidth,
             heightForThisPage
           )
-          
+
           yPosition += usableHeight
           pageNumber++
         }
@@ -617,7 +662,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const salvarNovoOrcamento = async () => {
     try {
       setIsLoading(true)
-      
+
       if (!orcamento.cliente) {
         setFeedbackSalvamento({
           visivel: true,
@@ -711,7 +756,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       setOrcamentoSalvo(orcamentoData.id)
       setOrcamentoOriginal({ ...orcamento }) // Atualizar orçamento original
-      
+
       setFeedbackSalvamento({
         visivel: true,
         sucesso: true,
@@ -739,7 +784,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const atualizarOrcamentoExistente = async () => {
     try {
       setIsLoading(true)
-      
+
       if (!orcamentoSalvo) {
         await salvarNovoOrcamento()
         return
@@ -849,7 +894,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       }
 
       setOrcamentoOriginal({ ...orcamento }) // Atualizar orçamento original
-      
+
       setFeedbackSalvamento({
         visivel: true,
         sucesso: true,
@@ -863,12 +908,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
     } catch (error) {
       console.error("Erro ao atualizar orçamento:", error)
-      
+
       // Log mais detalhado do erro
       if (error && typeof error === 'object') {
         console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
       }
-      
+
       setFeedbackSalvamento({
         visivel: true,
         sucesso: false,
@@ -973,13 +1018,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       setFeedbackSalvamento({
         visivel: true,
         sucesso: true,
-        mensagem: `Exportando ${
-          tipoExportacao === "completo"
-            ? "documento completo"
-            : tipoExportacao === "ficha"
-              ? "ficha técnica"
-              : "orçamento"
-        }, aguarde...`,
+        mensagem: `Exportando ${tipoExportacao === "completo"
+          ? "documento completo"
+          : tipoExportacao === "ficha"
+            ? "ficha técnica"
+            : "orçamento"
+          }, aguarde...`,
       })
 
       // Carregar o orçamento do banco de dados
@@ -1051,70 +1095,70 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       let itensFormatados: ItemOrcamento[] = await Promise.all(
         itensData
           ? itensData.map(async (item) => {
-              // Buscar o produto completo com tecidos
-              let produto: Produto | undefined = undefined
-              if (item.produto) {
-                const { data: tecidosData, error: tecidosError } = await supabase
-                  .from("tecidos")
-                  .select("*")
-                  .eq("produto_id", item.produto.id)
-
-                if (tecidosError) throw tecidosError
-
-                produto = {
-                  id: item.produto.id,
-                  nome: item.produto.nome,
-                  valorBase: Number(item.produto.valor_base),
-                  tecidos: tecidosData
-                    ? tecidosData.map((t) => ({
-                        nome: t.nome,
-                        composicao: t.composicao || "",
-                      }))
-                    : [],
-                  cores: item.produto.cores || [],
-                  tamanhosDisponiveis: item.produto.tamanhos_disponiveis || [],
-                }
-              }
-
-              // Carregar estampas do item
-              const { data: estampasData, error: estampasError } = await supabase
-                .from("estampas")
+            // Buscar o produto completo com tecidos
+            let produto: Produto | undefined = undefined
+            if (item.produto) {
+              const { data: tecidosData, error: tecidosError } = await supabase
+                .from("tecidos")
                 .select("*")
-                .eq("item_orcamento_id", item.id)
+                .eq("produto_id", item.produto.id)
 
-              if (estampasError) throw estampasError
+              if (tecidosError) throw tecidosError
 
-              // Converter estampas para o formato da aplicação
-              const estampas: Estampa[] = estampasData
-                ? estampasData.map((estampa) => ({
-                    id: estampa.id,
-                    posicao: estampa.posicao || undefined,
-                    tipo: estampa.tipo || undefined,
-                    largura: estampa.largura || undefined,
-                    comprimento: estampa.comprimento || undefined,
+              produto = {
+                id: item.produto.id,
+                nome: item.produto.nome,
+                valorBase: Number(item.produto.valor_base),
+                tecidos: tecidosData
+                  ? tecidosData.map((t) => ({
+                    nome: t.nome,
+                    composicao: t.composicao || "",
                   }))
-                : []
-
-              return {
-                id: item.id,
-                produtoId: item.produto_id || "",
-                produto,
-                quantidade: item.quantidade,
-                valorUnitario: Number(item.valor_unitario),
-                tecidoSelecionado: item.tecido_nome
-                  ? {
-                      nome: item.tecido_nome,
-                      composicao: item.tecido_composicao || "",
-                    }
-                  : undefined,
-                corSelecionada: item.cor_selecionada || undefined,
-                estampas: estampas,
-                tamanhos: (item.tamanhos as ItemOrcamento["tamanhos"]) || {},
-                imagem: item.imagem || undefined,
-                observacaoComercial: item.observacao_comercial || undefined,
-                observacaoTecnica: item.observacao_tecnica || undefined,
+                  : [],
+                cores: item.produto.cores || [],
+                tamanhosDisponiveis: item.produto.tamanhos_disponiveis || [],
               }
-            })
+            }
+
+            // Carregar estampas do item
+            const { data: estampasData, error: estampasError } = await supabase
+              .from("estampas")
+              .select("*")
+              .eq("item_orcamento_id", item.id)
+
+            if (estampasError) throw estampasError
+
+            // Converter estampas para o formato da aplicação
+            const estampas: Estampa[] = estampasData
+              ? estampasData.map((estampa) => ({
+                id: estampa.id,
+                posicao: estampa.posicao || undefined,
+                tipo: estampa.tipo || undefined,
+                largura: estampa.largura || undefined,
+                comprimento: estampa.comprimento || undefined,
+              }))
+              : []
+
+            return {
+              id: item.id,
+              produtoId: item.produto_id || "",
+              produto,
+              quantidade: item.quantidade,
+              valorUnitario: Number(item.valor_unitario),
+              tecidoSelecionado: item.tecido_nome
+                ? {
+                  nome: item.tecido_nome,
+                  composicao: item.tecido_composicao || "",
+                }
+                : undefined,
+              corSelecionada: item.cor_selecionada || undefined,
+              estampas: estampas,
+              tamanhos: (item.tamanhos as ItemOrcamento["tamanhos"]) || {},
+              imagem: item.imagem || undefined,
+              observacaoComercial: item.observacao_comercial || undefined,
+              observacaoTecnica: item.observacao_tecnica || undefined,
+            }
+          })
           : [],
       )
 
@@ -1323,7 +1367,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         await carregarDadosEmpresa()
         await carregarClientes()
         await carregarProdutos()
-        
+
         // SOMENTE inicializar com o próximo número se estiver criando um orçamento NOVO
         // Não sobrescrever o número de orçamentos já carregados
         if (!orcamentoSalvo && !orcamentoJaCarregado && orcamento.numero === "Carregando...") {
@@ -1505,9 +1549,9 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               valorBase: Number(produto.valor_base),
               tecidos: tecidosData
                 ? tecidosData.map((t) => ({
-                    nome: t.nome,
-                    composicao: t.composicao || "",
-                  }))
+                  nome: t.nome,
+                  composicao: t.composicao || "",
+                }))
                 : [],
               cores: produto.cores || [],
               tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
@@ -1684,12 +1728,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         ".rounded-md, .rounded-lg, .rounded-tl-md, .rounded-tr-md",
       )
       elementosArredondados.forEach((el) => {
-        ;(el as HTMLElement).style.borderRadius = "0"
+        ; (el as HTMLElement).style.borderRadius = "0"
       })
 
       const elementosComPadding = (clonedContent as HTMLElement).querySelectorAll(".p-6")
       elementosComPadding.forEach((el) => {
-        ;(el as HTMLElement).style.padding = "1rem"
+        ; (el as HTMLElement).style.padding = "1rem"
       })
 
       printContainer.appendChild(clonedContent)
@@ -2135,8 +2179,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         // Inserir as estampas duplicadas se existirem
         if (itemDuplicado.estampas && itemDuplicado.estampas.length > 0) {
           try {
-            const estampasValidas = itemDuplicado.estampas.filter(estampa => 
-              estampa.id && 
+            const estampasValidas = itemDuplicado.estampas.filter(estampa =>
+              estampa.id &&
               (estampa.posicao || estampa.tipo || estampa.largura)
             )
 
@@ -2169,7 +2213,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           sucesso: true,
           mensagem: "Item duplicado com sucesso!",
         })
-        
+
         // Atualizar o orcamentoOriginal após duplicar item com sucesso
         setOrcamentoOriginal({
           ...orcamento,
@@ -2229,7 +2273,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         .single()
 
       if (error) throw error
-      
+
       console.log('Dados do orçamento obtidos do banco:', {
         id: data.id,
         numero: data.numero,
@@ -2254,79 +2298,79 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       let itensFormatados: ItemOrcamento[] = await Promise.all(
         itensData
           ? itensData.map(async (item) => {
-              // Buscar o produto completo com tecidos
-              let produto: Produto | undefined = undefined
-              if (item.produto) {
-                const { data: tecidosData, error: tecidosError } = await supabase
-                  .from("tecidos")
-                  .select("*")
-                  .eq("produto_id", item.produto.id)
-
-                if (tecidosError) throw tecidosError
-
-                produto = {
-                  id: item.produto.id,
-                  nome: item.produto.nome,
-                  valorBase: Number(item.produto.valor_base),
-                  tecidos: tecidosData
-                    ? tecidosData.map((t) => ({
-                        nome: t.nome,
-                        composicao: t.composicao || "",
-                      }))
-                    : [],
-                  cores: item.produto.cores || [],
-                  tamanhosDisponiveis: item.produto.tamanhos_disponiveis || [],
-                }
-
-                // Adicionar o produto à lista de produtos se ainda não existir
-                if (!produtos.some((p) => p.id === produto?.id)) {
-                  setProdutos((prevProdutos) => [...prevProdutos, produto!])
-                }
-              }
-
-              // Carregar estampas do item
-              const { data: estampasData, error: estampasError } = await supabase
-                .from("estampas")
+            // Buscar o produto completo com tecidos
+            let produto: Produto | undefined = undefined
+            if (item.produto) {
+              const { data: tecidosData, error: tecidosError } = await supabase
+                .from("tecidos")
                 .select("*")
-                .eq("item_orcamento_id", item.id)
+                .eq("produto_id", item.produto.id)
 
-              if (estampasError) {
-                console.error("Erro ao listar estampas do item:", estampasError)
-                throw estampasError
-              }
+              if (tecidosError) throw tecidosError
 
-              // Converter estampas para o formato da aplicação
-              const estampas: Estampa[] = estampasData
-                ? estampasData.map((estampa) => ({
-                    id: estampa.id,
-                    posicao: estampa.posicao || undefined,
-                    tipo: estampa.tipo || undefined,
-                    largura: estampa.largura || undefined,
-                    comprimento: estampa.comprimento || undefined,
+              produto = {
+                id: item.produto.id,
+                nome: item.produto.nome,
+                valorBase: Number(item.produto.valor_base),
+                tecidos: tecidosData
+                  ? tecidosData.map((t) => ({
+                    nome: t.nome,
+                    composicao: t.composicao || "",
                   }))
-                : []
-
-              // Inside the carregarOrcamento function, in the itensFormatados mapping:
-              return {
-                id: item.id,
-                produtoId: item.produto_id || "",
-                produto,
-                quantidade: item.quantidade,
-                valorUnitario: Number(item.valor_unitario),
-                tecidoSelecionado: item.tecido_nome
-                  ? {
-                      nome: item.tecido_nome,
-                      composicao: item.tecido_composicao || "",
-                    }
-                  : undefined,
-                corSelecionada: item.cor_selecionada || undefined,
-                estampas: estampas,
-                tamanhos: (item.tamanhos as ItemOrcamento["tamanhos"]) || {},
-                imagem: item.imagem || undefined,
-                observacaoComercial: item.observacao_comercial || undefined,
-                observacaoTecnica: item.observacao_tecnica || undefined,
+                  : [],
+                cores: item.produto.cores || [],
+                tamanhosDisponiveis: item.produto.tamanhos_disponiveis || [],
               }
-            })
+
+              // Adicionar o produto à lista de produtos se ainda não existir
+              if (!produtos.some((p) => p.id === produto?.id)) {
+                setProdutos((prevProdutos) => [...prevProdutos, produto!])
+              }
+            }
+
+            // Carregar estampas do item
+            const { data: estampasData, error: estampasError } = await supabase
+              .from("estampas")
+              .select("*")
+              .eq("item_orcamento_id", item.id)
+
+            if (estampasError) {
+              console.error("Erro ao listar estampas do item:", estampasError)
+              throw estampasError
+            }
+
+            // Converter estampas para o formato da aplicação
+            const estampas: Estampa[] = estampasData
+              ? estampasData.map((estampa) => ({
+                id: estampa.id,
+                posicao: estampa.posicao || undefined,
+                tipo: estampa.tipo || undefined,
+                largura: estampa.largura || undefined,
+                comprimento: estampa.comprimento || undefined,
+              }))
+              : []
+
+            // Inside the carregarOrcamento function, in the itensFormatados mapping:
+            return {
+              id: item.id,
+              produtoId: item.produto_id || "",
+              produto,
+              quantidade: item.quantidade,
+              valorUnitario: Number(item.valor_unitario),
+              tecidoSelecionado: item.tecido_nome
+                ? {
+                  nome: item.tecido_nome,
+                  composicao: item.tecido_composicao || "",
+                }
+                : undefined,
+              corSelecionada: item.cor_selecionada || undefined,
+              estampas: estampas,
+              tamanhos: (item.tamanhos as ItemOrcamento["tamanhos"]) || {},
+              imagem: item.imagem || undefined,
+              observacaoComercial: item.observacao_comercial || undefined,
+              observacaoTecnica: item.observacao_tecnica || undefined,
+            }
+          })
           : [],
       )
 
@@ -2465,7 +2509,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
       // Atualizar o estado do orçamento - PRESERVAR O NÚMERO ORIGINAL
       console.log('Carregando orçamento com número:', data.numero)
-      
+
       setOrcamento({
         id: data.id,
         numero: data.numero, // PRESERVAR o número original do banco de dados
@@ -2502,7 +2546,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
       setOrcamentoSalvo(data.id)
       setCriandoNovoOrcamento(false)
       setOrcamentoJaCarregado(true) // Marcar que um orçamento foi carregado
-      
+
       console.log('Orçamento carregado com sucesso. Número final:', data.numero)
       console.log('Estado orcamentoJaCarregado definido como true')
 
@@ -2617,8 +2661,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   // Função para abrir orçamento na visualização otimizada
   const abrirOrcamentoOtimizado = (orcamentoId: string) => {
-    setOrcamentoOtimizadoId(orcamentoId)
-    setAbaAtiva("orcamento-otimizado")
+    // Redirecionar para a página standalone do orçamento otimizado
+    window.location.href = `/orcamento-otimizado?id=${orcamentoId}`
   }
 
   // Adicionar uma nova função para excluir permanentemente
@@ -2812,8 +2856,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   Há alterações não salvas neste orçamento
                 </span>
               </div>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
                 onClick={orcamentoSalvo ? atualizarOrcamentoExistente : salvarNovoOrcamento}
@@ -2889,9 +2933,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           {/* Feedback de salvamento */}
           {feedbackSalvamento.visivel && (
             <div
-              className={`p-2 md:p-3 rounded-md ${
-                feedbackSalvamento.sucesso ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-              } flex items-center gap-2 animate-in fade-in slide-in-from-top-5 duration-300 text-xs md:text-sm`}
+              className={`p-2 md:p-3 rounded-md ${feedbackSalvamento.sucesso ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                } flex items-center gap-2 animate-in fade-in slide-in-from-top-5 duration-300 text-xs md:text-sm`}
             >
               {feedbackSalvamento.sucesso ? <Check className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
               <p>{feedbackSalvamento.mensagem}</p>
@@ -2928,7 +2971,10 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               case "orcamento-otimizado":
                 return (
                   <div className="h-full overflow-hidden">
-                    <OrcamentoOtimizado id={orcamentoOtimizadoId || undefined} />
+                    <OrcamentoOtimizado
+                      id={orcamentoOtimizadoId || undefined}
+                      onOrcamentoChange={handleOrcamentoOtimizadoChange}
+                    />
                   </div>
                 )
               case "orcamento":
@@ -3150,7 +3196,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         setOrcamento={setOrcamento}
         setAbaAtiva={setAbaAtiva}
       />
-      
+
       {/* Modal de confirmação para alterações não salvas */}
       <Dialog open={modalConfirmacaoAberto} onOpenChange={setModalConfirmacaoAberto}>
         <DialogContent className="sm:max-w-md">
@@ -3165,7 +3211,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               Você tem alterações não salvas neste orçamento. O que deseja fazer?
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
+              <Button
                 onClick={salvarEContinuar}
                 className="flex-1"
                 disabled={isLoading}
@@ -3177,8 +3223,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 )}
                 Salvar e continuar
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={descartarEContinuar}
                 className="flex-1"
               >
@@ -3186,8 +3232,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                 Descartar alterações
               </Button>
             </div>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => setModalConfirmacaoAberto(false)}
               className="w-full mt-2"
             >

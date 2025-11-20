@@ -30,11 +30,11 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 
 interface AppSidebarProps {
@@ -55,8 +55,6 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-    window.history.pushState({}, "", `#${abaAtiva}`)
-
     const handleResize = () => {
       if (window.innerWidth < 1024) {
         setExpandido(false)
@@ -67,7 +65,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
 
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [abaAtiva])
+  }, [])
 
   const handleMenuItemClick = (aba: string) => {
     setAbaAtiva(aba)
@@ -83,7 +81,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       items: [
         { id: "orcamento", label: "Edição Orçamento", icon: FileText },
         { id: "orcamento-rapido", label: "Orçamento Rápido", icon: TrendingUp },
-        { id: "orcamento-otimizado", label: "Orçamento Otimizado", icon: FileText },
+        { id: "orcamento-otimizado", label: "Orçamento Otimizado", icon: FileText, isExternal: true },
         { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
         { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
         { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },
@@ -224,14 +222,14 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
                     <section.icon className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
-                
+
                 <div className="space-y-1">
                   {section.items.map((item: any) => {
                     const IconComponent = item.icon
                     const isActive = abaAtiva === item.id
                     const isDestructive = item.variant === "destructive"
                     const isExternal = item.isExternal === true
-                    
+
                     return (
                       <Button
                         key={item.id}
@@ -244,9 +242,8 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
                             handleMenuItemClick(item.id)
                           }
                         }}
-                        className={`w-full ${expandido ? "justify-start" : "justify-center px-0"} ${
-                          isDestructive && !isActive ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""
-                        } ${isActive && isDestructive ? "bg-destructive hover:bg-destructive" : ""}`}
+                        className={`w-full ${expandido ? "justify-start" : "justify-center px-0"} ${isDestructive && !isActive ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""
+                          } ${isActive && isDestructive ? "bg-destructive hover:bg-destructive" : ""}`}
                       >
                         <IconComponent className={`h-4 w-4 ${expandido ? "mr-3" : ""}`} />
                         {expandido && <span className="truncate">{item.label}</span>}
@@ -262,9 +259,9 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
 
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" 
-          onClick={() => setIsMobileMenuOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
     </>
