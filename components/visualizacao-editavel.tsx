@@ -1092,13 +1092,13 @@ export default function VisualizacaoEditavel({
                                 <InputTransparente type="number" value={est.largura} onChange={e => {
                                   const news = item.estampas!.map(x => x.id === est.id ? { ...x, largura: Number(e.target.value) } : x)
                                   updateItem(item.id, 'estampas', news)
-                                }} className="w-8 p-0 h-5 text-center text-[9px]" />
-                                <span>x</span>
+                                }} className="w-12 p-0 h-5 text-center text-[9px]" />
+                                <span className="text-[9px]">x</span>
                                 <InputTransparente type="number" value={est.comprimento} onChange={e => {
                                   const news = item.estampas!.map(x => x.id === est.id ? { ...x, comprimento: Number(e.target.value) } : x)
                                   updateItem(item.id, 'estampas', news)
-                                }} className="w-8 p-0 h-5 text-center text-[9px]" />
-                                <span>cm</span>
+                                }} className="w-12 p-0 h-5 text-center text-[9px]" />
+                                <span className="text-[9px] font-semibold">CM</span>
                               </>
                             ) : (
                               <span className="ml-1">{est.posicao} • {est.tipo} • {est.largura}x{est.comprimento} cm</span>
@@ -1161,6 +1161,11 @@ export default function VisualizacaoEditavel({
                         tamanhosParaMostrar = item.produto.tamanhosDisponiveis
                       } else if (item.tamanhos && Object.keys(item.tamanhos).length > 0) {
                         tamanhosParaMostrar = Object.keys(item.tamanhos)
+                      }
+
+                      // Garantir ordem consistente dos tamanhos
+                      if (tamanhosParaMostrar.length > 0) {
+                        tamanhosParaMostrar = ordenarLabelsTamanhos(tamanhosParaMostrar)
                       }
                       
                       return tamanhosParaMostrar.length > 0 ? (
@@ -1241,44 +1246,61 @@ export default function VisualizacaoEditavel({
   )
 }
 
-// Função para ordenar os tamanhos
+// Função para ordenar os tamanhos (usada em relatórios, etc.)
 const ordenarTamanhos = (tamanhos: Record<string, number>) => {
-  // Separar os tamanhos por categoria
+  const ordemLetras = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
   const tamanhosLetras: [string, number][] = []
   const tamanhosNumericos: [string, number][] = []
   const tamanhosInfantis: [string, number][] = []
 
-  // Ordem específica para tamanhos de letras
-  const ordemLetras = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
-
   Object.entries(tamanhos)
     .filter(([_, quantidade]) => quantidade > 0)
     .forEach(([tamanho, quantidade]) => {
-      // Verificar se é um tamanho de letra (PP, P, M, G, GG, G1-G7)
       if (ordemLetras.includes(tamanho)) {
         tamanhosLetras.push([tamanho, quantidade])
-      }
-      // Verificar se é um tamanho numérico adulto (36-62)
-      else if (/^(3[6-9]|[4-5][0-9]|6[0-2])$/.test(tamanho)) {
+      } else if (/^(3[6-9]|[4-5][0-9]|6[0-2])$/.test(tamanho)) {
         tamanhosNumericos.push([tamanho, quantidade])
-      }
-      // Verificar se é um tamanho infantil (0-13)
-      else if (/^([0-9]|1[0-3])$/.test(tamanho)) {
+      } else if (/^([0-9]|1[0-3])$/.test(tamanho)) {
         tamanhosInfantis.push([tamanho, quantidade])
-      }
-      // Outros tamanhos não categorizados
-      else {
+      } else {
         tamanhosLetras.push([tamanho, quantidade])
       }
     })
 
-  // Ordenar cada categoria
   tamanhosLetras.sort((a, b) => ordemLetras.indexOf(a[0]) - ordemLetras.indexOf(b[0]))
   tamanhosNumericos.sort((a, b) => Number.parseInt(a[0]) - Number.parseInt(b[0]))
   tamanhosInfantis.sort((a, b) => Number.parseInt(a[0]) - Number.parseInt(b[0]))
 
-  // Retornar todos os tamanhos ordenados
   return [...tamanhosLetras, ...tamanhosNumericos, ...tamanhosInfantis]
+}
+
+// Helper para ordenar apenas os rótulos de tamanhos usados na tabela da ficha técnica
+const ordenarLabelsTamanhos = (labels: string[]): string[] => {
+  const ordemLetras = ["PP", "P", "M", "G", "GG", "G1", "G2", "G3", "G4", "G5", "G6", "G7"]
+
+  const letras: string[] = []
+  const numerosAdulto: string[] = []
+  const numerosInfantil: string[] = []
+  const outros: string[] = []
+
+  labels.forEach((tamanho) => {
+    if (ordemLetras.includes(tamanho)) {
+      letras.push(tamanho)
+    } else if (/^(3[6-9]|[4-5][0-9]|6[0-2])$/.test(tamanho)) {
+      numerosAdulto.push(tamanho)
+    } else if (/^([0-9]|1[0-3])$/.test(tamanho)) {
+      numerosInfantil.push(tamanho)
+    } else {
+      outros.push(tamanho)
+    }
+  })
+
+  letras.sort((a, b) => ordemLetras.indexOf(a) - ordemLetras.indexOf(b))
+  numerosAdulto.sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+  numerosInfantil.sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+  outros.sort()
+
+  return [...letras, ...numerosInfantil, ...numerosAdulto, ...outros]
 }
 
 // Helper Cor

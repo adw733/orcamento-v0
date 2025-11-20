@@ -224,11 +224,33 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
       if (!orcamentoDb) return
 
-      // Carregar itens do orçamento
+      // Carregar itens do orçamento (tabela itens_orcamento)
       const { data: itensData } = await supabase
         .from("itens_orcamento")
         .select("*")
         .eq("orcamento_id", orcamentoDb.id)
+        .order("posicao", { ascending: true })
+
+      // Recuperar dados extras do campo JSON legado (itens + metadados)
+      let itensJSON: any[] = []
+      let metadados = { valorFrete: 0, nomeContato: "", telefoneContato: "" }
+      try {
+        if (orcamentoDb.itens) {
+          const bruto = typeof orcamentoDb.itens === 'string' ? JSON.parse(orcamentoDb.itens) : orcamentoDb.itens
+          if (Array.isArray(bruto.items)) {
+            itensJSON = bruto.items
+          }
+          if (bruto.metadados) {
+            metadados = {
+              valorFrete: Number(bruto.metadados.valorFrete) || 0,
+              nomeContato: bruto.metadados.nomeContato || "",
+              telefoneContato: bruto.metadados.telefoneContato || "",
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao parsear itens/metadados do orçamento:", e)
+      }
 
       // Processar itens completos
       let produtosAtuais = produtos
@@ -238,7 +260,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
       }
 
       const itensCompletos: ItemOrcamento[] = await Promise.all(
-        (itensData || []).map(async (item) => {
+        (itensData || []).map(async (item: any, idx: number) => {
           const produto = produtosAtuais.find(p => p.id === item.produto_id)
 
           let tecidos = produto?.tecidos || []
@@ -247,48 +269,30 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
             tecidos = (tData || []).map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
           }
 
+          // Tentar casar item da tabela com item do JSON (por id, depois por posição/índice)
+          let jsonItem = itensJSON.find((j: any) => j.id === item.id)
+          if (!jsonItem) {
+            const pos = typeof item.posicao === 'number' ? item.posicao : idx
+            jsonItem = itensJSON[pos] || null
+          }
+
           return {
             id: item.id,
             produtoId: item.produto_id,
-            quantidade: item.quantidade,
-            valorUnitario: Number(item.valor_unitario),
-            tamanhos: item.tamanhos || {},
-            estampas: item.estampas || [],
-            observacaoComercial: item.observacao_comercial || "",
-            observacaoTecnica: item.observacao_tecnica || "",
-            imagem: item.imagem,
+            quantidade: jsonItem?.quantidade ?? item.quantidade,
+            valorUnitario: Number(jsonItem?.valorUnitario ?? item.valor_unitario),
+            tipoTamanhoSelecionado: jsonItem?.tipoTamanhoSelecionado || null,
+            tamanhos: jsonItem?.tamanhos || item.tamanhos || {},
+            estampas: jsonItem?.estampas || [],
+            observacaoComercial: jsonItem?.observacaoComercial || item.observacao_comercial || "",
+            observacaoTecnica: jsonItem?.observacaoTecnica || item.observacao_tecnica || "",
+            imagem: jsonItem?.imagem || item.imagem,
             produto: produto ? { ...produto, tecidos } : undefined,
             tecidoSelecionado: produto?.tecidos?.find((t: any) => t.nome === item.tecido_nome) || (tecidos?.[0] || undefined),
             corSelecionada: item.cor_selecionada || (produto?.cores?.[0] || ""),
           }
         })
       )
-
-      // Tentar recuperar dados do campo JSON legado
-      let metadados = { valorFrete: 0, nomeContato: "", telefoneContato: "" }
-      try {
-        if (orcamentoDb.itens && typeof orcamentoDb.itens === 'string') {
-          const itensJSON = JSON.parse(orcamentoDb.itens)
-          if (itensJSON.metadados) {
-            metadados = {
-              valorFrete: Number(itensJSON.metadados.valorFrete) || 0,
-              nomeContato: itensJSON.metadados.nomeContato || "",
-              telefoneContato: itensJSON.metadados.telefoneContato || "",
-            }
-          }
-        } else if (orcamentoDb.itens && typeof orcamentoDb.itens === 'object') {
-          const itensJSON = orcamentoDb.itens
-          if (itensJSON.metadados) {
-            metadados = {
-              valorFrete: Number(itensJSON.metadados.valorFrete) || 0,
-              nomeContato: itensJSON.metadados.nomeContato || "",
-              telefoneContato: itensJSON.metadados.telefoneContato || "",
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("Erro ao parsear metadados do orçamento:", e)
-      }
 
       const novoOrcamento = {
         id: orcamentoDb.id,
@@ -575,6 +579,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
             valorUnitario: item.valorUnitario,
             tecidoSelecionado: item.tecidoSelecionado,
             corSelecionada: item.corSelecionada,
+            tipoTamanhoSelecionado: item.tipoTamanhoSelecionado,
             tamanhos: item.tamanhos,
             estampas: item.estampas,
             observacaoComercial: item.observacaoComercial,
