@@ -2,11 +2,15 @@
 
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, Plus, Search, Save, Copy, RefreshCw, Eye, Edit3, FileDown } from "lucide-react"
+import { Loader2, Plus, Search, Save, Copy, RefreshCw, Eye, Edit3, FileDown, Hash, Calendar, Building2, DollarSign, User, Phone } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { toast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import VisualizacaoEditavel from "@/components/visualizacao-editavel"
 import { useSearchParams } from "next/navigation"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, DadosEmpresa } from "@/types/types"
@@ -251,6 +255,32 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         })
       )
 
+      // Tentar recuperar dados do campo JSON legado
+      let metadados = { valorFrete: 0, nomeContato: "", telefoneContato: "" }
+      try {
+        if (orcamentoDb.itens && typeof orcamentoDb.itens === 'string') {
+          const itensJSON = JSON.parse(orcamentoDb.itens)
+          if (itensJSON.metadados) {
+            metadados = {
+              valorFrete: Number(itensJSON.metadados.valorFrete) || 0,
+              nomeContato: itensJSON.metadados.nomeContato || "",
+              telefoneContato: itensJSON.metadados.telefoneContato || "",
+            }
+          }
+        } else if (orcamentoDb.itens && typeof orcamentoDb.itens === 'object') {
+          const itensJSON = orcamentoDb.itens
+          if (itensJSON.metadados) {
+            metadados = {
+              valorFrete: Number(itensJSON.metadados.valorFrete) || 0,
+              nomeContato: itensJSON.metadados.nomeContato || "",
+              telefoneContato: itensJSON.metadados.telefoneContato || "",
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao parsear metadados do orçamento:", e)
+      }
+
       const novoOrcamento = {
         id: orcamentoDb.id,
         numero: orcamentoDb.numero,
@@ -261,9 +291,9 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         prazoEntrega: orcamentoDb.prazo_entrega,
         validadeOrcamento: orcamentoDb.validade_orcamento,
         observacoes: orcamentoDb.observacoes || "",
-        valorFrete: Number(orcamentoDb.valor_frete) || 0,
-        nomeContato: orcamentoDb.nome_contato || "",
-        telefoneContato: orcamentoDb.telefone_contato || "",
+        valorFrete: metadados.valorFrete,
+        nomeContato: metadados.nomeContato,
+        telefoneContato: metadados.telefoneContato,
         status: orcamentoDb.status,
       }
 
@@ -378,17 +408,15 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
       if (result.error) throw result.error
 
-      // Atualizar itens
-      if (orcamento.id) {
-        await supabase.from("itens_orcamento").delete().eq("orcamento_id", orcamento.id)
-      }
-
       const orcamentoId = result.data.id
 
+      // Salvar itens com segurança: primeiro salvar novos, depois deletar antigos
+      const novosItensIds: string[] = []
+      
       for (const item of orcamento.itens) {
-        await supabase.from("itens_orcamento").insert({
+        const dadosItem = {
           orcamento_id: orcamentoId,
-          produto_id: item.produtoId && item.produtoId.length > 5 ? item.produtoId : null, // FK check
+          produto_id: item.produtoId && item.produtoId.length > 5 ? item.produtoId : null,
           quantidade: item.quantidade,
           valor_unitario: item.valorUnitario,
           tecido_nome: item.tecidoSelecionado?.nome,
@@ -398,7 +426,57 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           observacao_comercial: item.observacaoComercial,
           observacao_tecnica: item.observacaoTecnica,
           imagem: item.imagem,
-        })
+        }
+
+        // Se o item já tem ID, tentar atualizar; se não, inserir novo
+        if (item.id && typeof item.id === 'string' && item.id.length > 10) {
+          const { data: itemAtualizado, error: updateError } = await supabase
+            .from("itens_orcamento")
+            .update(dadosItem)
+            .eq("id", item.id)
+            .eq("orcamento_id", orcamentoId)
+            .select()
+            .single()
+
+          if (!updateError && itemAtualizado) {
+            novosItensIds.push(itemAtualizado.id)
+          } else {
+            // Se falhou atualizar, tentar inserir como novo
+            const { data: novoItem, error: insertError } = await supabase
+              .from("itens_orcamento")
+              .insert(dadosItem)
+              .select()
+              .single()
+
+            if (insertError) {
+              console.error("Erro ao inserir item:", insertError)
+            } else if (novoItem) {
+              novosItensIds.push(novoItem.id)
+            }
+          }
+        } else {
+          // Item novo, inserir
+          const { data: novoItem, error: insertError } = await supabase
+            .from("itens_orcamento")
+            .insert(dadosItem)
+            .select()
+            .single()
+
+          if (insertError) {
+            console.error("Erro ao inserir item:", insertError)
+          } else if (novoItem) {
+            novosItensIds.push(novoItem.id)
+          }
+        }
+      }
+
+      // Agora deletar apenas os itens que não estão mais na lista (foram removidos pelo usuário)
+      if (orcamento.id && novosItensIds.length > 0) {
+        await supabase
+          .from("itens_orcamento")
+          .delete()
+          .eq("orcamento_id", orcamentoId)
+          .not("id", "in", `(${novosItensIds.join(",")})`)
       }
 
       const novoOrcamento = { ...orcamento, id: orcamentoId, numero: numeroCompleto }
@@ -487,28 +565,40 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           <p className="text-gray-500 mt-0.5 text-xs md:text-sm">Orçamento: {orcamento.numero.split(" - ")[0]}</p>
         </div>
         <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
-          <div className="flex bg-muted p-1 rounded-lg">
+          <div className="flex border border-primary/20 rounded-md overflow-hidden">
             <Button
-              variant={modoVisualizacao === "completo" ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
               onClick={() => setModoVisualizacao("completo")}
-              className={modoVisualizacao === "completo" ? "bg-background shadow-sm" : ""}
+              className={`rounded-none text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 ${
+                modoVisualizacao === "completo" 
+                  ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                  : "text-primary hover:bg-primary/10"
+              }`}
             >
               Completo
             </Button>
             <Button
-              variant={modoVisualizacao === "orcamento" ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
               onClick={() => setModoVisualizacao("orcamento")}
-              className={modoVisualizacao === "orcamento" ? "bg-background shadow-sm" : ""}
+              className={`rounded-none border-x border-primary/20 text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 ${
+                modoVisualizacao === "orcamento" 
+                  ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                  : "text-primary hover:bg-primary/10"
+              }`}
             >
               Orçamento
             </Button>
             <Button
-              variant={modoVisualizacao === "ficha" ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
               onClick={() => setModoVisualizacao("ficha")}
-              className={modoVisualizacao === "ficha" ? "bg-background shadow-sm" : ""}
+              className={`rounded-none text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9 ${
+                modoVisualizacao === "ficha" 
+                  ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                  : "text-primary hover:bg-primary/10"
+              }`}
             >
               Ficha Téc.
             </Button>
@@ -516,7 +606,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           <Button
             size="sm"
             onClick={() => setModoEdicao(!modoEdicao)}
-            className="flex items-center gap-1.5 bg-gray-500 hover:bg-gray-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
           >
             {modoEdicao ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
             {modoEdicao ? "Visualizar" : "Editar"}
@@ -534,7 +624,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
                 })
               }
             }}
-            className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
           >
             <Copy className="h-4 w-4" /> Copiar
           </Button>
@@ -569,7 +659,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
               }
               window.print()
             }}
-            className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
           >
             <FileDown className="h-4 w-4" /> PDF Orçamento
           </Button>
@@ -588,7 +678,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
               setModoVisualizacao("ficha")
               setTimeout(() => window.print(), 100)
             }}
-            className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
           >
             <FileDown className="h-4 w-4" /> PDF Ficha
           </Button>
@@ -597,7 +687,57 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
       {/* Conteúdo principal */}
       <div className="flex-1 overflow-auto p-3">
-        {/* Visualização Editável */}
+        {/* Seletor de Status - Apenas visível em modo de edição */}
+        {modoEdicao && (
+          <div className="max-w-[210mm] mx-auto mb-3">
+            <Card className="border-primary/20 shadow-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <Label className="text-primary text-sm font-medium">Status do Orçamento:</Label>
+                  </div>
+                  <Select
+                    value={orcamento.status || "5"}
+                    onValueChange={(value) => {
+                      setOrcamento({ ...orcamento, status: value })
+                      setTemAlteracoes(true)
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 - Finalizada</SelectItem>
+                      <SelectItem value="2">2 - Entregue</SelectItem>
+                      <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
+                      <SelectItem value="4">4 - Execução</SelectItem>
+                      <SelectItem value="5">5 - Proposta</SelectItem>
+                      <SelectItem value="6">6 - Recusada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Badge className={`${
+                    orcamento.status === "6" ? "bg-red-100 text-red-800 border-red-200" :
+                    orcamento.status === "5" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                    orcamento.status === "4" ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
+                    orcamento.status === "3" ? "bg-orange-100 text-orange-800 border-orange-200" :
+                    orcamento.status === "2" ? "bg-purple-100 text-purple-800 border-purple-200" :
+                    "bg-green-100 text-green-800 border-green-200"
+                  } text-xs px-2 py-1`}>
+                    {orcamento.status === "6" ? "Recusada" :
+                     orcamento.status === "5" ? "Proposta" :
+                     orcamento.status === "4" ? "Execução" :
+                     orcamento.status === "3" ? "Cobrança" :
+                     orcamento.status === "2" ? "Entregue" :
+                     "Finalizada"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Visualização Editável - Centralizada */}
         <VisualizacaoEditavel
           orcamento={orcamento}
           setOrcamento={setOrcamento}

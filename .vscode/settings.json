@@ -1,0 +1,7 @@
+{
+  "git.autoRepositoryDetection": false,
+  "git.enabled": true,
+  "git.path": null,
+  "git.repositoryScanMaxDepth": 0,
+  "git.scanRepositories": []
+}

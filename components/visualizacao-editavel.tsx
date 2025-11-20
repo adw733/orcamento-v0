@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale"
 import html2canvas from "html2canvas"
 import jsPDF from "jspdf"
 import { supabase } from "@/lib/supabase"
+import { type TipoTamanho, tipoTamanhoService } from "@/lib/services-materiais"
 
 interface VisualizacaoEditavelProps {
   orcamento: Orcamento
@@ -61,6 +62,22 @@ export default function VisualizacaoEditavel({
   const [openCliente, setOpenCliente] = useState(false)
   const [openProduto, setOpenProduto] = useState<string | null>(null) // ID do item sendo editado
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
+  
+  // Estados para tipos de tamanho
+  const [tiposTamanho, setTiposTamanho] = useState<TipoTamanho[]>([])
+  
+  // Carregar tipos de tamanho ao montar o componente
+  useEffect(() => {
+    const carregarTiposTamanho = async () => {
+      try {
+        const tiposData = await tipoTamanhoService.listarTodos()
+        setTiposTamanho(tiposData)
+      } catch (error) {
+        console.error("Erro ao carregar tipos de tamanho:", error)
+      }
+    }
+    carregarTiposTamanho()
+  }, [])
 
   // Helper para inputs transparentes
   const InputTransparente = ({ className, ...props }: React.ComponentProps<typeof Input>) => (
@@ -481,16 +498,12 @@ export default function VisualizacaoEditavel({
                     <p className="col-span-2 md:col-span-1">
                       <span className="font-medium">Telefone:</span> {orcamento.cliente?.telefone || ""}
                     </p>
-                    {orcamento.nomeContato && (
-                      <p className="col-span-2 md:col-span-1">
-                        <span className="font-medium">Contato:</span> {orcamento.nomeContato}
-                      </p>
-                    )}
-                    {orcamento.telefoneContato && (
-                      <p className="col-span-2 md:col-span-1">
-                        <span className="font-medium">Tel. Contato:</span> {orcamento.telefoneContato}
-                      </p>
-                    )}
+                    <p className="col-span-2 md:col-span-1">
+                      <span className="font-medium">Contato:</span> {orcamento.nomeContato || ""}
+                    </p>
+                    <p className="col-span-2 md:col-span-1">
+                      <span className="font-medium">Tel. Contato:</span> {orcamento.telefoneContato || ""}
+                    </p>
                   </div>
                 )}
               </div>
@@ -710,7 +723,7 @@ export default function VisualizacaoEditavel({
                       <td colSpan={modoEdicao ? 6 : 5} className="p-2 text-right border-t border-primary">Valor dos Produtos:</td>
                       <td className="p-2 text-right border-t border-primary">R$ {calcularTotal().toFixed(2)}</td>
                     </tr>
-                    {(orcamento.valorFrete !== undefined && orcamento.valorFrete > 0) && (
+                    {(modoEdicao || (orcamento.valorFrete !== undefined && orcamento.valorFrete > 0)) && (
                       <tr>
                         <td colSpan={modoEdicao ? 6 : 5} className="p-2 text-right">
                           {modoEdicao ? (
@@ -937,53 +950,99 @@ export default function VisualizacaoEditavel({
 
                 {/* Tabela Tamanhos Item */}
                 <div className="mt-6">
-                  <h4 className="font-bold mb-2 text-primary">Tabela de Tamanhos</h4>
-                  <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
-                    {item.produto?.tamanhosDisponiveis && item.produto.tamanhosDisponiveis.length > 0 ? (
-                      <table className="w-full border-collapse" style={{ fontSize: "0.9rem" }}>
-                        <tbody>
-                          <tr>
-                            <th className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
-                              Tam.
-                            </th>
-                            {item.produto.tamanhosDisponiveis.map(t => (
-                              <th key={`header-${t}`} className="p-2 text-center bg-gray-100 border border-gray-200 font-medium text-primary">
-                                {t}
-                              </th>
-                            ))}
-                            <th className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "80px", minWidth: "80px", maxWidth: "80px" }}>
-                              TOTAL
-                            </th>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
-                              Qtd.
-                            </td>
-                            {item.produto.tamanhosDisponiveis.map(t => (
-                              <td key={`qty-${t}`} className="p-2 text-center border border-gray-200">
-                                {modoEdicao ? (
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={item.tamanhos[t] || 0}
-                                    onChange={e => updateTamanho(item.id, t, Number(e.target.value))}
-                                    className="w-full text-center bg-transparent border-none focus:bg-white focus:ring-1 focus:ring-primary/30 rounded px-1 font-medium"
-                                    style={{ fontSize: "0.9rem" }}
-                                  />
-                                ) : (
-                                  <span className="font-medium">{item.tamanhos[t] || 0}</span>
-                                )}
-                              </td>
-                            ))}
-                            <td className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "80px", minWidth: "80px", maxWidth: "80px" }}>
-                              {item.quantidade}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div className="py-3 px-3 text-center text-gray-500 italic">Nenhum tamanho especificado</div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-bold text-primary">Tabela de Tamanhos</h4>
+                    {modoEdicao && tiposTamanho.length > 0 && (
+                      <Select
+                        value={item.tipoTamanhoSelecionado || ""}
+                        onValueChange={(value) => {
+                          const tipoSelecionado = tiposTamanho.find(t => t.id === value)
+                          if (tipoSelecionado) {
+                            // Criar novo objeto de tamanhos com os tamanhos do tipo selecionado
+                            const novosTamanhos: Record<string, number> = {}
+                            tipoSelecionado.tamanhos?.forEach(tamanho => {
+                              novosTamanhos[tamanho] = item.tamanhos[tamanho] || 0
+                            })
+                            updateItem(item.id, 'tipoTamanhoSelecionado', value)
+                            updateItem(item.id, 'tamanhos', novosTamanhos)
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[200px] h-8 text-xs">
+                          <SelectValue placeholder="Selecione o tipo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiposTamanho.map(tipo => (
+                            <SelectItem key={tipo.id} value={tipo.id}>
+                              {tipo.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
+                    {(() => {
+                      // Determinar quais tamanhos mostrar
+                      let tamanhosParaMostrar: string[] = []
+                      
+                      if (item.tipoTamanhoSelecionado) {
+                        const tipoSelecionado = tiposTamanho.find(t => t.id === item.tipoTamanhoSelecionado)
+                        tamanhosParaMostrar = tipoSelecionado?.tamanhos || []
+                      } else if (item.produto?.tamanhosDisponiveis && item.produto.tamanhosDisponiveis.length > 0) {
+                        tamanhosParaMostrar = item.produto.tamanhosDisponiveis
+                      } else if (item.tamanhos && Object.keys(item.tamanhos).length > 0) {
+                        tamanhosParaMostrar = Object.keys(item.tamanhos)
+                      }
+                      
+                      return tamanhosParaMostrar.length > 0 ? (
+                        <table className="w-full border-collapse" style={{ fontSize: "0.9rem" }}>
+                          <tbody>
+                            <tr>
+                              <th className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
+                                Tam.
+                              </th>
+                              {tamanhosParaMostrar.map(t => (
+                                <th key={`header-${t}`} className="p-2 text-center bg-gray-100 border border-gray-200 font-medium text-primary">
+                                  {t}
+                                </th>
+                              ))}
+                              <th className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "80px", minWidth: "80px", maxWidth: "80px" }}>
+                                TOTAL
+                              </th>
+                            </tr>
+                            <tr>
+                              <td className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
+                                Qtd.
+                              </td>
+                              {tamanhosParaMostrar.map(t => (
+                                <td key={`qty-${t}`} className="p-2 text-center border border-gray-200">
+                                  {modoEdicao ? (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={item.tamanhos[t] || 0}
+                                      onChange={e => updateTamanho(item.id, t, Number(e.target.value))}
+                                      className="w-full text-center bg-transparent border-none focus:bg-white focus:ring-1 focus:ring-primary/30 rounded px-1 font-medium"
+                                      style={{ fontSize: "0.9rem" }}
+                                    />
+                                  ) : (
+                                    <span className="font-medium">{item.tamanhos[t] || 0}</span>
+                                  )}
+                                </td>
+                              ))}
+                              <td className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "80px", minWidth: "80px", maxWidth: "80px" }}>
+                                {item.quantidade}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="py-3 px-3 text-center text-gray-500 italic">
+                          {modoEdicao ? "Selecione um tipo de tamanho acima para começar" : "Nenhum tamanho especificado"}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
 
