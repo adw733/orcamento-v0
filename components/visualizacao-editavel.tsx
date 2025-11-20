@@ -1131,8 +1131,13 @@ export default function VisualizacaoEditavel({
                             tipoSelecionado.tamanhos?.forEach(tamanho => {
                               novosTamanhos[tamanho] = item.tamanhos[tamanho] || 0
                             })
-                            updateItem(item.id, 'tipoTamanhoSelecionado', value)
-                            updateItem(item.id, 'tamanhos', novosTamanhos)
+                            // Atualizar ambos os campos em uma única operação
+                            const novosItens = orcamentoRef.current.itens.map(i => 
+                              i.id === item.id 
+                                ? { ...i, tipoTamanhoSelecionado: value, tamanhos: novosTamanhos }
+                                : i
+                            )
+                            setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
                           }
                         }}
                       >
