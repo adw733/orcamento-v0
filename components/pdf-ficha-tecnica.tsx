@@ -4,15 +4,15 @@ import type { Orcamento, DadosEmpresa, ItemOrcamento } from '@/types/types'
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
+    padding: 24,
     fontSize: 10,
     fontFamily: 'Helvetica',
     backgroundColor: '#ffffff',
   },
   header: {
     backgroundColor: '#0f4c81',
-    padding: 15,
-    marginBottom: 15,
+    padding: 14,
+    marginBottom: 10,
     borderRadius: 4,
   },
   headerContent: {
@@ -60,11 +60,11 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   mainTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#0f4c81',
-    marginBottom: 15,
-    paddingBottom: 8,
+    marginBottom: 10,
+    paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: '#0f4c81',
     flexDirection: 'row',
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   section: {
-    marginBottom: 15,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 10,
@@ -87,15 +87,15 @@ const styles = StyleSheet.create({
   imageContainer: {
     border: '2px dashed #e5e7eb',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
+    padding: 10,
+    marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 200,
+    minHeight: 160,
   },
   image: {
     maxWidth: '100%',
-    maxHeight: 300,
+    maxHeight: 220,
     objectFit: 'contain',
   },
   imagePlaceholder: {
@@ -105,8 +105,8 @@ const styles = StyleSheet.create({
   },
   specsGrid: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 15,
+    gap: 8,
+    marginBottom: 10,
   },
   specCard: {
     flex: 1,
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   },
   artesItem: {
     fontSize: 8,
-    marginBottom: 5,
-    paddingBottom: 5,
+    marginBottom: 3,
+    paddingBottom: 3,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
@@ -188,8 +188,8 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   tableContainer: {
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: 8,
+    marginBottom: 10,
   },
   table: {
     borderWidth: 1,
@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
   },
   observacoesBox: {
     backgroundColor: '#f0f4f8',
-    padding: 12,
+    padding: 9,
     borderRadius: 6,
-    marginTop: 10,
+    marginTop: 8,
   },
   observacoesText: {
     fontSize: 9,
@@ -350,36 +350,30 @@ export const PDFFichaTecnica: React.FC<PDFFichaTecnicaProps> = ({
 
       {/* Especificações */}
       <View style={styles.specsGrid}>
-        {/* Tecido */}
+        {/* Tecido + Cor */}
         <View style={styles.specCard}>
           <View style={styles.specCardHeader}>
-            <Text style={styles.specCardHeaderText}>Tecido</Text>
+            <Text style={styles.specCardHeaderText}>Tecido / Cor</Text>
           </View>
           <View style={styles.specCardContent}>
+            {/* Tecido */}
             <Text style={styles.specLabel}>
               {item.tecidoSelecionado?.nome || "Não selecionado"}
             </Text>
             <Text style={styles.specValue}>
               {item.tecidoSelecionado?.composicao || "Composição não especificada"}
             </Text>
-          </View>
-        </View>
 
-        {/* Cor */}
-        <View style={styles.specCard}>
-          <View style={styles.specCardHeader}>
-            <Text style={styles.specCardHeaderText}>Cor</Text>
-          </View>
-          <View style={styles.specCardContent}>
-            <Text style={styles.specLabel}>
-              {item.corSelecionada || "Não selecionada"}
+            {/* Cor */}
+            <Text style={[styles.specLabel, { marginTop: 6 }]}>
+              Cor: {item.corSelecionada || "Não selecionada"}
             </Text>
             <View style={[styles.colorSwatch, { backgroundColor: getCorHex(item.corSelecionada) }]} />
           </View>
         </View>
 
-        {/* Artes */}
-        <View style={styles.specCard}>
+        {/* Artes - card mais largo */}
+        <View style={[styles.specCard, { flex: 1.4 }]}>
           <View style={styles.specCardHeader}>
             <Text style={styles.specCardHeaderText}>Artes</Text>
           </View>
