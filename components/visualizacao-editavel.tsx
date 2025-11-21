@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Plus, Trash2, Upload, Search, Calendar as CalendarIcon, Check, Eye, Edit3, FileDown, Save, AlertCircle, Copy, ChevronUp, ChevronDown, Monitor, Smartphone, ZoomIn, ZoomOut, RotateCw } from "lucide-react"
+import { Plus, Trash2, Upload, Search, Calendar as CalendarIcon, Check, Eye, Edit3, FileDown, Save, AlertCircle, Copy, ChevronUp, ChevronDown, Monitor, Smartphone, ZoomIn, ZoomOut, RotateCw, Grid3x3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -156,7 +156,7 @@ export default function VisualizacaoEditavel({
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   
   // Estados para controle de visualização
-  const [orientacao, setOrientacao] = useState<'vertical' | 'horizontal'>('vertical')
+  const [orientacao, setOrientacao] = useState<'vertical' | 'grade'>('vertical')
   const [zoom, setZoom] = useState(100)
   
   // Refs para manter referências estáveis
@@ -505,28 +505,28 @@ export default function VisualizacaoEditavel({
                 )}
                 title="Modo Vertical (A4 Portrait)"
               >
-                <Smartphone className="h-4 w-4 mr-1" />
+                <Monitor className="h-4 w-4 mr-1.5" />
                 Vertical
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setOrientacao('horizontal')}
+                onClick={() => setOrientacao('grade')}
                 className={cn(
                   "rounded-none border-l border-primary/30 px-3 h-8 transition-all",
-                  orientacao === 'horizontal' 
+                  orientacao === 'grade' 
                     ? "bg-primary text-white hover:bg-primary hover:text-white" 
                     : "text-gray-600 hover:bg-gray-100"
                 )}
-                title="Modo Horizontal (A4 Landscape)"
+                title="Modo Grade (Matriz Responsiva)"
               >
-                <Monitor className="h-4 w-4 mr-1" />
-                Horizontal
+                <Grid3x3 className="h-4 w-4 mr-1.5" />
+                Grade
               </Button>
             </div>
           </div>
 
-          {/* Controle de Zoom */}
+          {/* Controles de Zoom */}
           <div className="flex items-center gap-3 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
             <span className="text-xs font-semibold text-gray-700">Zoom:</span>
             <Button
@@ -617,21 +617,22 @@ export default function VisualizacaoEditavel({
       {/* Container com Zoom e Orientação (scroll só aqui) */}
       <div
         className={cn(
-          "bg-gray-200 min-h-screen flex py-8 overflow-x-auto overflow-y-auto",
-          orientacao === "horizontal" ? "justify-start" : "justify-center"
+          "bg-gray-200 min-h-screen flex py-8 overflow-x-hidden overflow-y-auto",
+          "justify-center"
         )}
       >
         <div 
           className="flex font-sans text-gray-800"
           style={{
             flexDirection: orientacao === 'vertical' ? 'column' : 'row',
-            flexWrap: orientacao === 'horizontal' ? 'nowrap' : 'nowrap',
+            flexWrap: orientacao === 'grade' ? 'wrap' : 'nowrap',
             gap: '20px', // Espaçamento fixo entre páginas
-            justifyContent: orientacao === 'horizontal' ? 'flex-start' : 'center',
-            alignItems: orientacao === 'horizontal' ? 'flex-start' : 'center',
-            // Em modo horizontal, o container ocupa toda a largura disponível
-            // para que várias páginas possam ficar lado a lado.
-            width: orientacao === 'horizontal' ? '100%' : 'auto',
+            justifyContent: 'center',
+            alignItems: orientacao === 'grade' ? 'flex-start' : 'center',
+            // Em modo grade, o container ocupa toda a largura disponível
+            // para que as páginas se organizem em grade responsiva.
+            width: orientacao === 'grade' ? '100%' : 'auto',
+            maxWidth: orientacao === 'grade' ? '100%' : 'auto',
           }}
           ref={pdfContainerRef}
         >
