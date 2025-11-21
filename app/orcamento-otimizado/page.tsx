@@ -906,7 +906,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
             <Button
               size="sm"
-              onClick={() => setMostrarListaOrcamentos(true)}
+              onClick={abrirListaOrcamentos}
               className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
             >
               <Search className="h-4 w-4" /> Carregar
@@ -1136,29 +1136,67 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
             <DialogTitle>Carregar Orçamento</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-1 space-y-2">
-            {orcamentosSalvos.map(o => (
-              <div key={o.id} onClick={() => {
-                setMostrarListaOrcamentos(false)
-                if (onOrcamentoChange && o.id) {
-                  onOrcamentoChange(o.id)
-                } else {
-                  window.history.pushState({}, "", `/orcamento-otimizado?id=${o.id}`)
-                }
-                carregarOrcamentoPorId(o.id!)
-              }} className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors">
-                <div>
-                  <div className="font-bold text-primary">{o.numero}</div>
-                  <div className="text-sm text-gray-600">{o.cliente?.nome || "Sem cliente"}</div>
-                  <div className="text-xs text-gray-400">{new Date(o.data).toLocaleDateString()}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-lg">
-                    R$ {(o.itens.reduce((acc: number, i: any) => acc + (Number(i.quantidade) * Number(i.valor_unitario || i.valorUnitario)), 0) + (Number((o as any).valor_frete || o.valorFrete) || 0)).toFixed(2)}
-                  </div>
-                  <Badge variant="outline">{o.status}</Badge>
-                </div>
+            {carregandoOrcamentos ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            ))}
+            ) : orcamentosSalvos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Nenhum orçamento encontrado
+              </div>
+            ) : (
+              orcamentosSalvos.map(o => {
+                // Parsear itens se vier como string JSON
+                let itensArray: any[] = []
+                try {
+                  if (typeof o.itens === 'string') {
+                    const parsed = JSON.parse(o.itens)
+                    itensArray = Array.isArray(parsed.items) ? parsed.items : []
+                  } else if (Array.isArray(o.itens)) {
+                    itensArray = o.itens
+                  }
+                } catch (e) {
+                  console.warn('Erro ao parsear itens do orçamento:', e)
+                }
+
+                const total = itensArray.reduce((acc: number, i: any) => {
+                  const qtd = Number(i.quantidade) || 0
+                  const valor = Number(i.valor_unitario || i.valorUnitario) || 0
+                  return acc + (qtd * valor)
+                }, 0)
+
+                const frete = Number((o as any).valor_frete || o.valorFrete) || 0
+                const totalComFrete = total + frete
+
+                return (
+                  <div 
+                    key={o.id} 
+                    onClick={() => {
+                      setMostrarListaOrcamentos(false)
+                      if (onOrcamentoChange && o.id) {
+                        onOrcamentoChange(o.id)
+                      } else {
+                        window.history.pushState({}, "", `/orcamento-otimizado?id=${o.id}`)
+                      }
+                      carregarOrcamentoPorId(o.id!)
+                    }} 
+                    className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
+                  >
+                    <div>
+                      <div className="font-bold text-primary">{o.numero}</div>
+                      <div className="text-sm text-gray-600">{o.cliente?.nome || "Sem cliente"}</div>
+                      <div className="text-xs text-gray-400">{new Date(o.data).toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-lg">
+                        R$ {totalComFrete.toFixed(2)}
+                      </div>
+                      <Badge variant="outline">{o.status}</Badge>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -1175,14 +1175,17 @@ export default function VisualizacaoEditavel({
               <div className="space-y-3">
                 {/* Imagem Upload */}
                 <div 
-                  className={cn("text-center border-2 border-dashed border-gray-200 rounded-lg p-2 relative", modoEdicao && "hover:bg-gray-50 transition-colors group")}
+                  className={cn(
+                    "text-center border-2 border-dashed border-gray-200 rounded-lg p-2 relative flex items-center justify-center h-[280px]",
+                    modoEdicao && "hover:bg-gray-50 transition-colors group"
+                  )}
                   tabIndex={modoEdicao ? 0 : -1}
                   onPaste={modoEdicao ? (e) => handleImagePaste(e, item.id) : undefined}
                   title={modoEdicao ? "Clique para selecionar ou cole uma imagem (Ctrl+V)" : undefined}
                 >
                   <img
                     src={item.imagem || "/placeholder.svg"}
-                    className="max-h-[280px] max-w-[65%] mx-auto object-contain"
+                    className="max-h-full max-w-[65%] mx-auto object-contain"
                   />
                   {modoEdicao && (
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity cursor-pointer">
