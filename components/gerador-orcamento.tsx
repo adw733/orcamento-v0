@@ -10,8 +10,6 @@ import { SidebarInset } from "@/components/ui/sidebar"
 import { NavigationHeader } from "@/components/navigation-header"
 import LixeiraOrcamentos from "@/components/lixeira-orcamentos"
 import { mockClientes, mockProdutos } from "@/lib/mock-data"
-import FormularioOrcamento from "@/components/formulario-orcamento"
-import VisualizacaoDocumento from "@/components/visualizacao-documento"
 import GerenciadorClientes from "@/components/gerenciador-clientes"
 import GerenciadorProdutos from "@/components/gerenciador-produtos"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa, DadosEmpresa } from "@/types/types"
@@ -35,9 +33,8 @@ import * as ReactDOM from "react-dom/client"
 import { Loader2 } from "lucide-react"
 // Adicionar os imports necessários para o modal no início do arquivo:
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-// Importar a página de orçamento rápido
+// Importar a página de orçamento otimizado
 import dynamic from 'next/dynamic'
-const OrcamentoRapido = dynamic(() => import('@/app/orcamento-rapido/page'), { ssr: false })
 const OrcamentoOtimizado = dynamic(() => import('@/app/orcamento-otimizado/page'), { ssr: false })
 
 // Helper function to generate UUID
@@ -70,15 +67,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [orcamento, setOrcamento] = useState<Orcamento>(orcamentoInicial)
   const [isPrinting, setIsPrinting] = useState(false)
-  const [abaAtiva, setAbaAtiva] = useState<string>(() => {
-    // Ler da URL primeiro, depois usar abaAtivaInicial como fallback
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.replace('#', '')
-      const [aba] = hash.split('?')
-      if (aba) return aba
-    }
-    return abaAtivaInicial
-  })
+  // Importante para evitar hydration mismatch: o estado inicial de abaAtiva
+  // deve ser determinístico e igual no servidor e no cliente. Por isso,
+  // usamos apenas abaAtivaInicial aqui, sem ler window/location na criação
+  // do estado.
+  const [abaAtiva, setAbaAtiva] = useState<string>(abaAtivaInicial)
   const [isLoading, setIsLoading] = useState(false)
   const [orcamentoSalvo, setOrcamentoSalvo] = useState<string | null>(null)
   // Adicionar um novo estado para controlar se estamos criando um novo orçamento
@@ -93,10 +86,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Adicionar estado para controlar a aba ativa
   // Adicionar o estado para os dados da empresa
   const [dadosEmpresa, setDadosEmpresa] = useState<DadosEmpresa | null>(null)
-  // Adicionar o estado para controlar a exportação da ficha técnica
-  const [exportandoFichaTecnica, setExportandoFichaTecnica] = useState(false)
-  // Adicionar um estado para controlar o modal de visualização após os outros estados:
-  const [modalVisualizacaoAberto, setModalVisualizacaoAberto] = useState(false)
 
   // Estados para controle de mudanças não salvas
   const [temAlteracoes, setTemAlteracoes] = useState(false)
@@ -108,42 +97,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Estado para ID do orçamento otimizado
   const [orcamentoOtimizadoId, setOrcamentoOtimizadoId] = useState<string | null>(null)
 
-  // Helper para aplicar hash atual ao estado interno (abaAtiva + orcamentoOtimizadoId)
-  const aplicarHashNaAbaAtiva = () => {
-    if (typeof window === 'undefined') return
-
-    const hash = window.location.hash.replace('#', '')
-    const [aba, queryString] = hash.split('?')
-    const params = new URLSearchParams(queryString)
-    const id = params.get('id')
-
-    if (aba) {
-      setAbaAtiva(aba)
-    }
-
-    if (aba === 'orcamento-otimizado') {
-      setOrcamentoOtimizadoId(id)
-    } else {
-      setOrcamentoOtimizadoId(null)
-    }
-  }
-
-  // Efeito para inicializar estado baseado na URL
-  useEffect(() => {
-    aplicarHashNaAbaAtiva()
-  }, [])
-
-  // Efeito para reagir a mudanças de hash (ex: NavigationContext.goBack)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const handleHashChange = () => {
-      aplicarHashNaAbaAtiva()
-    }
-
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [])
+  // Removemos a lógica que lia o hash da URL para definir o estado inicial
+  // de abaAtiva (aplicarHashNaAbaAtiva + listeners). Isso garante que o
+  // HTML renderizado no servidor e o primeiro render no cliente partem do
+  // mesmo estado. O hash continua sendo atualizado abaixo, derivado de
+  // abaAtiva/orcamentoOtimizadoId.
 
   // Efeito para atualizar URL quando estado muda
   useEffect(() => {
@@ -949,7 +907,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     if (!orcamento) return
 
     try {
-      setExportandoFichaTecnica(true)
+      // setExportandoFichaTecnica(true) // Removido - estado não existe mais
       setFeedbackSalvamento({
         visivel: true,
         sucesso: true,
@@ -1023,7 +981,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         mensagem: `Erro ao exportar ficha técnica: ${error instanceof Error ? error.message : "Tente novamente"}`,
       })
     } finally {
-      setExportandoFichaTecnica(false)
+      // setExportandoFichaTecnica(false) // Removido - estado não existe mais
     }
   }
 
@@ -1032,7 +990,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Modificar a função exportarOrcamento para suportar os três tipos de exportação
   // Localizar a função exportarOrcamento e substituir por:
   // Função para exportar orçamento (completo, apenas orçamento ou apenas ficha técnica)
+  // NOTA: Esta função foi desabilitada pois usa VisualizacaoDocumento que foi removido
+  // A página de orçamento otimizado tem suas próprias funções de exportação
   const exportarOrcamento = async (orcamentoId: string, tipoExportacao: "completo" | "ficha" | "orcamento") => {
+    console.warn("exportarOrcamento foi desabilitada - use a página de orçamento otimizado")
+    return
+    /*
     try {
       setIsLoading(true)
       setFeedbackSalvamento({
@@ -1366,6 +1329,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     } finally {
       setIsLoading(false)
     }
+    */
   }
 
   // REMOVER ESTE useEffect que estava criando um novo orçamento automaticamente
@@ -2836,8 +2800,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   // Títulos para as abas
   const titulosAbas: { [key: string]: { title: string; subtitle: string } } = {
-    orcamento: { title: "Gerador de Orçamento", subtitle: "Crie orçamentos profissionais para uniformes industriais" },
-    "orcamento-otimizado": { title: "Gerador de Orçamento", subtitle: "Crie orçamentos profissionais para uniformes industriais" },
+    "orcamento-otimizado": { title: "Edição de Orçamento", subtitle: "Crie e edite orçamentos profissionais para uniformes industriais" },
     orcamentos: { title: "Todos os Orçamentos", subtitle: "Visualize e gerencie todos os seus orçamentos" },
     "orcamentos-propostas": { title: "Propostas", subtitle: "Visualize e gerencie suas propostas comerciais" },
     "orcamentos-execucao": { title: "Orçamentos em Execução", subtitle: "Acompanhe os orçamentos que estão em produção" },
@@ -2854,7 +2817,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     "produtos-tabela": { title: "Tabela de Produtos", subtitle: "Visualize e edite seus produtos em formato de tabela" },
   };
 
-  const { title, subtitle } = titulosAbas[abaAtiva] || titulosAbas.orcamento;
+  const { title, subtitle } = titulosAbas[abaAtiva] || titulosAbas["orcamento-otimizado"];
 
   // Substituir o return do componente por:
   return (
@@ -2989,8 +2952,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             }
 
             switch (abaAtiva) {
-              case "orcamento-rapido":
-                return <OrcamentoRapido />
               case "orcamento-otimizado":
                 return (
                   <div className="h-full overflow-hidden">
@@ -2998,79 +2959,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                       id={orcamentoOtimizadoId || undefined}
                       onOrcamentoChange={handleOrcamentoOtimizadoChange}
                     />
-                  </div>
-                )
-              case "orcamento":
-                return (
-                  <div className="space-y-3">
-                    {/* Formulário ocupando toda a largura */}
-                    <Card className="shadow-sm border border-gray-200">
-                      <CardContent className="p-3 md:p-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <h2 className="text-lg md:text-xl font-semibold text-primary">Dados do Orçamento</h2>
-                          <Dialog open={modalVisualizacaoAberto} onOpenChange={setModalVisualizacaoAberto}>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="flex items-center gap-1.5 border-primary text-primary hover:bg-primary hover:text-white text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-                              >
-                                <Eye className="h-4 w-4" />
-                                Visualizar
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
-                              <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0">
-                                <DialogTitle className="text-primary">
-                                  Visualização do Documento - {orcamento.numero}
-                                </DialogTitle>
-                                <Button
-                                  onClick={exportarPDFCanvas}
-                                  disabled={gerandoPDFProfissional || !orcamento.numero}
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs"
-                                >
-                                  {gerandoPDFProfissional ? (
-                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                  ) : (
-                                    <FileDown className="h-3 w-3 mr-1" />
-                                  )}
-                                  {gerandoPDFProfissional ? 'Gerando...' : 'Exportar PDF Pro'}
-                                </Button>
-                              </DialogHeader>
-                              <div className="flex-1 overflow-auto p-2 md:p-4 bg-gray-50">
-                                <div className="max-w-[210mm] mx-auto bg-white shadow-lg">
-                                  <div ref={documentoRef}>
-                                    <VisualizacaoDocumento
-                                      orcamento={orcamento}
-                                      calcularTotal={calcularTotal}
-                                      dadosEmpresa={dadosEmpresa || undefined}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                        <FormularioOrcamento
-                          orcamento={orcamento}
-                          clientes={clientes}
-                          produtos={produtos}
-                          atualizarOrcamento={atualizarOrcamento}
-                          adicionarItem={adicionarItem}
-                          removerItem={removerItem}
-                          duplicarItem={duplicarItem}
-                          atualizarItem={atualizarItem}
-                          calcularTotal={calcularTotal}
-                          handleClienteChange={handleClienteSelection}
-                          salvarNovoOrcamento={salvarNovoOrcamento}
-                          atualizarOrcamentoExistente={atualizarOrcamentoExistente}
-                          orcamentoSalvo={orcamentoSalvo}
-                          isLoading={isLoading}
-                          temAlteracoes={temAlteracoes}
-                        />
-                      </CardContent>
-                    </Card>
                   </div>
                 )
               case "produtos-tabela":
@@ -3158,54 +3046,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                   </Card>
                 )
               default:
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <Card className="shadow-sm border border-gray-200">
-                      <CardContent className="p-3 md:p-4">
-                        <FormularioOrcamento
-                          orcamento={orcamento}
-                          clientes={clientes}
-                          produtos={produtos}
-                          atualizarOrcamento={atualizarOrcamento}
-                          adicionarItem={adicionarItem}
-                          removerItem={removerItem}
-                          duplicarItem={duplicarItem}
-                          atualizarItem={atualizarItem}
-                          calcularTotal={calcularTotal}
-                          handleClienteSelection={handleClienteSelection}
-                        />
-                      </CardContent>
-                    </Card>
-                    <div className="border rounded-lg overflow-hidden bg-white shadow-sm border-gray-200">
-                      <div className="flex items-center justify-between p-2 border-b bg-gray-50">
-                        <h3 className="text-sm font-medium text-gray-700">Visualização do Orçamento</h3>
-                        <Button
-                          onClick={exportarPDFCanvas}
-                          disabled={gerandoPDFProfissional || !orcamento.numero}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          {gerandoPDFProfissional ? (
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          ) : (
-                            <FileDown className="h-3 w-3 mr-1" />
-                          )}
-                          {gerandoPDFProfissional ? 'Gerando...' : 'Exportar PDF Pro'}
-                        </Button>
-                      </div>
-                      <div className="p-2 md:p-3 h-[calc(100vh-250px)] overflow-auto">
-                        <div ref={documentoRef}>
-                          <VisualizacaoDocumento
-                            orcamento={orcamento}
-                            calcularTotal={calcularTotal}
-                            dadosEmpresa={dadosEmpresa || undefined}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
+                return null
             }
           })()}
         </div>

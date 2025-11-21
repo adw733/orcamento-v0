@@ -792,7 +792,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <NavigationHeader />
-              <h1 className="text-lg md:text-xl font-bold text-primary">Orçamento Otimizado</h1>
+              <h1 className="text-lg md:text-xl font-bold text-primary">Edição de Orçamento</h1>
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-3 text-sm md:text-base">

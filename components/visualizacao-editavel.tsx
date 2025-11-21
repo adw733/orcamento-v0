@@ -477,29 +477,8 @@ export default function VisualizacaoEditavel({
     <>
       <style>{pdfStyles}</style>
 
-      {/* Alerta de Edição Ativa - Fixo no topo sem scroll */}
-      {modoEdicao && temAlteracoes && (
-        <div className="sticky top-0 z-50 bg-yellow-50 border-b border-yellow-200 p-3 flex items-center justify-between print:hidden shadow-sm">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <span className="text-sm text-yellow-800 font-medium">
-              Edição ativa - Há alterações não salvas
-            </span>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-            onClick={onSave}
-          >
-            <Save className="h-3 w-3 mr-1" />
-            Salvar
-          </Button>
-        </div>
-      )}
-
       {/* Controles de Visualização */}
-      <div className="sticky top-0 z-50 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-300 p-3 print:hidden shadow-md" style={{ top: modoEdicao && temAlteracoes ? '52px' : '0' }}>
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-300 p-3 print:hidden shadow-md">
         <div className="flex flex-wrap items-center gap-3">
           {/* Toggle Orientação */}
           <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm border border-gray-200">

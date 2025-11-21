@@ -957,32 +957,19 @@ export default function ListaOrcamentos({
                       </TableCell>
                       <TableCell className="px-2 sm:px-4 py-3 align-middle">
                         <div className="flex justify-center gap-1">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
-                                title="Opções de Visualização"
-                              >
-                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => orcamento.id && onSelectOrcamento(orcamento.id)}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Abrir Original
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {
-                                if (orcamento.id && onAbrirOtimizado) {
-                                  onAbrirOtimizado(orcamento.id)
-                                }
-                              }}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Visualização Otimizada (A4)
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
+                            title="Abrir Orçamento"
+                            onClick={() => {
+                              if (orcamento.id && onAbrirOtimizado) {
+                                onAbrirOtimizado(orcamento.id)
+                              }
+                            }}
+                          >
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
 
                           {onExportOrcamento && (
                             <div className="relative hidden sm:block">

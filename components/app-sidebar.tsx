@@ -94,9 +94,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       title: "Orçamentos",
       icon: FileText,
       items: [
-        { id: "orcamento", label: "Edição Orçamento", icon: FileText },
-        { id: "orcamento-rapido", label: "Orçamento Rápido", icon: TrendingUp },
-        { id: "orcamento-otimizado", label: "Orçamento Otimizado", icon: FileText, isExternal: true },
+        { id: "orcamento-otimizado", label: "Edição de Orçamento", icon: FileText, isExternal: true },
         { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
         { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
         { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },
@@ -210,7 +208,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
           <Button
             onClick={() => {
               criarNovoOrcamento()
-              handleMenuItemClick("orcamento")
+              router.push("/orcamento-otimizado")
             }}
             className={`w-full ${expandido ? "justify-start" : "justify-center px-0"}`}
             size={expandido ? "default" : "icon"}

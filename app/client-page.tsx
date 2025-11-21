@@ -20,7 +20,6 @@ export default function ClientPage() {
 
   const criarNovoOrcamento = () => {
     setCriandoNovoOrcamento(true)
-    setAbaAtiva("orcamento")
   }
 
   return (
