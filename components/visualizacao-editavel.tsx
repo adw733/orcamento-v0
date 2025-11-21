@@ -47,14 +47,15 @@ interface VisualizacaoEditavelProps {
   setDadosEmpresa?: (dados: DadosEmpresa) => void
   calcularTotal: () => number
   modoExportacao?: "orcamento" | "ficha" | "completo"
+  setModoExportacao?: (modo: "orcamento" | "ficha" | "completo") => void
   clientes: Cliente[]
   produtos: Produto[]
   onSave: () => void
-  onCopy?: () => void
   exportarOrcamento?: (id: string, tipo: "orcamento" | "ficha") => Promise<void>
   temAlteracoes?: boolean
   mostrarBarraBotoes?: boolean
   modoEdicaoExterno?: boolean
+  setModoEdicaoExterno?: (modo: boolean) => void
 }
 
 // Componentes de input FORA do componente principal para evitar recriação
@@ -142,14 +143,15 @@ export default function VisualizacaoEditavel({
   setDadosEmpresa,
   calcularTotal,
   modoExportacao = "completo",
+  setModoExportacao,
   clientes,
   produtos,
   onSave,
-  onCopy,
   exportarOrcamento,
   temAlteracoes = false,
   mostrarBarraBotoes = true,
-  modoEdicaoExterno
+  modoEdicaoExterno,
+  setModoEdicaoExterno
 }: VisualizacaoEditavelProps) {
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const [progressoPDF, setProgressoPDF] = useState(0)
@@ -179,6 +181,16 @@ export default function VisualizacaoEditavel({
   // Estado para controlar modo edição/visualização
   const [modoEdicaoInterno, setModoEdicaoInterno] = useState(true)
   const modoEdicao = modoEdicaoExterno !== undefined ? modoEdicaoExterno : modoEdicaoInterno
+
+  const toggleModoEdicao = (valor?: boolean) => {
+    const novoValor = valor !== undefined ? valor : !modoEdicao
+
+    if (modoEdicaoExterno !== undefined && setModoEdicaoExterno) {
+      setModoEdicaoExterno(novoValor)
+    } else {
+      setModoEdicaoInterno(novoValor)
+    }
+  }
 
   // Estados para selects/autocompletes
   const [openCliente, setOpenCliente] = useState(false)
@@ -486,9 +498,9 @@ export default function VisualizacaoEditavel({
         </div>
       )}
 
-      {/* Controles de Visualização - Fixo no topo */}
+      {/* Controles de Visualização */}
       <div className="sticky top-0 z-50 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-300 p-3 print:hidden shadow-md" style={{ top: modoEdicao && temAlteracoes ? '52px' : '0' }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Toggle Orientação */}
           <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
             <span className="text-xs font-semibold text-gray-700">Orientação:</span>
@@ -572,47 +584,91 @@ export default function VisualizacaoEditavel({
               100%
             </Button>
           </div>
+
+          {/* Modos de Visualização */}
+          {setModoExportacao && (
+            <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+              <span className="text-xs font-semibold text-gray-700">Modo:</span>
+              <div className="flex border border-primary/30 rounded-md overflow-hidden">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModoExportacao("completo")}
+                  className={cn(
+                    "rounded-none px-3 h-8 transition-all text-xs",
+                    modoExportacao === "completo" 
+                      ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  Completo
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModoExportacao("orcamento")}
+                  className={cn(
+                    "rounded-none border-x border-primary/30 px-3 h-8 transition-all text-xs",
+                    modoExportacao === "orcamento" 
+                      ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  Orçamento
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModoExportacao("ficha")}
+                  className={cn(
+                    "rounded-none px-3 h-8 transition-all text-xs",
+                    modoExportacao === "ficha" 
+                      ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  Ficha Téc.
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Toggle Edição / Visualização */}
+          <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+            <span className="text-xs font-semibold text-gray-700">Edição:</span>
+            <div className="flex border border-primary/30 rounded-md overflow-hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleModoEdicao(true)}
+                className={cn(
+                  "rounded-none px-3 h-8 transition-all text-xs",
+                  modoEdicao
+                    ? "bg-primary text-white hover:bg-primary hover:text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                )}
+              >
+                <Edit3 className="h-4 w-4 mr-1.5" />
+                Editar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleModoEdicao(false)}
+                className={cn(
+                  "rounded-none border-l border-primary/30 px-3 h-8 transition-all text-xs",
+                  !modoEdicao
+                    ? "bg-primary text-white hover:bg-primary hover:text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                )}
+              >
+                <Eye className="h-4 w-4 mr-1.5" />
+                Visualizar
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Barra de Botões - Fixo no topo, abaixo dos controles */}
-      {mostrarBarraBotoes && (
-        <div className="sticky z-40 bg-white border-b border-gray-200 p-3 flex flex-wrap gap-2 print:hidden shadow-sm" style={{ top: modoEdicao && temAlteracoes ? '104px' : '52px' }}>
-          <Button
-            onClick={onCopy}
-            className="flex items-center gap-1.5 bg-secondary hover:bg-secondary-dark text-white transition-all shadow-sm text-xs px-3 py-2 h-8"
-          >
-            <Copy className="h-4 w-4" />
-            Copiar
-          </Button>
-
-          <Button
-            onClick={onSave}
-            className="flex items-center gap-1.5 bg-success hover:bg-success/80 text-white transition-all shadow-sm text-xs px-3 py-2 h-8"
-          >
-            <Save className="h-4 w-4" />
-            Atualizar
-          </Button>
-
-          <Button
-            onClick={gerarPDFOrcamento}
-            disabled={!orcamento.cliente || orcamento.itens.length === 0 || exportandoPDF}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-          >
-            <FileDown className="h-4 w-4" />
-            {exportandoPDF && progressoPDF > 0 && progressoPDF < 50 ? 'Gerando...' : 'PDF Orçamento'}
-          </Button>
-
-          <Button
-            onClick={gerarPDFFichasTecnicas}
-            disabled={!orcamento.cliente || orcamento.itens.length === 0 || exportandoPDF}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-          >
-            <FileDown className="h-4 w-4" />
-            {exportandoPDF && progressoPDF >= 50 ? 'Gerando...' : 'PDF Ficha'}
-          </Button>
-        </div>
-      )}
 
       {/* Container com Zoom e Orientação (scroll só aqui) */}
       <div
@@ -1076,8 +1132,19 @@ export default function VisualizacaoEditavel({
             <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center w-[50px] h-[50px] overflow-hidden">
-                    <img src={dadosEmpresa?.logo_url || "/placeholder.svg"} className="max-w-full max-h-full object-contain" />
+                  <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center" style={{ width: "50px", height: "50px" }}>
+                    {dadosEmpresa?.logo_url ? (
+                      <img
+                        src={dadosEmpresa.logo_url}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : (
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5"/>
+                        <path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                        <path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5"/>
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <div>
