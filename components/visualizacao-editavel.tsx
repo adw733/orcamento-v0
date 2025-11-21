@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Plus, Trash2, Upload, Search, Calendar as CalendarIcon, Check, Eye, Edit3, FileDown, Save, AlertCircle, Copy, ChevronUp, ChevronDown } from "lucide-react"
+import { Plus, Trash2, Upload, Search, Calendar as CalendarIcon, Check, Eye, Edit3, FileDown, Save, AlertCircle, Copy, ChevronUp, ChevronDown, Monitor, Smartphone, ZoomIn, ZoomOut, RotateCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -154,6 +154,10 @@ export default function VisualizacaoEditavel({
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const [progressoPDF, setProgressoPDF] = useState(0)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
+  
+  // Estados para controle de visualização
+  const [orientacao, setOrientacao] = useState<'vertical' | 'horizontal'>('vertical')
+  const [zoom, setZoom] = useState(100)
   
   // Refs para manter referências estáveis
   const orcamentoRef = useRef(orcamento)
@@ -482,9 +486,98 @@ export default function VisualizacaoEditavel({
         </div>
       )}
 
-      {/* Barra de Botões - Fixo no topo, abaixo do alerta */}
+      {/* Controles de Visualização - Fixo no topo */}
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-300 p-3 print:hidden shadow-md" style={{ top: modoEdicao && temAlteracoes ? '52px' : '0' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Toggle Orientação */}
+          <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+            <span className="text-xs font-semibold text-gray-700">Orientação:</span>
+            <div className="flex border border-primary/30 rounded-md overflow-hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOrientacao('vertical')}
+                className={cn(
+                  "rounded-none px-3 h-8 transition-all",
+                  orientacao === 'vertical' 
+                    ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                    : "text-gray-600 hover:bg-gray-100"
+                )}
+                title="Modo Vertical (A4 Portrait)"
+              >
+                <Smartphone className="h-4 w-4 mr-1" />
+                Vertical
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOrientacao('horizontal')}
+                className={cn(
+                  "rounded-none border-l border-primary/30 px-3 h-8 transition-all",
+                  orientacao === 'horizontal' 
+                    ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                    : "text-gray-600 hover:bg-gray-100"
+                )}
+                title="Modo Horizontal (A4 Landscape)"
+              >
+                <Monitor className="h-4 w-4 mr-1" />
+                Horizontal
+              </Button>
+            </div>
+          </div>
+
+          {/* Controle de Zoom */}
+          <div className="flex items-center gap-3 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+            <span className="text-xs font-semibold text-gray-700">Zoom:</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom(Math.max(25, zoom - 25))}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+              title="Diminuir Zoom"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="25"
+                max="200"
+                step="25"
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <span className="text-sm font-bold text-primary min-w-[50px] text-center">
+                {zoom}%
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom(Math.min(200, zoom + 25))}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+              title="Aumentar Zoom"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom(100)}
+              className="h-8 px-2 hover:bg-gray-100 text-xs font-medium"
+              title="Resetar Zoom"
+            >
+              <RotateCw className="h-3 w-3 mr-1" />
+              100%
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de Botões - Fixo no topo, abaixo dos controles */}
       {mostrarBarraBotoes && (
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 p-3 flex flex-wrap gap-2 print:hidden shadow-sm" style={{ top: modoEdicao && temAlteracoes ? '52px' : '0' }}>
+        <div className="sticky z-40 bg-white border-b border-gray-200 p-3 flex flex-wrap gap-2 print:hidden shadow-sm" style={{ top: modoEdicao && temAlteracoes ? '104px' : '52px' }}>
           <Button
             onClick={onCopy}
             className="flex items-center gap-1.5 bg-secondary hover:bg-secondary-dark text-white transition-all shadow-sm text-xs px-3 py-2 h-8"
@@ -521,11 +614,40 @@ export default function VisualizacaoEditavel({
         </div>
       )}
 
-      <div className="flex flex-col gap-8 p-4 font-sans text-gray-800 bg-white max-w-[210mm] mx-auto shadow-2xl my-8 min-h-screen" ref={pdfContainerRef}>
+      {/* Container com Zoom e Orientação (scroll só aqui) */}
+      <div
+        className={cn(
+          "bg-gray-200 min-h-screen flex py-8 overflow-x-auto overflow-y-auto",
+          orientacao === "horizontal" ? "justify-start" : "justify-center"
+        )}
+      >
+        <div 
+          className="flex font-sans text-gray-800"
+          style={{
+            flexDirection: orientacao === 'vertical' ? 'column' : 'row',
+            flexWrap: orientacao === 'horizontal' ? 'nowrap' : 'nowrap',
+            gap: '20px', // Espaçamento fixo entre páginas
+            justifyContent: orientacao === 'horizontal' ? 'flex-start' : 'center',
+            alignItems: orientacao === 'horizontal' ? 'flex-start' : 'center',
+            // Em modo horizontal, o container ocupa toda a largura disponível
+            // para que várias páginas possam ficar lado a lado.
+            width: orientacao === 'horizontal' ? '100%' : 'auto',
+          }}
+          ref={pdfContainerRef}
+        >
 
         {/* 1. ORÇAMENTO PRINCIPAL */}
         {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
-          <div className="border border-gray-300 rounded-md overflow-hidden shadow-sm orcamento-principal bg-white pdf-section">
+          <div 
+            className="border border-gray-300 rounded-md overflow-hidden shadow-sm orcamento-principal bg-white pdf-section"
+            style={{
+              // Largura base ~800px para manter proporção A4 (210x297)
+              width: '210mm',
+              minHeight: '297mm',
+              flexShrink: 0,
+              zoom: (zoom / 100) as any,
+            }}
+          >
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
               <div className="flex justify-between items-center">
@@ -939,7 +1061,16 @@ export default function VisualizacaoEditavel({
 
         {/* 2. FICHA TÉCNICA */}
         {(modoExportacao === "completo" || modoExportacao === "ficha") && orcamento.itens.map((item, idx) => (
-          <div key={item.id} className="border border-gray-300 rounded-md overflow-hidden shadow-sm ficha-tecnica bg-white page-break-before pdf-section mt-8">
+          <div 
+            key={item.id} 
+            className="border border-gray-300 rounded-md overflow-hidden shadow-sm ficha-tecnica bg-white page-break-before pdf-section"
+            style={{
+              width: '210mm',
+              minHeight: '297mm',
+              flexShrink: 0,
+              zoom: (zoom / 100) as any,
+            }}
+          >
             {/* Header Ficha */}
             <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
               <div className="flex justify-between items-center">
@@ -1246,6 +1377,7 @@ export default function VisualizacaoEditavel({
           </div>
         ))}
 
+        </div>
       </div>
     </>
   )

@@ -762,7 +762,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 overflow-x-hidden">
 
       {/* Wrapper superior igual ao GeradorOrcamento (padding + espaçamento vertical) */}
       <div className="p-2 md:p-4 space-y-2 md:space-y-3">
@@ -1083,7 +1083,7 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
       </div>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3">
         {/* Seletor de Status - Apenas visível em modo de edição */}
         {modoEdicao && (
           <div className="max-w-[210mm] mx-auto mb-3">
@@ -1134,8 +1134,11 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
           </div>
         )}
 
-        {/* Visualização Editável - Centralizada */}
-        <div className="max-w-[210mm] mx-auto">
+        {/* Visualização Editável
+            - Em vertical, o próprio componente centraliza as páginas.
+            - Em horizontal, ele usa toda a largura disponível para colocar
+              as páginas lado a lado. */}
+        <div className="w-full mx-auto">
           <VisualizacaoEditavel
             orcamento={orcamento}
             setOrcamento={setOrcamento}
