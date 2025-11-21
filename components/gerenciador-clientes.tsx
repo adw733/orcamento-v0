@@ -26,6 +26,7 @@ import {
 import type { Cliente } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { mockClientes } from "@/lib/mock-data"
+import { NavigationHeader } from "@/components/navigation-header"
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -461,6 +462,8 @@ export default function GerenciadorClientes({ clientes, adicionarCliente, setCli
 
   return (
     <div className="space-y-6">
+      <NavigationHeader />
+      
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-primary flex items-center gap-2">
           <span className="bg-primary text-white p-1 rounded-md text-xs">CLIENTES</span>

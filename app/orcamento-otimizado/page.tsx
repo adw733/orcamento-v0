@@ -17,6 +17,7 @@ import type { Cliente, Produto, Orcamento, ItemOrcamento, DadosEmpresa } from "@
 import { pdf } from '@react-pdf/renderer'
 import { PDFOrcamento } from '@/components/pdf-orcamento'
 import { PDFTodasFichasTecnicas } from '@/components/pdf-ficha-tecnica'
+import { NavigationHeader } from '@/components/navigation-header'
 
 // Helper para gerar UUID
 const generateUUID = () => {
@@ -763,6 +764,10 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-x-hidden">
+      {/* NavigationHeader */}
+      <div className="p-2 md:p-4">
+        <NavigationHeader />
+      </div>
 
       {/* Wrapper superior igual ao GeradorOrcamento (padding + espaçamento vertical) */}
       <div className="p-2 md:p-4 space-y-2 md:space-y-3">

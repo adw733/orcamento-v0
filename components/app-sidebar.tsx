@@ -36,6 +36,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
+import { useNavigation } from "@/lib/navigation-context"
+import { useRouter, usePathname } from "next/navigation"
 
 interface AppSidebarProps {
   abaAtiva: string
@@ -46,6 +48,9 @@ interface AppSidebarProps {
 
 export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarNovoOrcamento }: AppSidebarProps) {
   const { theme, setTheme } = useTheme()
+  const { pushNavigation } = useNavigation()
+  const router = useRouter()
+  const pathname = usePathname()
   const [expandido, setExpandido] = useState(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth >= 1024
@@ -67,10 +72,20 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  const handleMenuItemClick = (aba: string) => {
-    setAbaAtiva(aba)
+  const handleMenuItemClick = (aba: string, isExternal: boolean = false) => {
     if (window.innerWidth < 1024) {
       setIsMobileMenuOpen(false)
+    }
+
+    if (isExternal) {
+      // Para rotas externas (páginas separadas), usa router.push
+      router.push(`/${aba}`)
+    } else {
+      // Para navegação interna (hash), mantém comportamento atual
+      setAbaAtiva(aba)
+      if (typeof window !== 'undefined') {
+        window.location.hash = aba
+      }
     }
   }
 
@@ -235,13 +250,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
                         key={item.id}
                         variant={isActive ? "default" : "ghost"}
                         size="sm"
-                        onClick={() => {
-                          if (isExternal) {
-                            window.location.href = `/${item.id}`
-                          } else {
-                            handleMenuItemClick(item.id)
-                          }
-                        }}
+                        onClick={() => handleMenuItemClick(item.id, isExternal)}
                         className={`w-full ${expandido ? "justify-start" : "justify-center px-0"} ${isDestructive && !isActive ? "text-destructive hover:text-destructive hover:bg-destructive/10" : ""
                           } ${isActive && isDestructive ? "bg-destructive hover:bg-destructive" : ""}`}
                       >

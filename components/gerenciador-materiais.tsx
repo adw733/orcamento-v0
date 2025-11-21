@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { type Cor, type TecidoBase, type TipoTamanho, corService, tecidoBaseService, tipoTamanhoService } from "@/lib/services-materiais"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { NavigationHeader } from "@/components/navigation-header"
 
 export default function GerenciadorMateriais() {
   // Estados para cores
@@ -458,6 +459,8 @@ export default function GerenciadorMateriais() {
 
   return (
     <div className="space-y-6">
+      <NavigationHeader />
+      
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-primary flex items-center gap-2">
           <span className="bg-primary text-white p-1 rounded-md text-xs">MATERIAIS</span>
