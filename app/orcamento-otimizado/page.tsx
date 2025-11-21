@@ -764,11 +764,6 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
 
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-x-hidden">
-      {/* NavigationHeader */}
-      <div className="p-2 md:p-4">
-        <NavigationHeader />
-      </div>
-
       {/* Wrapper superior igual ao GeradorOrcamento (padding + espaçamento vertical) */}
       <div className="p-2 md:p-4 space-y-2 md:space-y-3">
         {/* Banner de alterações não salvas - mesmo estilo do GeradorOrcamento */}
@@ -795,7 +790,10 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         {/* Header com layout igual ao GeradorOrcamento */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
           <div className="space-y-1">
-            <h1 className="text-lg md:text-xl font-bold text-primary">Orçamento Otimizado</h1>
+            <div className="flex items-center gap-3">
+              <NavigationHeader />
+              <h1 className="text-lg md:text-xl font-bold text-primary">Orçamento Otimizado</h1>
+            </div>
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-3 text-sm md:text-base">
                 <div className="flex items-center gap-2">

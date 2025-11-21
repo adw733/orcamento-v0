@@ -7,6 +7,7 @@ import { Save, Check, AlertCircle, FileDown, Eye, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
+import { NavigationHeader } from "@/components/navigation-header"
 import LixeiraOrcamentos from "@/components/lixeira-orcamentos"
 import { mockClientes, mockProdutos } from "@/lib/mock-data"
 import FormularioOrcamento from "@/components/formulario-orcamento"
@@ -107,22 +108,41 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Estado para ID do orçamento otimizado
   const [orcamentoOtimizadoId, setOrcamentoOtimizadoId] = useState<string | null>(null)
 
+  // Helper para aplicar hash atual ao estado interno (abaAtiva + orcamentoOtimizadoId)
+  const aplicarHashNaAbaAtiva = () => {
+    if (typeof window === 'undefined') return
+
+    const hash = window.location.hash.replace('#', '')
+    const [aba, queryString] = hash.split('?')
+    const params = new URLSearchParams(queryString)
+    const id = params.get('id')
+
+    if (aba) {
+      setAbaAtiva(aba)
+    }
+
+    if (aba === 'orcamento-otimizado') {
+      setOrcamentoOtimizadoId(id)
+    } else {
+      setOrcamentoOtimizadoId(null)
+    }
+  }
+
   // Efeito para inicializar estado baseado na URL
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.replace('#', '')
-      const [aba, queryString] = hash.split('?')
-      const params = new URLSearchParams(queryString)
-      const id = params.get('id')
+    aplicarHashNaAbaAtiva()
+  }, [])
 
-      if (aba) {
-        setAbaAtiva(aba)
-      }
+  // Efeito para reagir a mudanças de hash (ex: NavigationContext.goBack)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
 
-      if (aba === 'orcamento-otimizado' && id) {
-        setOrcamentoOtimizadoId(id)
-      }
+    const handleHashChange = () => {
+      aplicarHashNaAbaAtiva()
     }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
   // Efeito para atualizar URL quando estado muda
@@ -2873,9 +2893,12 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             </div>
           )}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
-            <div>
-              <h1 className="text-lg md:text-xl font-bold text-primary">{title}</h1>
-              <p className="text-gray-500 mt-0.5 text-xs md:text-sm">{subtitle}</p>
+            <div className="flex items-center gap-3">
+              <NavigationHeader />
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-primary">{title}</h1>
+                <p className="text-gray-500 mt-0.5 text-xs md:text-sm">{subtitle}</p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
               {abaAtiva === "orcamento" && (

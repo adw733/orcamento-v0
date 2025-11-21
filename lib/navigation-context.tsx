@@ -30,22 +30,36 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams()
   const [history, setHistory] = useState<NavigationHistoryItem[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
+  const [hash, setHash] = useState<string>('')
 
   // Carregar histórico do sessionStorage na inicialização
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed)) {
-            setHistory(parsed)
-          }
-        } catch (e) {
-          console.warn('Erro ao carregar histórico de navegação:', e)
+    if (typeof window === 'undefined') return
+
+    const stored = sessionStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed)) {
+          setHistory(parsed)
         }
+      } catch (e) {
+        console.warn('Erro ao carregar histórico de navegação:', e)
       }
-      setIsInitialized(true)
+    }
+
+    // Inicializar hash atual e listener para mudanças de hash
+    setHash(window.location.hash || '')
+
+    const handleHashChange = () => {
+      setHash(window.location.hash || '')
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    setIsInitialized(true)
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
     }
   }, [])
 
@@ -61,7 +75,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (!isInitialized) return
 
     const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
-    const hash = typeof window !== 'undefined' ? window.location.hash : ''
     const fullPath = currentPath + hash
 
     // Não adicionar duplicatas consecutivas
@@ -98,7 +111,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       // Manter apenas últimas MAX_HISTORY entradas
       return newHistory.slice(-MAX_HISTORY)
     })
-  }, [pathname, searchParams, isInitialized])
+  }, [pathname, searchParams, hash, isInitialized])
 
   const pushNavigation = (path: string, label: string) => {
     const newItem: NavigationHistoryItem = {
@@ -117,6 +130,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       // Remove current page
       const newHistory = history.slice(0, -1)
       setHistory(newHistory)
+      // Garantir que o sessionStorage seja atualizado imediatamente
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory))
+      }
       
       // Navigate to previous page
       const previousPage = newHistory[newHistory.length - 1]

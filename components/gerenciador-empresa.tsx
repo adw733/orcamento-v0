@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Save, Upload, AlertCircle, Check } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { NavigationHeader } from "@/components/navigation-header"
 
 // Definir a interface para os dados da empresa
 export interface DadosEmpresa {
@@ -203,8 +202,6 @@ export default function GerenciadorEmpresa() {
 
   return (
     <div className="space-y-6">
-      <NavigationHeader />
-      
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-primary">Dados da Empresa</h2>

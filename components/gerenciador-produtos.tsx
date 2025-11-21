@@ -29,7 +29,6 @@ import {
 } from "lucide-react"
 import type { Produto } from "@/types/types"
 import { supabase } from "@/lib/supabase"
-import { NavigationHeader } from "@/components/navigation-header"
 
 // Importar os serviços de materiais
 import { type Cor, type TecidoBase, corService, tecidoBaseService } from "@/lib/services-materiais"
@@ -586,8 +585,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
 
   return (
     <div className="space-y-6">
-      <NavigationHeader />
-      
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-primary flex items-center gap-2">
           <span className="bg-primary text-white p-1 rounded-md text-xs">PRODUTOS</span>
