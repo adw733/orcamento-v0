@@ -30,10 +30,8 @@ import {
 import type { Produto } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 
-// Importar os serviços de materiais
 import { type Cor, type TecidoBase, corService, tecidoBaseService } from "@/lib/services-materiais"
 
-// Importar o gerenciador de categorias
 import { type Categoria, CORES_CATEGORIAS } from "./gerenciador-categorias"
 import GerenciadorCategorias from "./gerenciador-categorias"
 
@@ -541,8 +539,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
   // Obter produtos filtrados e ordenados
   const produtosExibidos = produtosFiltradosEOrdenados()
   const produtosAgrupados = agruparPorCategoria(produtosExibidos)
-
-  // Variável para armazenar os tecidos cadastrados
 
   // Funções para gerenciar categorias
   const handleCategoriaAdded = (categoria: Categoria) => {

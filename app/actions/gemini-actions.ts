@@ -1941,16 +1941,9 @@ export async function processGeminiAction(
 // New function to extract text from PDF
 export async function extractTextFromPDF(file: File): Promise<string> {
   try {
-    // For now, we'll just return a placeholder
-    // In a real implementation, you would use a PDF parsing library
-    // or a server-side function to extract text from the PDF
-
-    // Return the file content as text (this is a simplified approach)
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => {
-        // This is a simplified approach - in reality, you'd need to parse the PDF
-        // and extract the text properly
         resolve(reader.result as string)
       }
       reader.onerror = reject

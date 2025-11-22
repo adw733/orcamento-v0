@@ -1,40 +1,34 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import * as ReactDOM from "react-dom/client"
+import dynamic from 'next/dynamic'
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Save, Check, AlertCircle, FileDown, Eye, X } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import { AppSidebar } from "@/components/app-sidebar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { SidebarInset } from "@/components/ui/sidebar"
+import { Save, Check, AlertCircle, FileDown, Eye, X, Loader2 } from "lucide-react"
+
+import { supabase } from "@/lib/supabase"
+import { mockClientes, mockProdutos } from "@/lib/mock-data"
+import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa, DadosEmpresa } from "@/types/types"
+
+import { AppSidebar } from "@/components/app-sidebar"
 import { NavigationHeader } from "@/components/navigation-header"
 import LixeiraOrcamentos from "@/components/lixeira-orcamentos"
-import { mockClientes, mockProdutos } from "@/lib/mock-data"
 import GerenciadorClientes from "@/components/gerenciador-clientes"
 import GerenciadorProdutos from "@/components/gerenciador-produtos"
-import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa, DadosEmpresa } from "@/types/types"
 import ListaOrcamentos from "@/components/lista-orcamentos"
 import AssistenteIA from "@/components/assistente-ia"
-// Adicionar a importação do GerenciadorMateriais no início do arquivo, junto com as outras importações
 import GerenciadorMateriais from "@/components/gerenciador-materiais"
-// Adicionar a importação do GerenciadorTiposTamanho
 import GerenciadorTiposTamanho from "@/components/gerenciador-tipos-tamanho"
-// Adicionar a importação do GerenciadorEmpresa e DadosEmpresa
 import GerenciadorEmpresa from "@/components/gerenciador-empresa"
-// Importar o GerenciadorCategorias
 import GerenciadorCategorias from "@/components/gerenciador-categorias"
-// Adicionar a importação do componente TabelaProdutos no início do arquivo, junto com as outras importações
 import TabelaProdutos from "@/components/tabela-produtos"
-// Adicionar a importação do componente GerenciadorGastosReceitas
 import GerenciadorGastosReceitas from "@/components/gerenciador-gastos-receitas"
-import DashboardFinanceiro from "@/components/dashboard-financeiro";
-// Adicionar a importação do componente LixeiraOrcamentos
-import * as ReactDOM from "react-dom/client"
-import { Loader2 } from "lucide-react"
-// Adicionar os imports necessários para o modal no início do arquivo:
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-// Importar a página de orçamento otimizado
-import dynamic from 'next/dynamic'
+import DashboardFinanceiro from "@/components/dashboard-financeiro"
+
 const OrcamentoOtimizado = dynamic(() => import('@/app/orcamento-otimizado/page'), { ssr: false })
 
 // Helper function to generate UUID
@@ -714,22 +708,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           .single()
 
         if (itemError) throw itemError
-
-        // Salvar estampas do item (comentado temporariamente devido a erro 400)
-        // if (item.estampas && item.estampas.length > 0) {
-        //   for (const estampa of item.estampas) {
-        //     const { error: estampaError } = await supabase
-        //       .from("estampas")
-        //       .insert({
-        //         item_orcamento_id: itemData.id,
-        //         posicao: estampa.posicao,
-        //         tipo: estampa.tipo,
-        //         largura: estampa.largura,
-        //       })
-
-        //     if (estampaError) throw estampaError
-        //   }
-        // }
       }
 
       setOrcamentoSalvo(orcamentoData.id)
@@ -985,363 +963,10 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
-  // Adicionar a função exportarOrcamento após a função exportarFichaTecnica
-
-  // Modificar a função exportarOrcamento para suportar os três tipos de exportação
-  // Localizar a função exportarOrcamento e substituir por:
-  // Função para exportar orçamento (completo, apenas orçamento ou apenas ficha técnica)
-  // NOTA: Esta função foi desabilitada pois usa VisualizacaoDocumento que foi removido
-  // A página de orçamento otimizado tem suas próprias funções de exportação
   const exportarOrcamento = async (orcamentoId: string, tipoExportacao: "completo" | "ficha" | "orcamento") => {
     console.warn("exportarOrcamento foi desabilitada - use a página de orçamento otimizado")
     return
-    /*
-    try {
-      setIsLoading(true)
-      setFeedbackSalvamento({
-        visivel: true,
-        sucesso: true,
-        mensagem: `Exportando ${tipoExportacao === "completo"
-          ? "documento completo"
-          : tipoExportacao === "ficha"
-            ? "ficha técnica"
-            : "orçamento"
-          }, aguarde...`,
-      })
-
-      // Carregar o orçamento do banco de dados
-      const { data, error } = await supabase
-        .from("orcamentos")
-        .select("*, cliente:cliente_id(*)")
-        .eq("id", orcamentoId)
-        .single()
-
-      if (error) throw error
-
-      // Carregar itens do orçamento ordenados por posição
-      const { data: itensData, error: itensError } = await supabase
-        .from("itens_orcamento")
-        .select("*, produto:produto_id(*)")
-        .eq("orcamento_id", orcamentoId)
-        .order("posicao", { ascending: true })
-
-      if (itensError) throw itensError
-
-      // Extrair metadados e ordem dos itens do JSON
-      let _valorFrete = 0
-      let _nomeContato = ""
-      let _telefoneContato = ""
-      let ordemItens: string[] = [] // Array para armazenar a ordem dos IDs dos itens
-
-      try {
-        if (data.itens && typeof data.itens === "object") {
-          // Se itens já é um objeto (parseado automaticamente)
-          if (data.itens.metadados) {
-            if (data.itens.metadados.valorFrete !== undefined) {
-              _valorFrete = Number(data.itens.metadados.valorFrete)
-            }
-            if (data.itens.metadados.nomeContato !== undefined) {
-              _nomeContato = data.itens.metadados.nomeContato
-            }
-            if (data.itens.metadados.telefoneContato !== undefined) {
-              _telefoneContato = data.itens.metadados.telefoneContato
-            }
-          }
-          // Extrair a ordem dos itens, se existir
-          if (data.itens.items && Array.isArray(data.itens.items)) {
-            ordemItens = data.itens.items.map((item) => item.id)
-          }
-        } else if (data.itens && typeof data.itens === "string") {
-          // Se itens é uma string JSON
-          const itensObj = JSON.parse(data.itens)
-          if (itensObj.metadados) {
-            if (itensObj.metadados.valorFrete !== undefined) {
-              _valorFrete = Number(itensObj.metadados.valorFrete)
-            }
-            if (itensObj.metadados.nomeContato !== undefined) {
-              _nomeContato = itensObj.metadados.nomeContato
-            }
-            if (itensObj.metadados.telefoneContato !== undefined) {
-              _telefoneContato = itensObj.metadados.telefoneContato
-            }
-          }
-          // Extrair a ordem dos itens, se existir
-          if (itensObj.items && Array.isArray(itensObj.items)) {
-            ordemItens = itensObj.items.map((item) => item.id)
-          }
-        }
-      } catch (e) {
-        console.error("Erro ao extrair metadados do JSON:", e)
-      }
-
-      // Converter para o formato da aplicação
-      let itensFormatados: ItemOrcamento[] = await Promise.all(
-        itensData
-          ? itensData.map(async (item) => {
-            // Buscar o produto completo com tecidos
-            let produto: Produto | undefined = undefined
-            if (item.produto) {
-              const { data: tecidosData, error: tecidosError } = await supabase
-                .from("tecidos")
-                .select("*")
-                .eq("produto_id", item.produto.id)
-
-              if (tecidosError) throw tecidosError
-
-              produto = {
-                id: item.produto.id,
-                nome: item.produto.nome,
-                valorBase: Number(item.produto.valor_base),
-                tecidos: tecidosData
-                  ? tecidosData.map((t) => ({
-                    nome: t.nome,
-                    composicao: t.composicao || "",
-                  }))
-                  : [],
-                cores: item.produto.cores || [],
-                tamanhosDisponiveis: item.produto.tamanhos_disponiveis || [],
-              }
-            }
-
-            // Carregar estampas do item
-            const { data: estampasData, error: estampasError } = await supabase
-              .from("estampas")
-              .select("*")
-              .eq("item_orcamento_id", item.id)
-
-            if (estampasError) throw estampasError
-
-            // Converter estampas para o formato da aplicação
-            const estampas: Estampa[] = estampasData
-              ? estampasData.map((estampa) => ({
-                id: estampa.id,
-                posicao: estampa.posicao || undefined,
-                tipo: estampa.tipo || undefined,
-                largura: estampa.largura || undefined,
-                comprimento: estampa.comprimento || undefined,
-              }))
-              : []
-
-            return {
-              id: item.id,
-              produtoId: item.produto_id || "",
-              produto,
-              quantidade: item.quantidade,
-              valorUnitario: Number(item.valor_unitario),
-              tecidoSelecionado: item.tecido_nome
-                ? {
-                  nome: item.tecido_nome,
-                  composicao: item.tecido_composicao || "",
-                }
-                : undefined,
-              corSelecionada: item.cor_selecionada || undefined,
-              estampas: estampas,
-              tamanhos: (item.tamanhos as ItemOrcamento["tamanhos"]) || {},
-              imagem: item.imagem || undefined,
-              observacaoComercial: item.observacao_comercial || undefined,
-              observacaoTecnica: item.observacao_tecnica || undefined,
-            }
-          })
-          : [],
-      )
-
-      // Ordenar os itens conforme a ordem salva no JSON
-      if (ordemItens.length > 0) {
-        // Criar um mapa para facilitar a busca por ID
-        const itensMap = new Map(itensFormatados.map((item) => [item.id, item]))
-
-        // Criar um novo array ordenado
-        const itensOrdenados: ItemOrcamento[] = []
-
-        // Adicionar os itens na ordem salva
-        ordemItens.forEach((id) => {
-          const item = itensMap.get(id)
-          if (item) {
-            itensOrdenados.push(item)
-            itensMap.delete(id) // Remover do mapa para não duplicar
-          }
-        })
-
-        // Adicionar quaisquer itens restantes que não estavam na ordem salva
-        itensMap.forEach((item) => {
-          itensOrdenados.push(item)
-        })
-
-        // Substituir o array original pelo ordenado
-        itensFormatados = itensOrdenados
-      }
-
-      // Extrair metadados do JSON de itens, se existirem
-      let valorFrete = 0
-      let nomeContato = ""
-      let telefoneContato = ""
-
-      try {
-        if (data.itens && typeof data.itens === "object") {
-          // Se itens já é um objeto (parseado automaticamente)
-          if (data.itens.metadados) {
-            if (data.itens.metadados.valorFrete !== undefined) {
-              valorFrete = Number(data.itens.metadados.valorFrete)
-            }
-            if (data.itens.metadados.nomeContato !== undefined) {
-              nomeContato = data.itens.metadados.nomeContato
-            }
-            if (data.itens.metadados.telefoneContato !== undefined) {
-              telefoneContato = data.itens.metadados.telefoneContato
-            }
-          }
-        } else if (data.itens && typeof data.itens === "string") {
-          // Se itens é uma string JSON
-          const itensObj = JSON.parse(data.itens)
-          if (itensObj.metadados) {
-            if (itensObj.metadados.valorFrete !== undefined) {
-              valorFrete = Number(itensObj.metadados.valorFrete)
-            }
-            if (itensObj.metadados.nomeContato !== undefined) {
-              nomeContato = itensObj.metadados.nomeContato
-            }
-            if (itensObj.metadados.telefoneContato !== undefined) {
-              telefoneContato = itensObj.metadados.telefoneContato
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Erro ao extrair metadados do JSON:", e)
-      }
-
-      // Converter cliente
-      const clienteFormatado = {
-        id: data.cliente.id,
-        nome: data.cliente.nome,
-        cnpj: data.cliente.cnpj || "",
-        endereco: data.cliente.endereco || "",
-        telefone: data.cliente.telefone || "",
-        email: data.cliente.email || "",
-        contato: data.cliente.contato || "",
-      }
-
-      // Criar o orçamento temporário para exportação
-      const orcamentoExportacao: Orcamento = {
-        id: data.id,
-        numero: data.numero,
-        data: data.data,
-        cliente: clienteFormatado,
-        itens: itensFormatados,
-        observacoes: data.observacoes || "",
-        condicoesPagamento: data.condicoes_pagamento || "À vista",
-        prazoEntrega: data.prazo_entrega || "15 dias",
-        validadeOrcamento: data.validade_orcamento || "15 dias",
-        status: data.status || "proposta",
-        valorFrete: valorFrete,
-        nomeContato: nomeContato,
-        telefoneContato: telefoneContato,
-      }
-
-      // Importar as funções de PDF
-      const { generatePDF, formatPDFFilename } = await import("@/lib/pdf-utils")
-
-      // Criar um container temporário
-      const container = document.createElement("div")
-      container.style.position = "absolute"
-      container.style.left = "-9999px"
-      container.style.width = "210mm"
-      container.style.backgroundColor = "#ffffff"
-      document.body.appendChild(container)
-
-      // Renderizar o documento
-      const root = ReactDOM.createRoot(container)
-
-      // Renderizar o conteúdo apropriado com base no tipo de exportação
-      if (tipoExportacao === "orcamento") {
-        // Renderizar apenas o orçamento
-        root.render(
-          <div className="orcamento-container">
-            <VisualizacaoDocumento
-              orcamento={{
-                ...orcamentoExportacao,
-                itens: orcamentoExportacao.itens, // Manter todos os itens para o cabeçalho
-              }}
-              calcularTotal={() =>
-                orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
-              }
-              dadosEmpresa={dadosEmpresa || undefined}
-              modoExportacao="orcamento" // Adicionar prop para indicar que é apenas o orçamento
-            />
-          </div>,
-        )
-      } else if (tipoExportacao === "ficha") {
-        // Renderizar apenas as fichas técnicas
-        root.render(
-          <div className="fichas-tecnicas-container">
-            <VisualizacaoDocumento
-              orcamento={orcamentoExportacao}
-              calcularTotal={() =>
-                orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
-              }
-              dadosEmpresa={dadosEmpresa || undefined}
-              modoExportacao="ficha" // Adicionar prop para indicar que são apenas as fichas
-            />
-          </div>,
-        )
-      } else {
-        // Renderizar o documento completo
-        root.render(
-          <VisualizacaoDocumento
-            orcamento={orcamentoExportacao}
-            calcularTotal={() =>
-              orcamentoExportacao.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
-            }
-            dadosEmpresa={dadosEmpresa || undefined}
-            modoExportacao="completo" // Adicionar prop para indicar que é o documento completo
-          />,
-        )
-      }
-
-      // Aguardar renderização
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Gerar o nome do arquivo
-      const filename = formatPDFFilename(
-        orcamentoExportacao.numero,
-        tipoExportacao === "ficha" ? "ficha-tecnica" : "orcamento",
-        orcamentoExportacao.cliente?.nome,
-        orcamentoExportacao.nomeContato,
-      )
-
-      // Gerar o PDF
-      await generatePDF(container, filename, tipoExportacao)
-
-      // Remover o container
-      document.body.removeChild(container)
-
-      setFeedbackSalvamento({
-        visivel: true,
-        sucesso: true,
-        mensagem: `Documento exportado com sucesso!`,
-      })
-    } catch (error) {
-      console.error("Erro ao exportar:", error)
-      setFeedbackSalvamento({
-        visivel: true,
-        sucesso: false,
-        mensagem: `Erro ao exportar: ${error instanceof Error ? error.message : "Tente novamente"}`,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-    */
   }
-
-  // REMOVER ESTE useEffect que estava criando um novo orçamento automaticamente
-  // useEffect(() => {
-  //   criarNovoOrcamento()
-  //
-  //   // Get hash from URL if available
-  //   if (typeof window !== "undefined") {
-  //     const hash = window.location.hash ? window.location.hash.substring(1) : "orcamento"
-  //     setAbaAtiva(hash)
-  //   }
-  // }, [])
 
   // Inicializar o aplicativo - VERSÃO CORRIGIDA
   useEffect(() => {
@@ -2071,14 +1696,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
-  // Modificar a função atualizarOrcamento para salvar a ordem dos itens no Supabase
-
-  // Localizar a função atualizarOrcamento e modificar a parte onde os itens são salvos
-  // Aproximadamente na linha 1000-1100
-
-  // Substituir o trecho que atualiza o orçamento no Supabase por:
-
-  const atualizarOrcamento = (novoOrcamento: Partial<Orcamento>) => {
+  const atualizarOrcamento = async (updates: Partial<Orcamento>) => {
     const orcamentoAtualizado = { ...orcamento, ...novoOrcamento }
     setOrcamento(orcamentoAtualizado)
   }
@@ -2358,12 +1976,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           : [],
       )
 
-      // Agora, precisamos modificar a função carregarOrcamento para garantir que a ordem dos itens seja respeitada
-      // Localizar a função carregarOrcamento e adicionar o código para ordenar os itens conforme a ordem salva
-
-      // Adicionar este trecho de código dentro da função carregarOrcamento, após a linha onde os itensFormatados são criados:
-      // Aproximadamente na linha 1500-1600, após a criação de itensFormatados
-
       // Extrair metadados e ordem dos itens do JSON
       let _valorFrete = 0
       let _nomeContato = ""
@@ -2595,8 +2207,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     }
   }
 
-  // Adicionar a função para excluir um orçamento
-  // Modificar a função excluirOrcamento para mover para a lixeira em vez de excluir permanentemente
   const excluirOrcamento = async (orcamentoId: string) => {
     try {
       setIsLoading(true)
@@ -2819,7 +2429,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   const { title, subtitle } = titulosAbas[abaAtiva] || titulosAbas["orcamento-otimizado"];
 
-  // Substituir o return do componente por:
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-2rem)]">
       <AppSidebar
