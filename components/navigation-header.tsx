@@ -11,19 +11,24 @@ interface NavigationHeaderProps {
 export function NavigationHeader({ 
   className = ""
 }: NavigationHeaderProps) {
-  const { canGoBack, goBack } = useNavigation()
+  try {
+    const { canGoBack, goBack } = useNavigation()
 
-  if (!canGoBack) return null
+    if (!canGoBack) return null
 
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={goBack}
-      className={`w-fit hover:bg-primary/10 text-muted-foreground hover:text-primary ${className}`}
-    >
-      <ArrowLeft className="h-4 w-4 mr-1" />
-      Voltar
-    </Button>
-  )
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={goBack}
+        className={`w-fit hover:bg-primary/10 text-muted-foreground hover:text-primary ${className}`}
+      >
+        <ArrowLeft className="h-4 w-4 mr-1" />
+        Voltar
+      </Button>
+    )
+  } catch (error) {
+    // Durante SSR/prerender, o NavigationProvider pode não estar disponível
+    return null
+  }
 }

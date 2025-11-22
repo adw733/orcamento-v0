@@ -1,6 +1,6 @@
 "use server"
 
-import { GoogleGenerativeAI } from "@google/genai"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 import { supabase } from "@/lib/supabase"
 import type { Cliente, Produto, ItemOrcamento, Orcamento } from "@/types/types"
 

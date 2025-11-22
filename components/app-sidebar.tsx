@@ -48,7 +48,14 @@ interface AppSidebarProps {
 
 export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarNovoOrcamento }: AppSidebarProps) {
   const { theme, setTheme } = useTheme()
-  const { pushNavigation } = useNavigation()
+  let pushNavigation: ((path: string, label: string) => void) | undefined
+  try {
+    const nav = useNavigation()
+    pushNavigation = nav.pushNavigation
+  } catch (error) {
+    // Durante SSR, o NavigationProvider pode não estar disponível
+    pushNavigation = undefined
+  }
   const router = useRouter()
   const pathname = usePathname()
   const [expandido, setExpandido] = useState(() => {

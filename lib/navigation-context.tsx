@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 
 interface NavigationHistoryItem {
@@ -24,7 +24,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 const STORAGE_KEY = 'onebase_navigation_history'
 const MAX_HISTORY = 10
 
-export function NavigationProvider({ children }: { children: ReactNode }) {
+function NavigationProviderInner({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -177,6 +177,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     <NavigationContext.Provider value={value}>
       {children}
     </NavigationContext.Provider>
+  )
+}
+
+export function NavigationProvider({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<>{children}</>}>
+      <NavigationProviderInner>{children}</NavigationProviderInner>
+    </Suspense>
   )
 }
 

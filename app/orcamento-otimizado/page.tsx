@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus, Search, Save, Copy, RefreshCw, Eye, Edit3, FileDown, Hash, Calendar, Building2, DollarSign, User, Phone, AlertCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
@@ -28,7 +28,7 @@ const generateUUID = () => {
   })
 }
 
-export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: string, onOrcamentoChange?: (id: string) => void }) {
+function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrcamentoChange?: (id: string) => void }) {
   const searchParams = useSearchParams()
   const idUrl = id || searchParams.get("id")
 
@@ -1204,5 +1204,19 @@ export default function OrcamentoOtimizado({ id, onOrcamentoChange }: { id?: str
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function OrcamentoOtimizado(props: { id?: string, onOrcamentoChange?: (id: string) => void }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
+      <OrcamentoOtimizadoInner {...props} />
+    </Suspense>
   )
 }
