@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabase"
+import { useDataCache } from "@/lib/data-cache"
 import type { Orcamento } from "@/types/types"
 
 interface ListaOrcamentosProps {
@@ -52,8 +53,9 @@ export default function ListaOrcamentos({
   onAbrirOtimizado,
   filtroStatus,
 }: ListaOrcamentosProps) {
-  const [orcamentos, setOrcamentos] = useState<Partial<Orcamento>[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  // Usar cache global para orçamentos
+  const { orcamentosLista, orcamentosLoading, reloadOrcamentos, invalidateOrcamento } = useDataCache()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>(filtroStatus || "4")
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +67,28 @@ export default function ListaOrcamentos({
     direcao: "desc",
   })
 
+  // Converter dados do cache para formato esperado pelo componente
+  const orcamentos = useMemo(() => {
+    return orcamentosLista.map(orc => ({
+      id: orc.id,
+      numero: orc.numero,
+      data: orc.data,
+      prazoEntrega: orc.prazo_entrega || "30 DIAS",
+      cliente: orc.cliente ? {
+        id: orc.cliente.id,
+        nome: orc.cliente.nome,
+        cnpj: orc.cliente.cnpj || "",
+      } : null,
+      itens: orc.itens || [],
+      created_at: orc.created_at,
+      updated_at: orc.updated_at,
+      status: orc.status || "5",
+      valorFrete: orc.valorFrete || 0,
+      nomeContato: orc.nomeContato || "",
+      telefoneContato: orc.telefoneContato || "",
+    }))
+  }, [orcamentosLista])
+
   // Definir o filtro inicial baseado na prop filtroStatus
   useEffect(() => {
     if (filtroStatus) {
@@ -75,13 +99,9 @@ export default function ListaOrcamentos({
   // Expor a função de recarregar para o componente pai
   useEffect(() => {
     if (reloadRef) {
-      reloadRef.current = carregarOrcamentos
+      reloadRef.current = reloadOrcamentos
     }
-  }, [reloadRef])
-
-  useEffect(() => {
-    carregarOrcamentos()
-  }, [])
+  }, [reloadRef, reloadOrcamentos])
 
   // Adicionar uma função para verificar se todos os itens têm imagens
   // Adicionar esta função antes da função calcularTotal
@@ -144,110 +164,7 @@ export default function ListaOrcamentos({
     }
   }
 
-  const carregarOrcamentos = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      const { data, error } = await supabase
-        .from("orcamentos")
-        .select(
-          "id, numero, data, cliente:cliente_id(nome, cnpj), itens, created_at, updated_at, status, prazo_entrega",
-        )
-        .is("deleted_at", null) // Adicionar esta linha para filtrar orçamentos excluídos
-        .order("numero", { ascending: false })
-
-      if (error) {
-        console.error("Erro ao carregar orçamentos:", error)
-        setError(`Erro ao carregar orçamentos: ${error.message}`)
-        return
-      }
-
-      // Converter para o formato da aplicação
-      const orcamentosFormatados = data.map((orcamento) => {
-        let itensParseados = []
-        let valorFrete = 0
-        let nomeContato = ""
-        let telefoneContato = ""
-
-        // Verificar se o campo itens existe e não é nulo
-        if (orcamento.itens) {
-          try {
-            // Verificar se é uma string antes de fazer o parse
-            if (typeof orcamento.itens === "string") {
-              // Verificar se a string não está vazia
-              if (orcamento.itens.trim() !== "") {
-                const itensObj = JSON.parse(orcamento.itens)
-
-                // Verificar se o JSON tem a nova estrutura (com metadados)
-                if (itensObj.items && Array.isArray(itensObj.items)) {
-                  itensParseados = itensObj.items
-                  // Extrair o valor do frete e informações de contato dos metadados
-                  if (itensObj.metadados) {
-                    if (typeof itensObj.metadados.valorFrete === "number") {
-                      valorFrete = itensObj.metadados.valorFrete
-                    }
-                    nomeContato = itensObj.metadados.nomeContato || ""
-                    telefoneContato = itensObj.metadados.telefoneContato || ""
-                  }
-                } else if (Array.isArray(itensObj)) {
-                  // Formato antigo (array simples)
-                  itensParseados = itensObj
-                }
-              }
-            } else if (typeof orcamento.itens === "object") {
-              // Se já for um objeto, verificar a estrutura
-              if (orcamento.itens.items && Array.isArray(orcamento.itens.items)) {
-                itensParseados = orcamento.itens.items
-                // Extrair o valor do frete e informações de contato dos metadados
-                if (orcamento.itens.metadados) {
-                  if (typeof orcamento.itens.metadados.valorFrete === "number") {
-                    valorFrete = orcamento.itens.metadados.valorFrete
-                  }
-                  nomeContato = orcamento.itens.metadados.nomeContato || ""
-                  telefoneContato = orcamento.itens.metadados.telefoneContato || ""
-                }
-              } else if (Array.isArray(orcamento.itens)) {
-                // Formato antigo (array simples)
-                itensParseados = orcamento.itens
-              }
-            }
-          } catch (parseError) {
-            console.error(`Erro ao fazer parse do JSON para o orçamento ${orcamento.id}:`, parseError)
-            // Continuar com um array vazio em caso de erro
-          }
-        }
-
-        return {
-          id: orcamento.id,
-          numero: orcamento.numero,
-          data: orcamento.data,
-          prazoEntrega: orcamento.prazo_entrega || "30 DIAS", // Incluir o prazo de entrega
-          cliente: orcamento.cliente
-            ? {
-              id: orcamento.cliente.id,
-              nome: orcamento.cliente.nome,
-              cnpj: orcamento.cliente.cnpj || "",
-            }
-            : null,
-          itens: Array.isArray(itensParseados) ? itensParseados : [],
-          created_at: orcamento.created_at,
-          updated_at: orcamento.updated_at,
-          status: orcamento.status ? mapearStatusAntigo(orcamento.status) : "5", // Converter status antigos e definir "5" (Proposta) como padrão
-          valorFrete: valorFrete, // Adicionar o valor do frete
-          nomeContato: nomeContato, // Adicionar o nome do contato
-          telefoneContato: telefoneContato, // Adicionar o telefone do contato
-        }
-      })
-
-      setOrcamentos(orcamentosFormatados)
-    } catch (error) {
-      console.error("Erro ao carregar orçamentos:", error)
-      setError(`Erro ao carregar orçamentos: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Função carregarOrcamentos removida - agora usa cache global via useDataCache
 
   const calcularTotal = (orcamento: Partial<Orcamento>) => {
     if (!orcamento.itens || !Array.isArray(orcamento.itens)) return 0
@@ -273,8 +190,9 @@ export default function ListaOrcamentos({
         return
       }
 
-      // Atualizar o status localmente
-      setOrcamentos(orcamentos.map((orc) => (orc.id === orcamentoId ? { ...orc, status: novoStatus } : orc)))
+      // Invalidar cache e recarregar para refletir a mudança
+      invalidateOrcamento(orcamentoId)
+      await reloadOrcamentos()
 
       // Chamar a função de callback se existir
       if (onUpdateStatus) {
@@ -622,7 +540,7 @@ export default function ListaOrcamentos({
           <Button
             variant="outline"
             size="sm"
-            onClick={carregarOrcamentos}
+            onClick={reloadOrcamentos}
             className="mt-2 text-red-700 border-red-300 hover:bg-red-100"
           >
             Tentar novamente
@@ -832,7 +750,7 @@ export default function ListaOrcamentos({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {orcamentosLoading && orcamentos.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="flex justify-center items-center py-8">

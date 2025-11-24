@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { NavigationProvider } from "@/lib/navigation-context"
+import { DataCacheProvider } from "@/lib/data-cache"
 import { ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -12,9 +13,11 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <NavigationProvider>
-        {children}
-      </NavigationProvider>
+      <DataCacheProvider>
+        <NavigationProvider>
+          {children}
+        </NavigationProvider>
+      </DataCacheProvider>
     </ThemeProvider>
   )
 }

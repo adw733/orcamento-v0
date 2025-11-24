@@ -18,6 +18,7 @@ import { pdf } from '@react-pdf/renderer'
 import { PDFOrcamento } from '@/components/pdf-orcamento'
 import { PDFTodasFichasTecnicas } from '@/components/pdf-ficha-tecnica'
 import { NavigationHeader } from '@/components/navigation-header'
+import { useDataCache } from '@/lib/data-cache'
 
 // Helper para gerar UUID
 const generateUUID = () => {
@@ -32,10 +33,21 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
   const searchParams = useSearchParams()
   const idUrl = id || searchParams.get("id")
 
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  const [produtos, setProdutos] = useState<Produto[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  // Usar cache global para dados compartilhados
+  const { 
+    clientes, 
+    produtos, 
+    dadosEmpresa: dadosEmpresaCache, 
+    orcamentosLista,
+    orcamentosLoading,
+    getOrcamentoCompleto,
+    invalidateOrcamento,
+    isInitialized 
+  } = useDataCache()
+
+  const [isLoadingOrcamento, setIsLoadingOrcamento] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [dadosEmpresa, setDadosEmpresa] = useState<DadosEmpresa | undefined>(undefined)
 
   // Estado unificado do orçamento
   const [orcamento, setOrcamento] = useState<Orcamento>({
@@ -62,12 +74,9 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
   // Estados para Preview e PDF
   const [modoVisualizacao, setModoVisualizacao] = useState<"orcamento" | "ficha" | "completo">("completo")
   const [modoEdicao, setModoEdicao] = useState(true)
-  const [dadosEmpresa, setDadosEmpresa] = useState<DadosEmpresa | undefined>(undefined)
 
   // Estados para carregar orçamentos (Lista)
   const [mostrarListaOrcamentos, setMostrarListaOrcamentos] = useState(false)
-  const [orcamentosSalvos, setOrcamentosSalvos] = useState<Orcamento[]>([])
-  const [carregandoOrcamentos, setCarregandoOrcamentos] = useState(false)
   const [exportandoPDF, setExportandoPDF] = useState(false)
 
   // Estados para edição do número do orçamento
@@ -75,17 +84,19 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
   const [numeroTemp, setNumeroTemp] = useState("")
   const [erroNumero, setErroNumero] = useState("")
 
-  // Carregar dados iniciais
+  // Sincronizar dados da empresa do cache
   useEffect(() => {
-    carregarDados()
-  }, [])
+    if (dadosEmpresaCache) {
+      setDadosEmpresa(dadosEmpresaCache)
+    }
+  }, [dadosEmpresaCache])
 
-  // Carregar orçamento pelo ID da URL se existir
+  // Carregar orçamento pelo ID da URL se existir (usando cache)
   useEffect(() => {
-    if (idUrl && idUrl !== orcamento.id && !isLoading) {
+    if (idUrl && idUrl !== orcamento.id && isInitialized && !isLoadingOrcamento) {
       carregarOrcamentoPorId(idUrl)
     }
-  }, [idUrl, isLoading, orcamento.id])
+  }, [idUrl, isInitialized, isLoadingOrcamento, orcamento.id])
 
   // Atalho Ctrl+S para salvar
   useEffect(() => {
@@ -135,190 +146,30 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [temAlteracoes, orcamento.id])
 
-  const carregarDados = async () => {
-    try {
-      setIsLoading(true)
-
-      // Carregar clientes
-      const { data: clientesData, error: clientesError } = await supabase
-        .from("clientes")
-        .select("*")
-        .order("nome")
-
-      if (clientesError) throw clientesError
-      setClientes(clientesData || [])
-
-      // Carregar produtos
-      const { data: produtosData, error: produtosError } = await supabase
-        .from("produtos")
-        .select("*")
-        .order("nome")
-
-      if (produtosError) throw produtosError
-
-      // Carregar tecidos para cada produto
-      const produtosCompletos = await Promise.all(
-        (produtosData || []).map(async (produto) => {
-          const { data: tecidosData } = await supabase
-            .from("tecidos")
-            .select("*")
-            .eq("produto_id", produto.id)
-
-          return {
-            id: produto.id,
-            codigo: produto.codigo || "",
-            nome: produto.nome,
-            valorBase: Number(produto.valor_base) || 0,
-            tecidos: (tecidosData || []).map((t) => ({
-              nome: t.nome,
-              composicao: t.composicao || "",
-            })),
-            cores: produto.cores || [],
-            tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
-          }
-        })
-      )
-
-      setProdutos(produtosCompletos)
-
-      // Carregar dados da empresa
-      const { data: empresaData } = await supabase
-        .from("empresa")
-        .select("*")
-        .limit(1)
-        .single()
-
-      if (empresaData) {
-        setDadosEmpresa({
-          id: empresaData.id,
-          nome: empresaData.nome || "",
-          cnpj: empresaData.cnpj || "",
-          telefone: empresaData.telefone || "",
-          email: empresaData.email || "",
-          endereco: empresaData.endereco || "",
-          logo_url: empresaData.logo_url || empresaData.logo || "",
-        })
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // Função para carregar orçamento usando cache global
   const carregarOrcamentoPorId = async (id: string) => {
     try {
-      setIsLoading(true)
+      setIsLoadingOrcamento(true)
 
-      const { data: orcamentoDb, error } = await supabase
-        .from("orcamentos")
-        .select(`*, cliente:clientes(*)`)
-        .eq("id", id)
-        .single()
-
-      if (error) throw error
-
-      if (!orcamentoDb) return
-
-      // Carregar itens do orçamento (tabela itens_orcamento)
-      const { data: itensData } = await supabase
-        .from("itens_orcamento")
-        .select("*")
-        .eq("orcamento_id", orcamentoDb.id)
-        .order("posicao", { ascending: true })
-
-      // Recuperar dados extras do campo JSON legado (itens + metadados)
-      let itensJSON: any[] = []
-      let metadados = { valorFrete: 0, nomeContato: "", telefoneContato: "" }
-      try {
-        if (orcamentoDb.itens) {
-          const bruto = typeof orcamentoDb.itens === 'string' ? JSON.parse(orcamentoDb.itens) : orcamentoDb.itens
-          if (Array.isArray(bruto.items)) {
-            itensJSON = bruto.items
-          }
-          if (bruto.metadados) {
-            metadados = {
-              valorFrete: Number(bruto.metadados.valorFrete) || 0,
-              nomeContato: bruto.metadados.nomeContato || "",
-              telefoneContato: bruto.metadados.telefoneContato || "",
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("Erro ao parsear itens/metadados do orçamento:", e)
-      }
-
-      // Processar itens completos
-      let produtosAtuais = produtos
-      if (produtosAtuais.length === 0) {
-        const { data: pData } = await supabase.from("produtos").select("*")
-        produtosAtuais = (pData || []).map((p: any) => ({ ...p, tecidos: [], cores: [], tamanhosDisponiveis: p.tamanhos_disponiveis || [] }))
-      }
-
-      const itensCompletos: ItemOrcamento[] = await Promise.all(
-        (itensData || []).map(async (item: any, idx: number) => {
-          const produto = produtosAtuais.find(p => p.id === item.produto_id)
-
-          let tecidos = produto?.tecidos || []
-          if (produto && tecidos.length === 0) {
-            const { data: tData } = await supabase.from("tecidos").select("*").eq("produto_id", produto.id)
-            tecidos = (tData || []).map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
-          }
-
-          // Tentar casar item da tabela com item do JSON (por id, depois por posição/índice)
-          let jsonItem = itensJSON.find((j: any) => j.id === item.id)
-          if (!jsonItem) {
-            const pos = typeof item.posicao === 'number' ? item.posicao : idx
-            jsonItem = itensJSON[pos] || null
-          }
-
-          return {
-            id: item.id,
-            produtoId: item.produto_id,
-            quantidade: jsonItem?.quantidade ?? item.quantidade,
-            valorUnitario: Number(jsonItem?.valorUnitario ?? item.valor_unitario),
-            tipoTamanhoSelecionado: jsonItem?.tipoTamanhoSelecionado || null,
-            tamanhos: jsonItem?.tamanhos || item.tamanhos || {},
-            estampas: jsonItem?.estampas || [],
-            observacaoComercial: jsonItem?.observacaoComercial || item.observacao_comercial || "",
-            observacaoTecnica: jsonItem?.observacaoTecnica || item.observacao_tecnica || "",
-            imagem: jsonItem?.imagem || item.imagem,
-            produto: produto ? { ...produto, tecidos } : undefined,
-            tecidoSelecionado: produto?.tecidos?.find((t: any) => t.nome === item.tecido_nome) || (tecidos?.[0] || undefined),
-            corSelecionada: item.cor_selecionada || (produto?.cores?.[0] || ""),
-          }
+      // Usar cache global para carregar orçamento
+      const orcamentoCompleto = await getOrcamentoCompleto(id)
+      
+      if (!orcamentoCompleto) {
+        toast({
+          title: "Erro",
+          description: "Orçamento não encontrado.",
+          variant: "destructive",
         })
-      )
-
-      const novoOrcamento = {
-        id: orcamentoDb.id,
-        numero: orcamentoDb.numero,
-        data: orcamentoDb.data,
-        cliente: orcamentoDb.cliente || { id: "", codigo: "", nome: "", cnpj: "", telefone: "", email: "", endereco: "" },
-        itens: itensCompletos,
-        condicoesPagamento: orcamentoDb.condicoes_pagamento,
-        prazoEntrega: orcamentoDb.prazo_entrega,
-        validadeOrcamento: orcamentoDb.validade_orcamento,
-        observacoes: orcamentoDb.observacoes || "",
-        valorFrete: metadados.valorFrete,
-        nomeContato: metadados.nomeContato,
-        telefoneContato: metadados.telefoneContato,
-        status: orcamentoDb.status,
+        return
       }
 
-      setOrcamento(novoOrcamento)
-      setOrcamentoOriginal(novoOrcamento) // Salvar cópia original
-
+      setOrcamento(orcamentoCompleto)
+      setOrcamentoOriginal(orcamentoCompleto)
       setTemAlteracoes(false)
 
       toast({
         title: "✅ Orçamento Carregado",
-        description: `Orçamento ${orcamentoDb.numero} carregado.`,
+        description: `Orçamento ${orcamentoCompleto.numero} carregado.`,
       })
 
     } catch (error) {
@@ -329,7 +180,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setIsLoadingOrcamento(false)
     }
   }
 
@@ -691,6 +542,9 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
       setOrcamentoOriginal(novoOrcamento) // Atualizar original após salvar
       setTemAlteracoes(false)
 
+      // Invalidar cache para forçar atualização na próxima vez
+      invalidateOrcamento(orcamentoId)
+
       toast({
         title: "✅ Sucesso!",
         description: `Orçamento salvo com sucesso`,
@@ -730,37 +584,11 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
     }
   }
 
-  const carregarOrcamentos = async () => {
-    try {
-      setCarregandoOrcamentos(true)
-      const { data: orcamentosData, error } = await supabase
-        .from("orcamentos")
-        .select(`*, cliente:clientes(*)`)
-        .order("created_at", { ascending: false })
-        .limit(50)
-
-      if (error) throw error
-      setOrcamentosSalvos(orcamentosData as any || [])
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCarregandoOrcamentos(false)
-    }
-  }
-
+  // Usar lista de orçamentos do cache global
   const abrirListaOrcamentos = () => {
-    carregarOrcamentos()
     setMostrarListaOrcamentos(true)
   }
 
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
 
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-x-hidden">
@@ -918,25 +746,8 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
             <Button
               size="sm"
               onClick={() => {
-                const novoOrcamento: Orcamento = {
-                  id: undefined,
-                  numero: "PREVIEW",
-                  data: new Date().toISOString().split("T")[0],
-                  cliente: null,
-                  itens: [],
-                  observacoes: "",
-                  condicoesPagamento: "À vista",
-                  prazoEntrega: "30 dias",
-                  validadeOrcamento: "15 dias",
-                  valorFrete: 0,
-                  status: "5",
-                  nomeContato: "",
-                  telefoneContato: ""
-                }
-                setOrcamento(novoOrcamento)
-                setOrcamentoOriginal(null)
-                setTemAlteracoes(false)
-                window.history.pushState({}, "", '/orcamento-otimizado')
+                // Navegar para URL limpa para forçar reset completo do estado
+                window.location.href = '/orcamento-otimizado'
               }}
               className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
             >
@@ -1132,73 +943,49 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
 
       </div>
 
-      {/* Dialog Lista */}
+      {/* Dialog Lista - usando cache global */}
       <Dialog open={mostrarListaOrcamentos} onOpenChange={setMostrarListaOrcamentos}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Carregar Orçamento</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-1 space-y-2">
-            {carregandoOrcamentos ? (
+            {orcamentosLoading && orcamentosLista.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            ) : orcamentosSalvos.length === 0 ? (
+            ) : orcamentosLista.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Nenhum orçamento encontrado
               </div>
             ) : (
-              orcamentosSalvos.map(o => {
-                // Parsear itens se vier como string JSON
-                let itensArray: any[] = []
-                try {
-                  if (typeof o.itens === 'string') {
-                    const parsed = JSON.parse(o.itens)
-                    itensArray = Array.isArray(parsed.items) ? parsed.items : []
-                  } else if (Array.isArray(o.itens)) {
-                    itensArray = o.itens
-                  }
-                } catch (e) {
-                  console.warn('Erro ao parsear itens do orçamento:', e)
-                }
-
-                const total = itensArray.reduce((acc: number, i: any) => {
-                  const qtd = Number(i.quantidade) || 0
-                  const valor = Number(i.valor_unitario || i.valorUnitario) || 0
-                  return acc + (qtd * valor)
-                }, 0)
-
-                const frete = Number((o as any).valor_frete || o.valorFrete) || 0
-                const totalComFrete = total + frete
-
-                return (
-                  <div 
-                    key={o.id} 
-                    onClick={() => {
-                      setMostrarListaOrcamentos(false)
-                      if (onOrcamentoChange && o.id) {
-                        onOrcamentoChange(o.id)
-                      } else {
-                        window.history.pushState({}, "", `/orcamento-otimizado?id=${o.id}`)
-                      }
-                      carregarOrcamentoPorId(o.id!)
-                    }} 
-                    className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
-                  >
-                    <div>
-                      <div className="font-bold text-primary">{o.numero}</div>
-                      <div className="text-sm text-gray-600">{o.cliente?.nome || "Sem cliente"}</div>
-                      <div className="text-xs text-gray-400">{new Date(o.data).toLocaleDateString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-lg">
-                        R$ {totalComFrete.toFixed(2)}
-                      </div>
-                      <Badge variant="outline">{o.status}</Badge>
-                    </div>
+              orcamentosLista.map(o => (
+                <div 
+                  key={o.id} 
+                  onClick={() => {
+                    setMostrarListaOrcamentos(false)
+                    if (onOrcamentoChange && o.id) {
+                      onOrcamentoChange(o.id)
+                    } else {
+                      window.history.pushState({}, "", `/orcamento-otimizado?id=${o.id}`)
+                    }
+                    carregarOrcamentoPorId(o.id!)
+                  }} 
+                  className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
+                >
+                  <div>
+                    <div className="font-bold text-primary">{o.numero}</div>
+                    <div className="text-sm text-gray-600">{o.cliente?.nome || "Sem cliente"}</div>
+                    <div className="text-xs text-gray-400">{new Date(o.data).toLocaleDateString()}</div>
                   </div>
-                )
-              })
+                  <div className="text-right">
+                    <div className="font-bold text-lg">
+                      R$ {(o.valor_total || 0).toFixed(2)}
+                    </div>
+                    <Badge variant="outline">{o.status}</Badge>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </DialogContent>
