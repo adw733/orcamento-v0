@@ -17,7 +17,7 @@ import type { Cliente, Produto, Orcamento, ItemOrcamento, DadosEmpresa } from "@
 import { pdf } from '@react-pdf/renderer'
 import { PDFOrcamento } from '@/components/pdf-orcamento'
 import { PDFTodasFichasTecnicas } from '@/components/pdf-ficha-tecnica'
-import { NavigationHeader } from '@/components/navigation-header'
+import { PageHeader } from '@/components/page-header'
 import { useDataCache } from '@/lib/data-cache'
 
 // Helper para gerar UUID
@@ -615,308 +615,197 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
           </div>
         )}
 
-        {/* Header com layout igual ao GeradorOrcamento */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <NavigationHeader />
-              <h1 className="text-lg md:text-xl font-bold text-primary">Edição de Orçamento</h1>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-3 text-sm md:text-base">
-                <div className="flex items-center gap-2">
-                  {!editandoNumero ? (
-                    <p 
-                      className="text-gray-600 text-sm md:text-base cursor-pointer hover:text-primary transition-colors"
-                      onClick={() => {
-                        if (orcamento.id) { // Só permite editar se já foi salvo
-                          setEditandoNumero(true)
-                          setNumeroTemp(orcamento.numero.split(" - ")[0])
-                          setErroNumero("")
-                        }
-                      }}
-                      title={orcamento.id ? "Clique para editar" : "Salve o orçamento antes de editar o número"}
-                    >
-                      <span className="font-semibold text-primary">Orçamento:</span>{" "}
-                      <span className="font-semibold text-gray-800">{orcamento.numero.split(" - ")[0]}</span>
-                      {orcamento.id && <Edit3 className="inline h-3.5 w-3.5 ml-1 text-primary" />}
-                    </p>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Input
-                        type="text"
-                        value={numeroTemp}
-                        onChange={(e) => setNumeroTemp(e.target.value.replace(/\D/g, ""))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            validarEAtualizarNumero(numeroTemp)
-                          } else if (e.key === "Escape") {
-                            setEditandoNumero(false)
-                            setErroNumero("")
-                          }
-                        }}
-                        className="w-20 h-7 text-xs"
-                        placeholder="0000"
-                        maxLength={4}
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => validarEAtualizarNumero(numeroTemp)}
-                        className="h-7 px-2 text-xs"
-                      >
-                        OK
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditandoNumero(false)
-                          setErroNumero("")
-                        }}
-                        className="h-7 px-2 text-xs"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  )}
+        {/* Header Padronizado */}
+        <PageHeader
+          title="Edição de Orçamento"
+          badge={
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Número do Orçamento */}
+              {!editandoNumero ? (
+                <button 
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors text-sm"
+                  onClick={() => {
+                    if (orcamento.id) {
+                      setEditandoNumero(true)
+                      setNumeroTemp(orcamento.numero.split(" - ")[0])
+                      setErroNumero("")
+                    }
+                  }}
+                  title={orcamento.id ? "Clique para editar" : "Salve o orçamento antes de editar o número"}
+                >
+                  <Hash className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-medium text-gray-700">{orcamento.numero.split(" - ")[0]}</span>
+                  {orcamento.id && <Edit3 className="h-3 w-3 text-primary" />}
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="text"
+                    value={numeroTemp}
+                    onChange={(e) => setNumeroTemp(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") validarEAtualizarNumero(numeroTemp)
+                      else if (e.key === "Escape") { setEditandoNumero(false); setErroNumero("") }
+                    }}
+                    className="w-16 h-7 text-xs"
+                    placeholder="0000"
+                    maxLength={4}
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={() => validarEAtualizarNumero(numeroTemp)} className="h-7 px-2 text-xs">OK</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setEditandoNumero(false); setErroNumero("") }} className="h-7 px-2 text-xs">✕</Button>
                 </div>
-
-                {modoEdicao && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
-                    <div className="flex items-center gap-1">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      <span className="text-primary font-semibold">Status do Orçamento:</span>
-                    </div>
-                    <Select
-                      value={orcamento.status || "5"}
-                      onValueChange={(value) => {
-                        setOrcamento({ ...orcamento, status: value })
-                        setTemAlteracoes(true)
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-xs md:text-sm w-[210px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 - Finalizada</SelectItem>
-                        <SelectItem value="2">2 - Entregue</SelectItem>
-                        <SelectItem value="3">3 - Emitir Cobrança</SelectItem>
-                        <SelectItem value="4">4 - Execução</SelectItem>
-                        <SelectItem value="5">5 - Proposta</SelectItem>
-                        <SelectItem value="6">6 - Recusada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Badge className={`${
-                      orcamento.status === "6" ? "bg-red-100 text-red-800 border-red-200" :
-                      orcamento.status === "5" ? "bg-blue-100 text-blue-800 border-blue-200" :
-                      orcamento.status === "4" ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
-                      orcamento.status === "3" ? "bg-orange-100 text-orange-800 border-orange-200" :
-                      orcamento.status === "2" ? "bg-purple-100 text-purple-800 border-purple-200" :
-                      "bg-green-100 text-green-800 border-green-200"
-                    } text-xs px-2 py-0.5 rounded-full`}
-                    >
-                      {orcamento.status === "6" ? "Recusada" :
-                       orcamento.status === "5" ? "Proposta" :
-                       orcamento.status === "4" ? "Execução" :
-                       orcamento.status === "3" ? "Cobrança" :
-                       orcamento.status === "2" ? "Entregue" :
-                       "Finalizada"}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-
+              )}
+              
+              {/* Status Badge */}
+              {modoEdicao && (
+                <div className="flex items-center gap-1.5">
+                  <Select
+                    value={orcamento.status || "5"}
+                    onValueChange={(value) => {
+                      setOrcamento({ ...orcamento, status: value })
+                      setTemAlteracoes(true)
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-[140px] border-gray-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 - Finalizada</SelectItem>
+                      <SelectItem value="2">2 - Entregue</SelectItem>
+                      <SelectItem value="3">3 - Cobrança</SelectItem>
+                      <SelectItem value="4">4 - Execução</SelectItem>
+                      <SelectItem value="5">5 - Proposta</SelectItem>
+                      <SelectItem value="6">6 - Recusada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Badge className={`text-xs px-2 py-0.5 rounded-full ${
+                    orcamento.status === "6" ? "bg-red-100 text-red-700" :
+                    orcamento.status === "5" ? "bg-blue-100 text-blue-700" :
+                    orcamento.status === "4" ? "bg-yellow-100 text-yellow-700" :
+                    orcamento.status === "3" ? "bg-orange-100 text-orange-700" :
+                    orcamento.status === "2" ? "bg-purple-100 text-purple-700" :
+                    "bg-green-100 text-green-700"
+                  }`}>
+                    {orcamento.status === "6" ? "Recusada" :
+                     orcamento.status === "5" ? "Proposta" :
+                     orcamento.status === "4" ? "Execução" :
+                     orcamento.status === "3" ? "Cobrança" :
+                     orcamento.status === "2" ? "Entregue" : "Finalizada"}
+                  </Badge>
+                </div>
+              )}
+              
               {erroNumero && (
                 <span className="text-red-500 text-xs flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" /> {erroNumero}
                 </span>
               )}
             </div>
-          </div>
-          <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
-            <Button
-              size="sm"
-              onClick={abrirListaOrcamentos}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-            >
-              <Search className="h-4 w-4" /> Carregar
-            </Button>
-            
-            <Button
-              size="sm"
-              onClick={() => {
-                // Navegar para URL limpa para forçar reset completo do estado
-                window.location.href = '/orcamento-otimizado'
-              }}
-              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-            >
-              <Plus className="h-4 w-4" /> Novo
-            </Button>
-            {/* Botões de Ação */}
-            <Button
-              size="sm"
-              onClick={async () => {
-                if (!orcamento.id) {
-                  toast({
-                    title: "⚠️ Aviso",
-                    description: "Salve o orçamento antes de copiá-lo.",
-                    variant: "destructive",
-                  })
-                  return
+          }
+        >
+          {/* Botões de Ação */}
+          <Button size="sm" onClick={abrirListaOrcamentos} className="h-9 px-3 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm">
+            <Search className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Carregar</span>
+          </Button>
+          
+          <Button size="sm" onClick={() => window.location.href = '/orcamento-otimizado'} className="h-9 px-3 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Novo</span>
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={async () => {
+              if (!orcamento.id) {
+                toast({ title: "⚠️ Aviso", description: "Carregue um orçamento antes de copiá-lo.", variant: "destructive" })
+                return
+              }
+              try {
+                // Buscar próximo número disponível
+                const { data: ultimoOrcamento } = await supabase.from("orcamentos").select("numero").is("deleted_at", null).order("created_at", { ascending: false }).limit(1)
+                let proximoNumero = "0001"
+                if (ultimoOrcamento && ultimoOrcamento.length > 0) {
+                  const numeroAtual = Number.parseInt(ultimoOrcamento[0].numero.split(" - ")[0], 10)
+                  if (!isNaN(numeroAtual)) proximoNumero = (numeroAtual + 1).toString().padStart(4, "0")
                 }
-
-                try {
-                  setIsSaving(true)
-                  const { data: ultimoOrcamento } = await supabase
-                    .from("orcamentos")
-                    .select("numero")
-                    .is("deleted_at", null)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-
-                  let proximoNumero = "0001"
-                  if (ultimoOrcamento && ultimoOrcamento.length > 0) {
-                    const numeroAtual = Number.parseInt(ultimoOrcamento[0].numero.split(" - ")[0], 10)
-                    if (!isNaN(numeroAtual)) {
-                      proximoNumero = (numeroAtual + 1).toString().padStart(4, "0")
-                    }
-                  }
-
-                  const primeiroItem = orcamento.itens[0]?.produto?.nome || "Item"
-                  const nomeCliente = orcamento.cliente?.nome || "CLIENTE"
-                  const numeroCompleto = `${proximoNumero} - ${primeiroItem} - ${nomeCliente} - ${orcamento.nomeContato || ""}`
-
-                  const dadosOrcamento = {
-                    numero: numeroCompleto,
-                    data: new Date().toISOString().split('T')[0],
-                    cliente_id: orcamento.cliente?.id && orcamento.cliente.id.length > 10 ? orcamento.cliente.id : null,
-                    observacoes: orcamento.observacoes,
-                    condicoes_pagamento: orcamento.condicoesPagamento,
-                    prazo_entrega: orcamento.prazoEntrega,
-                    validade_orcamento: orcamento.validadeOrcamento,
-                    status: orcamento.status || "5 - Proposta",
-                    itens: JSON.stringify({
-                      items: orcamento.itens.map((item) => ({
-                        id: item.id,
-                        produtoId: item.produtoId,
-                        quantidade: item.quantidade,
-                        valorUnitario: item.valorUnitario,
-                        tamanhos: item.tamanhos,
-                        estampas: item.estampas,
-                        observacaoComercial: item.observacaoComercial,
-                        observacaoTecnica: item.observacaoTecnica,
-                        imagem: item.imagem,
-                        tipoTamanhoSelecionado: item.tipoTamanhoSelecionado,
-                      })),
-                      metadados: {
-                        valorFrete: orcamento.valorFrete,
-                        nomeContato: orcamento.nomeContato,
-                        telefoneContato: orcamento.telefoneContato,
-                      },
-                    }),
-                  }
-
-                  const { data: novoOrcamento, error } = await supabase
-                    .from("orcamentos")
-                    .insert(dadosOrcamento)
-                    .select()
-                    .single()
-
-                  if (error) throw error
-
-                  const itensParaInserir = orcamento.itens.map((item, index) => ({
-                    id: item.id,
-                    orcamento_id: novoOrcamento.id,
-                    produto_id: item.produtoId,
-                    quantidade: item.quantidade,
-                    valor_unitario: item.valorUnitario,
-                    tamanhos: item.tamanhos,
-                    observacao_comercial: item.observacaoComercial || "",
-                    observacao_tecnica: item.observacaoTecnica || "",
-                    imagem: item.imagem,
-                    tecido_nome: item.tecidoSelecionado?.nome || "",
-                    cor_selecionada: item.corSelecionada || "",
-                    posicao: index,
-                  }))
-
-                  const { error: itensError } = await supabase
-                    .from("itens_orcamento")
-                    .insert(itensParaInserir)
-
-                  if (itensError) throw itensError
-
-                  toast({
-                    title: "✅ Sucesso!",
-                    description: `Orçamento copiado! Novo número: ${proximoNumero}`,
-                  })
-
-                  window.location.href = `/orcamento-otimizado?id=${novoOrcamento.id}`
-                } catch (error: any) {
-                  console.error("Erro ao copiar:", error)
-                  toast({
-                    title: "❌ Erro",
-                    description: error.message || "Erro ao copiar orçamento",
-                    variant: "destructive",
-                  })
-                } finally {
-                  setIsSaving(false)
+                
+                // Criar cópia local do orçamento SEM SALVAR no banco
+                // Apenas atualiza o estado local para edição
+                const novoOrcamento: Orcamento = {
+                  ...orcamento,
+                  id: undefined, // Remove o ID para indicar que é novo
+                  numero: proximoNumero,
+                  data: new Date().toISOString().split('T')[0],
+                  status: "5 - Proposta",
+                  // Gerar novos IDs para os itens
+                  itens: orcamento.itens.map((item, index) => ({
+                    ...item,
+                    id: `temp-${Date.now()}-${index}`, // ID temporário
+                  })),
                 }
-              }}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 bg-secondary hover:bg-secondary-dark text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-            >
-              <Copy className="h-4 w-4" /> Copiar
-            </Button>
+                
+                setOrcamento(novoOrcamento)
+                setOrcamentoOriginal(novoOrcamento)
+                setTemAlteracoes(true) // Marcar como tendo alterações para forçar salvamento
+                
+                // Atualizar URL sem o ID (novo orçamento)
+                window.history.pushState({}, '', '/orcamento-otimizado')
+                
+                toast({ 
+                  title: "📋 Orçamento Copiado", 
+                  description: `Cópia criada com número ${proximoNumero}. Clique em "Atualizar" para salvar.`,
+                })
+              } catch (error: any) {
+                console.error("Erro ao copiar:", error)
+                toast({ title: "❌ Erro", description: error.message || "Erro ao copiar orçamento", variant: "destructive" })
+              }
+            }}
+            disabled={isSaving}
+            className="h-9 px-3 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg shadow-sm"
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Copiar</span>
+          </Button>
 
-            <Button
-              size="sm"
-              onClick={salvarOrcamento}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 bg-success hover:bg-success/80 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-            >
-              <Save className="h-4 w-4" /> Atualizar
-            </Button>
+          <Button size="sm" onClick={salvarOrcamento} disabled={isSaving} className="h-9 px-3 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm">
+            <Save className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Atualizar</span>
+          </Button>
 
-            <Button
-              size="sm"
-              onClick={async () => {
-                if (!orcamento.cliente || orcamento.itens.length === 0) {
-                  toast({
-                    title: "⚠️ Aviso",
-                    description: "Complete o orçamento para gerar PDF.",
-                    variant: "destructive",
-                  })
-                  return
-                }
-                await gerarPDFOrcamento()
-              }}
-              disabled={exportandoPDF}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-            >
-              <FileDown className="h-4 w-4" /> PDF Orçamento
-            </Button>
+          <Button
+            size="sm"
+            onClick={async () => {
+              if (!orcamento.cliente || orcamento.itens.length === 0) {
+                toast({ title: "⚠️ Aviso", description: "Complete o orçamento para gerar PDF.", variant: "destructive" })
+                return
+              }
+              await gerarPDFOrcamento()
+            }}
+            disabled={exportandoPDF}
+            className="h-9 px-3 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">PDF Orçamento</span>
+          </Button>
 
-            <Button
-              size="sm"
-              onClick={async () => {
-                if (!orcamento.cliente || orcamento.itens.length === 0) {
-                  toast({
-                    title: "⚠️ Aviso",
-                    description: "Complete o orçamento para gerar ficha técnica.",
-                    variant: "destructive",
-                  })
-                  return
-                }
-                await gerarPDFFichasTecnicas()
-              }}
-              disabled={exportandoPDF}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-            >
-              <FileDown className="h-4 w-4" /> PDF Ficha
-            </Button>
-          </div>
-        </div>
+          <Button
+            size="sm"
+            onClick={async () => {
+              if (!orcamento.cliente || orcamento.itens.length === 0) {
+                toast({ title: "⚠️ Aviso", description: "Complete o orçamento para gerar ficha técnica.", variant: "destructive" })
+                return
+              }
+              await gerarPDFFichasTecnicas()
+            }}
+            disabled={exportandoPDF}
+            className="h-9 px-3 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">PDF Ficha</span>
+          </Button>
+        </PageHeader>
       </div>
 
       {/* Conteúdo principal */}

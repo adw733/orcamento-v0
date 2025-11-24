@@ -15,7 +15,7 @@ import { mockClientes, mockProdutos } from "@/lib/mock-data"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, Estampa, DadosEmpresa } from "@/types/types"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { NavigationHeader } from "@/components/navigation-header"
+import { PageHeader } from "@/components/page-header"
 import LixeiraOrcamentos from "@/components/lixeira-orcamentos"
 import GerenciadorClientes from "@/components/gerenciador-clientes"
 import GerenciadorProdutos from "@/components/gerenciador-produtos"
@@ -2464,66 +2464,61 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
               </Button>
             </div>
           )}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-2 md:p-4 rounded-lg shadow-sm gap-2 border border-gray-100">
-            <div className="flex items-center gap-3">
-              <NavigationHeader />
-              <div>
-                <h1 className="text-lg md:text-xl font-bold text-primary">{title}</h1>
-                <p className="text-gray-500 mt-0.5 text-xs md:text-sm">{subtitle}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1.5 justify-start md:justify-end">
-              {abaAtiva === "orcamento" && (
-                <>
+          <PageHeader title={title} subtitle={subtitle}>
+            {abaAtiva === "orcamento" && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={orcamentoSalvo ? copiarOrcamento : salvarNovoOrcamento}
+                  disabled={isLoading || !orcamento.cliente}
+                  className="h-9 px-3 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  <span className="hidden sm:inline">{orcamentoSalvo ? "Copiar" : "Salvar"}</span>
+                </Button>
+
+                {orcamentoSalvo && (
                   <Button
-                    onClick={orcamentoSalvo ? copiarOrcamento : salvarNovoOrcamento}
+                    size="sm"
+                    onClick={atualizarOrcamentoExistente}
                     disabled={isLoading || !orcamento.cliente}
-                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
+                    className="h-9 px-3 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                   >
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {orcamentoSalvo ? "Copiar" : "Salvar"}
+                    <Save className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">{isLoading ? "Atualizando..." : "Atualizar"}</span>
                   </Button>
+                )}
 
-                  {orcamentoSalvo && (
-                    <Button
-                      onClick={atualizarOrcamentoExistente}
-                      disabled={isLoading || !orcamento.cliente}
-                      className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-                    >
-                      <Save className="h-4 w-4" />
-                      {isLoading ? "Atualizando..." : "Atualizar"}
-                    </Button>
-                  )}
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    if (orcamento.id) {
+                      await exportarOrcamento(orcamento.id, "completo")
+                    }
+                  }}
+                  disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
+                  className="h-9 px-3 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{isLoading ? "Gerando..." : "PDF Orçamento"}</span>
+                </Button>
 
-                  <Button
-                    onClick={async () => {
-                      if (orcamento.id) {
-                        await exportarOrcamento(orcamento.id, "completo")
-                      }
-                    }}
-                    disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
-                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-                  >
-                    <FileDown className="h-4 w-4" />
-                    {isLoading ? "Gerando..." : "PDF Orçamento"}
-                  </Button>
-
-                  <Button
-                    onClick={async () => {
-                      if (orcamento.id) {
-                        await exportarOrcamento(orcamento.id, "ficha")
-                      }
-                    }}
-                    disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
-                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white transition-all shadow-sm text-xs px-2 py-1 md:px-3 md:py-2 h-8 md:h-9"
-                  >
-                    <FileDown className="h-4 w-4" />
-                    {isLoading ? "Gerando..." : "PDF Ficha"}
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    if (orcamento.id) {
+                      await exportarOrcamento(orcamento.id, "ficha")
+                    }
+                  }}
+                  disabled={isLoading || !orcamento.cliente || orcamento.itens.length === 0}
+                  className="h-9 px-3 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{isLoading ? "Gerando..." : "PDF Ficha"}</span>
+                </Button>
+              </>
+            )}
+          </PageHeader>
 
           {/* Feedback de salvamento */}
           {feedbackSalvamento.visivel && (

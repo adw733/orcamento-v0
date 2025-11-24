@@ -54,7 +54,7 @@ export default function ListaOrcamentos({
   filtroStatus,
 }: ListaOrcamentosProps) {
   // Usar cache global para orçamentos
-  const { orcamentosLista, orcamentosLoading, reloadOrcamentos, invalidateOrcamento } = useDataCache()
+  const { orcamentosLista, orcamentosLoading, reloadOrcamentos, invalidateOrcamento, removeOrcamentoFromList } = useDataCache()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>(filtroStatus || "4")
@@ -927,14 +927,17 @@ export default function ListaOrcamentos({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
+                            onClick={async () => {
                               if (orcamento.id) {
                                 if (
                                   window.confirm(
                                     "Tem certeza que deseja excluir este orçamento? Esta ação não pode ser desfeita.",
                                   )
                                 ) {
-                                  onDeleteOrcamento(orcamento.id)
+                                  // Remover da lista local imediatamente para feedback instantâneo
+                                  removeOrcamentoFromList(orcamento.id)
+                                  // Depois executar a exclusão no banco
+                                  await onDeleteOrcamento(orcamento.id)
                                 }
                               }
                             }}

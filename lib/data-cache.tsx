@@ -52,6 +52,7 @@ interface DataCacheContextType {
   // Cache de orçamentos completos (por ID)
   getOrcamentoCompleto: (id: string) => Promise<Orcamento | null>
   invalidateOrcamento: (id: string) => void
+  removeOrcamentoFromList: (id: string) => void
   
   // Status geral
   isInitialized: boolean
@@ -393,6 +394,12 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     setOrcamentosTimestamp(0)
   }, [])
 
+  // Remover orçamento da lista local (para exclusão instantânea sem recarregar)
+  const removeOrcamentoFromList = useCallback((id: string) => {
+    orcamentosCache.delete(id)
+    setOrcamentosLista(prev => prev.filter(orc => orc.id !== id))
+  }, [])
+
   // Inicializar todos os dados em paralelo
   const initializeAll = useCallback(async () => {
     if (isInitialized) return
@@ -433,6 +440,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     
     getOrcamentoCompleto,
     invalidateOrcamento,
+    removeOrcamentoFromList,
     
     isInitialized,
     initializeAll
