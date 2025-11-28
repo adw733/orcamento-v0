@@ -12,14 +12,14 @@
 | # | Tarefa | Status | Crítico? |
 |---|--------|--------|----------|
 | 1 | Remover API Key exposta | � Concluído | ⚠️ SIM |
-| 2 | Habilitar RLS + Multi-tenant | 🔴 Pendente | ⚠️ SIM |
+| 2 | Habilitar RLS + Multi-tenant | � Concluído | ⚠️ SIM |
 | 3 | Autenticação (login/cadastro) | 🔴 Pendente | ⚠️ SIM |
 | 4 | Onboarding (criar empresa) | 🔴 Pendente | ⚠️ SIM |
 | 5 | Migrar meus dados | 🔴 Pendente | ⚠️ SIM |
 | 6 | Logout + Nome empresa | 🔴 Pendente | Não |
 | 7 | Testar isolamento | 🔴 Pendente | ⚠️ SIM |
 
-**Progresso:** 1/7 (14%)
+**Progresso:** 2/7 (28%)
 
 ---
 
@@ -73,7 +73,7 @@ Mantenha o fallback para buscar do banco se a env var não existir.
 
 ### Após executar
 - [x] Testar se Assistente IA ainda funciona ✅
-- [ ] Commit: `fix: remove hardcoded gemini api key`
+- [x] Commit: `fix: remove hardcoded gemini api key` ✅
 
 ### Resultado da Execução (28/11/2025)
 ```
@@ -97,7 +97,7 @@ Mantenha o fallback para buscar do banco se a env var não existir.
 
 | Campo | Valor |
 |-------|-------|
-| **Status** | 🔴 Pendente |
+| **Status** | � Concluído (28/11/2025) |
 | **Prioridade** | P0 - CRÍTICO |
 | **Tempo** | 30 min |
 | **Por quê?** | Sem isso, QUALQUER pessoa pode ler/modificar TODOS os dados via API do Supabase. |
@@ -138,8 +138,21 @@ Gere o SQL completo para eu executar no Supabase Dashboard.
 ```
 
 ### Após executar
-- [ ] Executar SQL no Supabase Dashboard
-- [ ] Testar se sistema ainda funciona (vai funcionar pois tenant_id IS NULL é permitido)
+- [x] Executar SQL no Supabase Dashboard ✅
+- [x] Testar se sistema ainda funciona (vai funcionar pois tenant_id IS NULL é permitido) ✅
+
+### Resultado da Execução (28/11/2025)
+```
+✅ SQL executado com sucesso (usando public.get_tenant_id() para evitar erro de permissão no schema auth)
+✅ Coluna tenant_id adicionada em todas as tabelas
+✅ RLS habilitado em todas as tabelas
+✅ Políticas criadas (permissivas para NULL)
+
+✅ Sistema testado em http://localhost:3001:
+   - Orçamentos carregando normalmente
+   - Clientes carregando normalmente
+   - Sem erros de RLS no console
+```
 
 ---
 
