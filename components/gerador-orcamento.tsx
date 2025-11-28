@@ -55,6 +55,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     valorFrete: 0, // Inicializar o valor do frete
     nomeContato: "",
     telefoneContato: "",
+    valorDesconto: 0,
+    tipoDesconto: "valor",
   }
 
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -541,6 +543,8 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
         valorFrete: 0,
         nomeContato: "",
         telefoneContato: "",
+        valorDesconto: 0,
+        tipoDesconto: "valor" as const,
       }
 
       setOrcamento(novoOrcamento)

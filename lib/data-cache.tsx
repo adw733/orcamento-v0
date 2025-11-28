@@ -297,7 +297,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
       
       // Recuperar dados extras do campo JSON legado
       let itensJSON: any[] = []
-      let metadados = { valorFrete: 0, nomeContato: "", telefoneContato: "" }
+      let metadados = { valorFrete: 0, nomeContato: "", telefoneContato: "", valorDesconto: 0, tipoDesconto: "valor" as const }
       try {
         if (orcamentoDb.itens) {
           const bruto = typeof orcamentoDb.itens === 'string' ? JSON.parse(orcamentoDb.itens) : orcamentoDb.itens
@@ -309,6 +309,8 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
               valorFrete: Number(bruto.metadados.valorFrete) || 0,
               nomeContato: bruto.metadados.nomeContato || "",
               telefoneContato: bruto.metadados.telefoneContato || "",
+              valorDesconto: Number(bruto.metadados.valorDesconto) || 0,
+              tipoDesconto: bruto.metadados.tipoDesconto || "valor",
             }
           }
         }
@@ -374,6 +376,8 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
         valorFrete: metadados.valorFrete,
         nomeContato: metadados.nomeContato,
         telefoneContato: metadados.telefoneContato,
+        valorDesconto: metadados.valorDesconto,
+        tipoDesconto: metadados.tipoDesconto,
         status: orcamentoDb.status,
       }
       

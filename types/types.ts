@@ -81,4 +81,6 @@ export type Orcamento = {
   valorFrete?: number // Adicionar campo de valor do frete
   nomeContato?: string // Novo campo para nome do contato
   telefoneContato?: string // Novo campo para telefone do contato
+  valorDesconto?: number // Valor do desconto
+  tipoDesconto?: 'percentual' | 'valor' // Tipo do desconto: percentual (%) ou valor fixo (R$)
 }

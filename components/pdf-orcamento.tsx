@@ -260,7 +260,19 @@ const ordenarTamanhos = (tamanhos: Record<string, number>) => {
 
 export const PDFOrcamento: React.FC<PDFOrcamentoProps> = ({ orcamento, dadosEmpresa, calcularTotal }) => {
   const total = calcularTotal()
-  const totalComFrete = total + (orcamento.valorFrete || 0)
+  const subtotal = total + (orcamento.valorFrete || 0)
+  
+  // Calcular desconto
+  let valorDescontoCalculado = 0
+  if (orcamento.valorDesconto && orcamento.valorDesconto > 0) {
+    if (orcamento.tipoDesconto === 'percentual') {
+      valorDescontoCalculado = (subtotal * orcamento.valorDesconto) / 100
+    } else {
+      valorDescontoCalculado = orcamento.valorDesconto
+    }
+  }
+  
+  const totalFinal = subtotal - valorDescontoCalculado
 
   return (
     <Document>
@@ -384,9 +396,15 @@ export const PDFOrcamento: React.FC<PDFOrcamentoProps> = ({ orcamento, dadosEmpr
                 <Text style={styles.totalValue}>R$ {orcamento.valorFrete.toFixed(2)}</Text>
               </View>
             )}
+            {valorDescontoCalculado > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Desconto ({orcamento.tipoDesconto === 'percentual' ? `${orcamento.valorDesconto}%` : 'R$'}):</Text>
+                <Text style={[styles.totalValue, { color: '#dc2626' }]}>- R$ {valorDescontoCalculado.toFixed(2)}</Text>
+              </View>
+            )}
             <View style={[styles.totalRow, styles.totalFinal]}>
               <Text style={styles.totalLabel}>TOTAL:</Text>
-              <Text style={styles.totalValue}>R$ {totalComFrete.toFixed(2)}</Text>
+              <Text style={styles.totalValue}>R$ {totalFinal.toFixed(2)}</Text>
             </View>
           </View>
         </View>

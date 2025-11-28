@@ -63,7 +63,9 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
     valorFrete: 0,
     status: "5",
     nomeContato: "",
-    telefoneContato: ""
+    telefoneContato: "",
+    valorDesconto: 0,
+    tipoDesconto: "valor"
   })
 
   // Estado para armazenar o orçamento original (para verificar alterações)
@@ -574,7 +576,9 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
       valorFrete: 0,
       status: "5",
       nomeContato: "",
-      telefoneContato: ""
+      telefoneContato: "",
+      valorDesconto: 0,
+      tipoDesconto: "valor"
     })
     setTemAlteracoes(false)
     if (onOrcamentoChange) {
