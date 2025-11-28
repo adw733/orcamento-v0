@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -37,7 +37,6 @@ interface ListaOrcamentosProps {
   onDeleteOrcamento: (orcamentoId: string) => Promise<void>
   onUpdateStatus?: (orcamentoId: string, status: string) => Promise<void>
   onExportOrcamento?: (orcamentoId: string, tipoExportacao: "completo" | "ficha") => Promise<void>
-  onExportOrcamento?: (orcamentoId: string, tipoExportacao: "completo" | "ficha") => Promise<void>
   onAbrirOtimizado?: (orcamentoId: string) => void
   reloadRef?: React.MutableRefObject<(() => Promise<void>) | null>
   filtroStatus?: string
@@ -66,6 +65,10 @@ export default function ListaOrcamentos({
     campo: "numero",
     direcao: "desc",
   })
+
+  // Estados para paginação
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  const ITENS_POR_PAGINA = 15
 
   // Converter dados do cache para formato esperado pelo componente
   const orcamentos = useMemo(() => {
@@ -218,6 +221,52 @@ export default function ListaOrcamentos({
     }
   }
 
+  // Funções auxiliares movidas para antes de filtrarOrcamentos
+  const extrairNumeroOrcamento = (numeroCompleto?: string) => {
+    if (!numeroCompleto) return ""
+    const match = numeroCompleto.match(/^\d+/)
+    return match ? match[0] : numeroCompleto
+  }
+
+  const extrairNumeroDiasPrazo = (prazoEntrega?: string): number => {
+    if (!prazoEntrega) return 30
+    const match = prazoEntrega.match(/(\d+)/)
+    if (match && match[1]) {
+      return Number.parseInt(match[1], 10)
+    }
+    return 30
+  }
+
+  const mapearStatusAntigo = (status: string): string => {
+    switch (status) {
+      case "proposta":
+        return "5"
+      case "execucao":
+        return "4"
+      case "finalizado":
+        return "1"
+      default:
+        return status
+    }
+  }
+
+  const calcularDataEntregaParaOrdenacao = (dataOrcamento?: string, prazoEntrega?: string): Date => {
+    if (!dataOrcamento) return new Date(0)
+    const data = new Date(`${dataOrcamento}T12:00:00`)
+    let diasAdicionais = 0
+    if (prazoEntrega) {
+      const match = prazoEntrega.match(/(\d+)/)
+      if (match && match[1]) {
+        diasAdicionais = Number.parseInt(match[1], 10)
+      }
+    }
+    if (isNaN(diasAdicionais) || diasAdicionais <= 0) {
+      diasAdicionais = 30
+    }
+    data.setDate(data.getDate() + diasAdicionais)
+    return data
+  }
+
   const filtrarOrcamentos = () => {
     let resultado = orcamentos
 
@@ -315,39 +364,30 @@ export default function ListaOrcamentos({
     return resultado
   }
 
+  // Dados paginados com memoização
+  const { dadosPaginados, totalPaginas, totalItens } = useMemo(() => {
+    const filtrados = filtrarOrcamentos()
+    const total = filtrados.length
+    const paginas = Math.ceil(total / ITENS_POR_PAGINA)
+    const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA
+    const fim = inicio + ITENS_POR_PAGINA
+    return {
+      dadosPaginados: filtrados.slice(inicio, fim),
+      totalPaginas: paginas,
+      totalItens: total
+    }
+  }, [paginaAtual, orcamentos, searchTerm, statusFilter, ordenacao])
+
+  // Reset página quando filtros mudam
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [searchTerm, statusFilter])
+
   const formatarData = (dataString?: string) => {
     if (!dataString) return ""
     // Adicionar o horário para evitar problemas de fuso horário
     const data = new Date(`${dataString}T12:00:00`)
     return data.toLocaleDateString("pt-BR")
-  }
-
-  // Função para calcular a data de entrega para ordenação (retorna um objeto Date)
-  const calcularDataEntregaParaOrdenacao = (dataOrcamento?: string, prazoEntrega?: string): Date => {
-    if (!dataOrcamento) return new Date(0) // Data mínima se não houver data
-
-    // Converter a data do orçamento para um objeto Date
-    const data = new Date(`${dataOrcamento}T12:00:00`)
-
-    // Extrair o número de dias do prazo de entrega
-    let diasAdicionais = 0
-    if (prazoEntrega) {
-      // Tentar extrair o número de dias do prazo
-      const match = prazoEntrega.match(/(\d+)/)
-      if (match && match[1]) {
-        diasAdicionais = Number.parseInt(match[1], 10)
-      }
-    }
-
-    // Se não conseguir extrair um número válido, usar 30 dias como padrão
-    if (isNaN(diasAdicionais) || diasAdicionais <= 0) {
-      diasAdicionais = 30
-    }
-
-    // Adicionar os dias ao objeto Date
-    data.setDate(data.getDate() + diasAdicionais)
-
-    return data
   }
 
   // Modificar a função getStatusClassName para incluir os novos status
@@ -373,42 +413,6 @@ export default function ListaOrcamentos({
       default:
         return "bg-gray-100 text-gray-700 border-gray-300"
     }
-  }
-
-  // Função para mapear status antigos para novos códigos numéricos
-  const mapearStatusAntigo = (status: string): string => {
-    switch (status) {
-      case "proposta":
-        return "5"
-      case "execucao":
-        return "4"
-      case "finalizado":
-        return "1"
-      default:
-        return status
-    }
-  }
-
-  const extrairNumeroOrcamento = (numeroCompleto?: string) => {
-    if (!numeroCompleto) return ""
-    // Extrair apenas os dígitos numéricos do início da string
-    const match = numeroCompleto.match(/^\d+/)
-    return match ? match[0] : numeroCompleto
-  }
-
-  // Adicionar uma função para extrair apenas o número de dias do prazo de entrega
-  // Adicionar esta função após a função extrairNumeroOrcamento
-
-  const extrairNumeroDiasPrazo = (prazoEntrega?: string): number => {
-    if (!prazoEntrega) return 30 // Valor padrão se não houver prazo definido
-
-    // Extrair apenas os dígitos do prazo
-    const match = prazoEntrega.match(/(\d+)/)
-    if (match && match[1]) {
-      return Number.parseInt(match[1], 10)
-    }
-
-    return 30 // Valor padrão se não conseguir extrair um número
   }
 
   const formatarDescricaoPedido = (numeroCompleto: string, nomeContato?: string) => {
@@ -779,7 +783,7 @@ export default function ListaOrcamentos({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtrarOrcamentos().map((orcamento) => (
+                  dadosPaginados.map((orcamento) => (
                     <TableRow key={orcamento.id} className="border-t hover:bg-muted/50">
                       <TableCell className="px-2 sm:px-4 py-3 align-middle">
                         <div className="flex flex-col gap-1">
@@ -956,6 +960,76 @@ export default function ListaOrcamentos({
           </div>
         </div>
       </div>
+
+      {/* Paginação */}
+      {totalPaginas > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-2">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {((paginaAtual - 1) * ITENS_POR_PAGINA) + 1} - {Math.min(paginaAtual * ITENS_POR_PAGINA, totalItens)} de {totalItens} orçamentos
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaAtual(1)}
+              disabled={paginaAtual === 1}
+              className="hidden sm:flex"
+            >
+              Primeira
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+              disabled={paginaAtual === 1}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                let pageNum: number
+                if (totalPaginas <= 5) {
+                  pageNum = i + 1
+                } else if (paginaAtual <= 3) {
+                  pageNum = i + 1
+                } else if (paginaAtual >= totalPaginas - 2) {
+                  pageNum = totalPaginas - 4 + i
+                } else {
+                  pageNum = paginaAtual - 2 + i
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={paginaAtual === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPaginaAtual(pageNum)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+              disabled={paginaAtual === totalPaginas}
+            >
+              Próxima
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaAtual(totalPaginas)}
+              disabled={paginaAtual === totalPaginas}
+              className="hidden sm:flex"
+            >
+              Última
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
