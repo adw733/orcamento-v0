@@ -4,21 +4,31 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { supabase } from "@/lib/supabase"
 import type { Cliente, Produto, ItemOrcamento, Orcamento } from "@/types/types"
 
-// Function to get the API key from Supabase
+// Function to get the API key - priority: env var > database
 async function getGeminiApiKey(): Promise<string> {
+  // 1. Primeiro tenta pegar da variável de ambiente (mais seguro)
+  const envApiKey = process.env.GEMINI_API_KEY
+  if (envApiKey) {
+    return envApiKey
+  }
+
+  // 2. Fallback: busca do banco de dados (para compatibilidade)
   try {
     const { data, error } = await supabase.from("configuracoes").select("valor").eq("chave", "gemini_api_key").single()
 
     if (error) {
-      console.error("Erro ao buscar API key:", error)
-      // Default API key as fallback
-      return "AIzaSyCTqW48OFu3BPowgrc0xtBVmvGQAvUQX5I"
+      console.error("Erro ao buscar API key do banco:", error)
+      throw new Error("API key não configurada. Configure GEMINI_API_KEY no .env.local")
     }
 
-    return data?.valor || "AIzaSyCTqW48OFu3BPowgrc0xtBVmvGQAvUQX5I"
+    if (!data?.valor) {
+      throw new Error("API key não encontrada no banco. Configure GEMINI_API_KEY no .env.local")
+    }
+
+    return data.valor
   } catch (error) {
     console.error("Erro ao buscar API key:", error)
-    return "AIzaSyCTqW48OFu3BPowgrc0xtBVmvGQAvUQX5I"
+    throw new Error("API key não configurada. Configure GEMINI_API_KEY no .env.local ou no banco de dados.")
   }
 }
 

@@ -40,7 +40,7 @@ export default function AssistenteIA({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [prompt, setPrompt] = useState("")
-  const [apiKey, setApiKey] = useState("AIzaSyCTqW48OFu3BPowgrc0xtBVmvGQAvUQX5I")
+  const [apiKey, setApiKey] = useState("") // API key é gerenciada no servidor via env var
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([])
   const [feedback, setFeedback] = useState<{ visible: boolean; success: boolean; message: string }>({
     visible: false,

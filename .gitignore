@@ -37,3 +37,6 @@ sistema-versao/
 *.bat
 *.py
 README_CORRECOES.md
+
+# Backups locais (não commitar)
+backup_antes_saas/
