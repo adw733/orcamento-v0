@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, LabelList } from 'recharts';
 import { getMonth, getYear, parseISO, startOfYear, endOfYear } from 'date-fns';
 import { Info, X, Calendar, ChevronDown } from "lucide-react"
@@ -42,6 +43,7 @@ const estimarLarguraTexto = (texto: string, fontSize: number = 11): number => {
 };
 
 export default function DashboardFinanceiro() {
+  const { tenantId } = useCurrentUser();
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [orcamentos, setOrcamentos] = useState<Partial<Orcamento>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,26 +53,32 @@ export default function DashboardFinanceiro() {
   const [consolidarReceitasFuturas, setConsolidarReceitasFuturas] = useState(false);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (tenantId) {
+      carregarDados();
+    }
+  }, [tenantId]);
 
   const carregarDados = async () => {
+    if (!tenantId) return;
+    
     setIsLoading(true);
     try {
-      // Carrega movimentações
+      // Carrega movimentações filtradas por tenant_id
       const { data, error } = await supabase
         .from('gastos_receitas')
         .select('id, data, tipo, categoria, sub_categoria, valor, descricao')
+        .eq('tenant_id', tenantId)
         .order('data', { ascending: true });
 
       if (error) throw error;
 
       setMovimentacoes(data || []);
 
-      // Carrega orçamentos com status 2 (Entregue), 3 (Cobrança) ou 4 (Em Execução)
+      // Carrega orçamentos com status 2 (Entregue), 3 (Cobrança) ou 4 (Em Execução) filtrados por tenant_id
       const { data: orcamentosData, error: orcamentosError } = await supabase
         .from('orcamentos')
         .select('*')
+        .eq('tenant_id', tenantId)
         .in('status', ['2', '3', '4']);
 
       if (orcamentosError) {
@@ -80,7 +88,7 @@ export default function DashboardFinanceiro() {
       }
 
       // Extrai anos únicos dos dados
-      const years = [...new Set(data.map(item => getYear(parseISO(item.data))))].sort((a, b) => b - a);
+      const years = [...new Set((data || []).map(item => getYear(parseISO(item.data))))].sort((a, b) => b - a);
       setAnos(years);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);

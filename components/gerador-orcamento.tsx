@@ -28,6 +28,7 @@ import GerenciadorCategorias from "@/components/gerenciador-categorias"
 import TabelaProdutos from "@/components/tabela-produtos"
 import GerenciadorGastosReceitas from "@/components/gerenciador-gastos-receitas"
 import DashboardFinanceiro from "@/components/dashboard-financeiro"
+import GerenciadorUsuarios from "@/components/gerenciador-usuarios"
 
 const OrcamentoOtimizado = dynamic(() => import('@/app/orcamento-otimizado/page'), { ssr: false })
 
@@ -2650,6 +2651,14 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
                         onExcluirPermanentemente={excluirOrcamentoPermanentemente}
                         reloadRef={recarregarLixeiraRef}
                       />
+                    </CardContent>
+                  </Card>
+                )
+              case "usuarios":
+                return (
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
+                      <GerenciadorUsuarios />
                     </CardContent>
                   </Card>
                 )

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Cliente, Produto, DadosEmpresa, Orcamento } from '@/types/types'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 // Tipos para o cache
 interface CachedData<T> {
@@ -68,6 +69,8 @@ const CACHE_TTL = 5 * 60 * 1000
 const orcamentosCache = new Map<string, { data: Orcamento; timestamp: number }>()
 
 export function DataCacheProvider({ children }: { children: ReactNode }) {
+  const { tenantId, isLoading: userLoading } = useCurrentUser()
+  
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clientesLoading, setClientesLoading] = useState(false)
   const [clientesTimestamp, setClientesTimestamp] = useState(0)
@@ -90,12 +93,14 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
   const reloadClientes = useCallback(async (force = false) => {
     if (clientesLoading) return
     if (!force && clientes.length > 0 && Date.now() - clientesTimestamp < CACHE_TTL) return
+    if (!tenantId) return // Não carregar sem tenant_id
     
     setClientesLoading(true)
     try {
       const { data, error } = await supabase
         .from("clientes")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("nome")
       
       if (error) throw error
@@ -106,18 +111,20 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     } finally {
       setClientesLoading(false)
     }
-  }, [clientesLoading, clientes.length, clientesTimestamp])
+  }, [clientesLoading, clientes.length, clientesTimestamp, tenantId])
 
   // Carregar produtos com tecidos
   const reloadProdutos = useCallback(async (force = false) => {
     if (produtosLoading) return
     if (!force && produtos.length > 0 && Date.now() - produtosTimestamp < CACHE_TTL) return
+    if (!tenantId) return // Não carregar sem tenant_id
     
     setProdutosLoading(true)
     try {
       const { data: produtosData, error } = await supabase
         .from("produtos")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("nome")
       
       if (error) throw error
@@ -152,18 +159,20 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     } finally {
       setProdutosLoading(false)
     }
-  }, [produtosLoading, produtos.length, produtosTimestamp])
+  }, [produtosLoading, produtos.length, produtosTimestamp, tenantId])
 
   // Carregar dados da empresa
   const reloadEmpresa = useCallback(async (force = false) => {
     if (empresaLoading) return
     if (!force && dadosEmpresa && Date.now() - empresaTimestamp < CACHE_TTL) return
+    if (!tenantId) return // Não carregar sem tenant_id
     
     setEmpresaLoading(true)
     try {
       const { data, error } = await supabase
         .from("empresa")
         .select("*")
+        .eq("tenant_id", tenantId)
         .limit(1)
         .single()
       
@@ -186,12 +195,13 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     } finally {
       setEmpresaLoading(false)
     }
-  }, [empresaLoading, dadosEmpresa, empresaTimestamp])
+  }, [empresaLoading, dadosEmpresa, empresaTimestamp, tenantId])
 
   // Carregar lista de orçamentos (completa para todas as visualizações)
   const reloadOrcamentos = useCallback(async (force = false) => {
     if (orcamentosLoading) return
     if (!force && orcamentosLista.length > 0 && Date.now() - orcamentosTimestamp < CACHE_TTL) return
+    if (!tenantId) return // Não carregar sem tenant_id
     
     setOrcamentosLoading(true)
     try {
@@ -209,6 +219,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
           updated_at,
           cliente:clientes(id, nome, cnpj)
         `)
+        .eq("tenant_id", tenantId)
         .is("deleted_at", null)
         .order("numero", { ascending: false })
       
@@ -268,7 +279,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     } finally {
       setOrcamentosLoading(false)
     }
-  }, [orcamentosLoading, orcamentosLista.length, orcamentosTimestamp])
+  }, [orcamentosLoading, orcamentosLista.length, orcamentosTimestamp, tenantId])
 
   // Buscar orçamento completo (com cache)
   const getOrcamentoCompleto = useCallback(async (id: string): Promise<Orcamento | null> => {
@@ -420,10 +431,28 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
 
   // Inicializar automaticamente na primeira renderização
   useEffect(() => {
-    if (!isInitialized) {
+    if (!isInitialized && tenantId && !userLoading) {
       initializeAll()
     }
-  }, [isInitialized, initializeAll])
+  }, [isInitialized, initializeAll, tenantId, userLoading])
+
+  // Reinicializar quando o tenantId mudar (logout/login)
+  useEffect(() => {
+    if (tenantId && !userLoading) {
+      // Limpar dados antigos
+      setClientes([])
+      setProdutos([])
+      setDadosEmpresa(undefined)
+      setOrcamentosLista([])
+      orcamentosCache.clear()
+      setIsInitialized(false)
+      // Recarregar com novo tenant
+      setClientesTimestamp(0)
+      setProdutosTimestamp(0)
+      setEmpresaTimestamp(0)
+      setOrcamentosTimestamp(0)
+    }
+  }, [tenantId])
 
   const value: DataCacheContextType = {
     clientes,

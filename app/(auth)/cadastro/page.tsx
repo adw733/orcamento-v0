@@ -23,13 +23,14 @@ export default function CadastroPage() {
         setLoading(true)
 
         try {
-            const { error } = await supabase.auth.signUp({
+            const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
                         full_name: name,
                     },
+                    emailRedirectTo: `${window.location.origin}/setup`,
                 },
             })
 
@@ -38,8 +39,15 @@ export default function CadastroPage() {
                 return
             }
 
-            toast.success('Cadastro realizado com sucesso! Verifique seu email.')
-            router.push('/login')
+            // Auto login após cadastro (se email confirmation estiver desabilitado)
+            if (data.session) {
+                toast.success('Cadastro realizado com sucesso!')
+                router.push('/setup')
+                router.refresh()
+            } else {
+                toast.success('Cadastro realizado! Verifique seu email para confirmar.')
+                router.push('/login')
+            }
         } catch (error) {
             toast.error('Erro inesperado ao cadastrar')
             console.error(error)

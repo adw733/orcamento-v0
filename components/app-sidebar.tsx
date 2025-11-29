@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useNavigation } from "@/lib/navigation-context"
 import { useRouter, usePathname } from "next/navigation"
+import { UserMenu } from "@/components/user-menu"
 
 interface AppSidebarProps {
   abaAtiva: string
@@ -134,6 +135,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       title: "Sistema",
       icon: Settings,
       items: [
+        { id: "usuarios", label: "Usuários", icon: Users },
         { id: "lixeira", label: "Lixeira", icon: Trash2, variant: "destructive" as const },
       ]
     }
@@ -268,6 +270,11 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
               </div>
             ))}
           </div>
+        </div>
+
+        {/* User Menu */}
+        <div className="border-t border-border p-3">
+          <UserMenu expanded={expandido} />
         </div>
       </div>
 

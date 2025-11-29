@@ -1,7 +1,8 @@
-import { createClient } from "@supabase/supabase-js"
+import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/types/supabase"
 
-// Create a singleton Supabase client
+// Create a singleton Supabase client with SSR support
+// This client properly manages session/cookies for authentication
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -12,8 +13,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Create the client with fallback values for development
-export const supabase = createClient<Database>(
+// Create the client with SSR support for proper session management
+// This ensures the JWT token is sent with requests for RLS to work
+export const supabase = createBrowserClient<Database>(
   supabaseUrl || "https://your-project.supabase.co",
   supabaseAnonKey || "your-anon-key",
 )

@@ -37,17 +37,34 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    if (
-        !user &&
-        !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/cadastro') &&
-        !request.nextUrl.pathname.startsWith('/auth') &&
-        !request.nextUrl.pathname.startsWith('/_next') &&
-        !request.nextUrl.pathname.includes('.') // static files
-    ) {
-        // no user, potentially respond by redirecting the user to the login page
+    const isPublicPath = 
+        request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/cadastro') ||
+        request.nextUrl.pathname.startsWith('/auth') ||
+        request.nextUrl.pathname.startsWith('/api') ||
+        request.nextUrl.pathname.startsWith('/_next') ||
+        request.nextUrl.pathname.includes('.') // static files
+
+    const isSetupPath = request.nextUrl.pathname.startsWith('/setup')
+
+    // Not logged in - redirect to login (except public paths)
+    if (!user && !isPublicPath) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
+        return NextResponse.redirect(url)
+    }
+
+    // Logged in but no tenant_id - redirect to setup (except setup and public paths)
+    if (user && !user.app_metadata?.tenant_id && !isSetupPath && !isPublicPath) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/setup'
+        return NextResponse.redirect(url)
+    }
+
+    // Has tenant_id but trying to access setup - redirect to home
+    if (user && user.app_metadata?.tenant_id && isSetupPath) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/'
         return NextResponse.redirect(url)
     }
 
