@@ -40,6 +40,7 @@
     "@radix-ui/react-tooltip": "1.1.6",
     "@react-pdf/renderer": "^4.3.0",
     "@sparticuz/chromium": "^138.0.2",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "latest",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",

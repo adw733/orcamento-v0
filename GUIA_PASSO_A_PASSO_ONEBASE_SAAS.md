@@ -13,13 +13,13 @@
 |---|--------|--------|----------|
 | 1 | Remover API Key exposta | � Concluído | ⚠️ SIM |
 | 2 | Habilitar RLS + Multi-tenant | � Concluído | ⚠️ SIM |
-| 3 | Autenticação (login/cadastro) | 🔴 Pendente | ⚠️ SIM |
+| 3 | Autenticação (login/cadastro) | � Concluído | ⚠️ SIM |
 | 4 | Onboarding (criar empresa) | 🔴 Pendente | ⚠️ SIM |
 | 5 | Migrar meus dados | 🔴 Pendente | ⚠️ SIM |
 | 6 | Logout + Nome empresa | 🔴 Pendente | Não |
 | 7 | Testar isolamento | 🔴 Pendente | ⚠️ SIM |
 
-**Progresso:** 2/7 (28%)
+**Progresso:** 3/7 (43%)
 
 ---
 
@@ -160,7 +160,7 @@ Gere o SQL completo para eu executar no Supabase Dashboard.
 
 | Campo | Valor |
 |-------|-------|
-| **Status** | 🔴 Pendente |
+| **Status** | � Concluído (28/11/2025) |
 | **Prioridade** | P0 - CRÍTICO |
 | **Tempo** | 1-2 horas |
 | **Por quê?** | Sem login, não tem como separar usuários. |
@@ -188,10 +188,23 @@ Usar componentes shadcn que já existem (Button, Input, Card).
 ```
 
 ### Após executar
-- [ ] Testar cadastro de novo usuário
-- [ ] Testar login
-- [ ] Verificar redirecionamento
+- [x] Testar cadastro de novo usuário ✅
+- [x] Testar login ✅
+- [x] Verificar redirecionamento ✅
 - [ ] Commit: `feat: add authentication with supabase auth`
+
+### Resultado da Execução (28/11/2025)
+```
+✅ Pacote @supabase/ssr instalado
+✅ lib/supabase/client.ts criado
+✅ lib/supabase/server.ts criado
+✅ lib/supabase/middleware.ts criado
+✅ middleware.ts configurado
+✅ app/(auth)/login/page.tsx criado
+✅ app/(auth)/cadastro/page.tsx criado
+✅ Redirecionamento para /login funcionando
+✅ Telas de login e cadastro testadas via Playwright
+```
 
 ---
 
