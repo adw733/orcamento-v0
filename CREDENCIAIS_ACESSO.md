@@ -1,7 +1,7 @@
 # 🔐 CREDENCIAIS DE ACESSO - Sistema OneBase
 
-**Data:** 29/11/2025  
-**URL:** http://localhost:3001 (desenvolvimento)
+**Data:** 29/11/2025 (Atualizado)  
+**URL:** http://localhost:3002 (desenvolvimento - porta pode variar)
 
 ---
 
@@ -9,12 +9,17 @@
 
 ### 1. Usuário Principal (com dados existentes)
 ```
-Email:    adw733@gmail.com
-Senha:    coelho733
-Tenant:   218cefab-7696-4a08-bc1e-d41f19e0aeb3
-Empresa:  OneBase Uniformes
-Dados:    ✅ 26 clientes, 32 produtos, 110 orçamentos
+Email:    jordysilva733@gmail.com
+Senha:    [verificar no Supabase Dashboard]
+Tenant:   Configurado
+Empresa:  ONEBASE Principal
+Dados:    ✅ 82 orçamentos carregando corretamente
 ```
+
+> ⚠️ **NOTA:** Se a senha não funcionar, use o Supabase Dashboard para resetar:
+> 1. Acesse: https://supabase.com/dashboard
+> 2. Vá em Authentication > Users
+> 3. Encontre o usuário e clique em "Send password recovery"
 
 ### 2. Usuário de Teste 1 (sem dados - pronto para setup)
 ```
@@ -38,25 +43,27 @@ Dados:    Vazio (ambiente zerado)
 
 ## 🚀 FLUXO DE TESTE
 
-### Para o usuário principal (adw733@gmail.com):
-1. Acesse http://localhost:3001/login
-2. Digite: adw733@gmail.com / coelho733
-3. ✅ Deve ver todos os seus dados (26 clientes, 110 orçamentos)
+### Para o usuário principal (jordysilva733@gmail.com):
+1. Acesse http://localhost:3002/login
+2. Digite: jordysilva733@gmail.com / [sua senha]
+3. ✅ Deve ver todos os seus dados (82 orçamentos)
 
 ### Para usuários de teste (novos ambientes):
-1. Acesse http://localhost:3001/login
-2. Digite: teste@exemplo.com / teste123
-3. ➡️ Será redirecionado para /setup
-4. Preencha o nome da empresa (ex: "Empresa Teste XPTO")
-5. ✅ Será criado um novo tenant isolado
-6. ✅ Começará com dados zerados (sem clientes, produtos ou orçamentos)
+1. Acesse http://localhost:3002/cadastro
+2. Crie uma nova conta com email válido
+3. ⚠️ Confirme o email (se confirmação estiver habilitada)
+4. Faça login e será redirecionado para /setup
+5. Preencha o nome da empresa
+6. ✅ Será criado um novo tenant isolado
+7. ✅ Começará com dados zerados
 
 ### Para criar novo usuário:
-1. Acesse http://localhost:3001/cadastro
-2. Preencha nome, email e senha
-3. ➡️ Será redirecionado para /setup
-4. Configure o nome da empresa
-5. ✅ Pronto! Novo ambiente multi-tenant criado
+1. Acesse http://localhost:3002/cadastro
+2. Preencha nome, email e senha (mínimo 6 caracteres)
+3. ⚠️ Confirme o email se necessário
+4. Faça login e será redirecionado para /setup
+5. Configure o nome da empresa
+6. ✅ Pronto! Novo ambiente multi-tenant criado
 
 ---
 
@@ -125,8 +132,9 @@ tenant_id = get_tenant_id()
 
 ## 🎯 PRÓXIMOS PASSOS
 
-- [ ] Adicionar botão de logout no header
-- [ ] Mostrar nome da empresa logada no header
+- [x] Adicionar botão de logout no header ✅
+- [x] Mostrar nome da empresa logada no header ✅
+- [x] Menu de usuário com dropdown ✅
 - [ ] Testar isolamento completo (criar dados em ambos usuários)
 - [ ] Deploy em produção (Vercel)
 - [ ] Convidar primeiros 3 clientes
@@ -135,8 +143,8 @@ tenant_id = get_tenant_id()
 
 ## 📝 NOTAS IMPORTANTES
 
-- **Servidor local:** Porta 3001 (3000 estava em uso)
-- **Confirmação de email:** Desabilitada para testes (auto-confirm)
+- **Servidor local:** Porta 3002 (portas anteriores em uso)
+- **Confirmação de email:** Habilitada (verificar no Supabase se precisa desabilitar)
 - **Service Role Key:** Necessária no .env.local para criar tenants
 - **Dados migrados:** Todos vinculados ao tenant 218cefab-7696-4a08-bc1e-d41f19e0aeb3
 
