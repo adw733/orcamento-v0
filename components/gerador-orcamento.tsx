@@ -20,7 +20,7 @@ import LixeiraOrcamentos from "@/components/lixeira-orcamentos"
 import GerenciadorClientes from "@/components/gerenciador-clientes"
 import GerenciadorProdutos from "@/components/gerenciador-produtos"
 import ListaOrcamentos from "@/components/lista-orcamentos"
-import AssistenteIA from "@/components/assistente-ia"
+import AssistenteIAV2 from "@/components/assistente-ia-v2"
 import GerenciadorMateriais from "@/components/gerenciador-materiais"
 import GerenciadorTiposTamanho from "@/components/gerenciador-tipos-tamanho"
 import GerenciadorEmpresa from "@/components/gerenciador-empresa"
@@ -2668,14 +2668,14 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
           })()}
         </div>
       </SidebarInset>
-      <AssistenteIA
-        clientes={clientes}
-        produtos={produtos}
-        orcamento={orcamento}
-        setClientes={setClientes}
-        setProdutos={setProdutos}
-        setOrcamento={setOrcamento}
-        setAbaAtiva={setAbaAtiva}
+      <AssistenteIAV2
+        onOrcamentoCriado={(orc) => {
+          // Recarregar lista de orçamentos quando um novo for criado
+          if (abaAtiva === "orcamentos") {
+            window.location.reload()
+          }
+        }}
+        onNavigate={(aba) => setAbaAtiva(aba)}
       />
 
       {/* Modal de confirmação para alterações não salvas */}
