@@ -413,8 +413,8 @@ export async function generateWithGemini(
     // Initialize the Gemini API with the correct class name
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    // Get the model using the correct model name with free quota
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro-exp-03-25" })
+    // Get the model using Gemini 3 Pro Preview
+    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" })
 
     // Criar listas de clientes, produtos, cores e tecidos para incluir no prompt
     const clientesLista =
@@ -525,8 +525,8 @@ export async function processFileWithGemini(
     // Initialize the Gemini API
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    // Get the vision model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro-exp-03-25" })
+    // Get the vision model - Gemini 3 Pro Preview
+    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" })
 
     // Criar listas de clientes, produtos, cores e tecidos para incluir no prompt
     const clientesLista =

@@ -23,6 +23,18 @@ function getAdminClient() {
   })
 }
 
+// Obter tenant_id do usuário atual
+async function getTenantId(): Promise<string> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user?.app_metadata?.tenant_id) {
+    throw new Error('Usuário não tem tenant_id configurado')
+  }
+  
+  return user.app_metadata.tenant_id
+}
+
 interface ClienteDB {
   id: string
   codigo: string
@@ -176,7 +188,7 @@ async function obterProximoCodigo(tabela: string, prefixo: string = ""): Promise
   return prefixo + "0001"
 }
 
-async function criarCliente(dados: Partial<ClienteDB>): Promise<ClienteDB> {
+async function criarCliente(dados: Partial<ClienteDB>, tenantId: string): Promise<ClienteDB> {
   const supabase = getAdminClient()
   const codigo = await obterProximoCodigo("clientes")
   
@@ -188,6 +200,7 @@ async function criarCliente(dados: Partial<ClienteDB>): Promise<ClienteDB> {
     endereco: dados.endereco || null,
     telefone: dados.telefone || null,
     email: dados.email || null,
+    tenant_id: tenantId,
   }
   
   const { error } = await supabase.from("clientes").insert(novoCliente)
@@ -202,7 +215,7 @@ async function criarProduto(dados: {
   cores?: string[]
   tamanhos?: string[]
   tecido?: string
-}): Promise<ProdutoDB> {
+}, tenantId: string): Promise<ProdutoDB> {
   const supabase = getAdminClient()
   const codigo = await obterProximoCodigo("produtos")
   
@@ -213,6 +226,7 @@ async function criarProduto(dados: {
     valor_base: dados.valorBase || 50.0,
     cores: dados.cores || ["BRANCO", "PRETO"],
     tamanhos_disponiveis: dados.tamanhos || ["P", "M", "G", "GG"],
+    tenant_id: tenantId,
   }
   
   const { error: produtoError } = await supabase.from("produtos").insert(novoProduto)
@@ -224,6 +238,7 @@ async function criarProduto(dados: {
       nome: dados.tecido,
       composicao: "Composição padrão",
       produto_id: novoProduto.id,
+      tenant_id: tenantId,
     })
   }
   
@@ -243,6 +258,7 @@ async function criarOrcamento(
     tamanhos: Record<string, number>
     estampas?: Array<{ posicao: string; tipo: string; largura: number }>
   }>,
+  tenantId: string,
   imagemUrl?: string
 ): Promise<any> {
   const supabase = getAdminClient()
@@ -250,6 +266,7 @@ async function criarOrcamento(
   const { data: ultimoOrc } = await supabase
     .from("orcamentos")
     .select("numero")
+    .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
     .limit(1)
   
@@ -281,6 +298,7 @@ async function criarOrcamento(
     prazo_entrega: orcamento.prazoEntrega || "45 dias",
     validade_orcamento: orcamento.validadeOrcamento || "15 dias",
     status: "5 - Proposta",
+    tenant_id: tenantId,
   }
   
   const { error: orcError } = await supabase.from("orcamentos").insert(novoOrcamento)
@@ -497,10 +515,10 @@ ${mensagem}
 
 Responda APENAS com o JSON, sem markdown, sem explicações adicionais.`
 
-    console.log("🤖 Processando com Gemini 2.0 Flash...")
+    console.log("🤖 Processando com Gemini 3 Pro Preview...")
     
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-pro-preview",
       contents: promptCompleto,
     })
     
@@ -524,6 +542,9 @@ Responda APENAS com o JSON, sem markdown, sem explicações adicionais.`
       const orcamento = jsonResponse.orcamento as OrcamentoIA
       const entidadesCriadas: { cliente?: ClienteDB; produtos?: ProdutoDB[] } = {}
       
+      // Obter tenant_id do usuário atual
+      const tenantId = await getTenantId()
+      
       let clienteId: string
       const clienteExistente = buscarClienteSimilar(orcamento.cliente, contexto.clientes)
       
@@ -532,7 +553,7 @@ Responda APENAS com o JSON, sem markdown, sem explicações adicionais.`
       } else {
         const novoCliente = await criarCliente({
           nome: orcamento.cliente,
-        })
+        }, tenantId)
         clienteId = novoCliente.id
         entidadesCriadas.cliente = novoCliente
       }
@@ -559,7 +580,7 @@ Responda APENAS com o JSON, sem markdown, sem explicações adicionais.`
             valorBase: item.valorUnitario,
             cores: item.cor ? [item.cor] : undefined,
             tecido: item.tecido,
-          })
+          }, tenantId)
           entidadesCriadas.produtos.push(produto)
           contexto.produtos.push(produto)
         }
@@ -588,8 +609,11 @@ Responda APENAS com o JSON, sem markdown, sem explicações adicionais.`
         })
       }
       
-      console.log("🎨 Tentando gerar imagem do orçamento...")
+      // Geração de imagem desabilitada temporariamente (quota Gemini excedida)
+      // Para reativar, descomente o bloco abaixo quando tiver quota disponível
       let imagemUrl: string | null = null
+      /*
+      console.log("🎨 Tentando gerar imagem do orçamento...")
       try {
         imagemUrl = await gerarImagemOrcamento(
           `Orçamento para ${orcamento.cliente}`,
@@ -602,8 +626,9 @@ Responda APENAS com o JSON, sem markdown, sem explicações adicionais.`
       } catch (imgError) {
         console.log("⚠️ Não foi possível gerar imagem:", imgError)
       }
+      */
       
-      const orcamentoCriado = await criarOrcamento(orcamento, clienteId, itensProcessados, imagemUrl || undefined)
+      const orcamentoCriado = await criarOrcamento(orcamento, clienteId, itensProcessados, tenantId, imagemUrl || undefined)
       
       const valorTotal = itensProcessados.reduce(
         (acc, item) => acc + (item.quantidade * item.valorUnitario),

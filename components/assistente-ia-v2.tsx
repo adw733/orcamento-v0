@@ -146,7 +146,10 @@ Cole aqui qualquer texto de WhatsApp, email ou anotação e eu transformo em um 
   }
   
   const abrirOrcamento = (orcamento: any) => {
-    if (onNavigate) {
+    if (orcamento?.id) {
+      // Redirecionar para a página de visualização do orçamento
+      window.location.href = `/orcamento-otimizado?id=${orcamento.id}`
+    } else if (onNavigate) {
       onNavigate("orcamento")
     }
   }

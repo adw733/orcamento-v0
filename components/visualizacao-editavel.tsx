@@ -675,7 +675,7 @@ export default function VisualizacaoEditavel({
         {/* 1. ORÇAMENTO PRINCIPAL */}
         {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
           <div 
-            className="border border-gray-300 rounded-md overflow-hidden shadow-sm orcamento-principal bg-white pdf-section"
+            className="border border-gray-300 rounded-md shadow-sm orcamento-principal bg-white pdf-section"
             style={{
               // Largura base ~800px para manter proporção A4 (210x297)
               width: '210mm',
@@ -1146,7 +1146,7 @@ export default function VisualizacaoEditavel({
         {(modoExportacao === "completo" || modoExportacao === "ficha") && orcamento.itens.map((item, idx) => (
           <div 
             key={item.id} 
-            className="border border-gray-300 rounded-md overflow-hidden shadow-sm ficha-tecnica bg-white page-break-before pdf-section"
+            className="border border-gray-300 rounded-md shadow-sm ficha-tecnica bg-white page-break-before pdf-section"
             style={{
               width: '210mm',
               minHeight: '297mm',
@@ -1241,7 +1241,12 @@ export default function VisualizacaoEditavel({
                               if (t) updateItem(item.id, 'tecidoSelecionado', t)
                             }}>
                               <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                              <SelectContent>{item.produto?.tecidos.map((t, tIdx) => <SelectItem key={`${item.id}-tecido-${tIdx}`} value={t.nome}>{t.nome}</SelectItem>)}</SelectContent>
+                              <SelectContent>
+                                {item.produto?.tecidos && item.produto.tecidos.length > 0 
+                                  ? item.produto.tecidos.map((t, tIdx) => <SelectItem key={`${item.id}-tecido-${tIdx}`} value={t.nome}>{t.nome}</SelectItem>)
+                                  : <div className="p-2 text-[10px] text-gray-500 text-center">Sem tecidos cadastrados</div>
+                                }
+                              </SelectContent>
                             </Select>
                             <p className="text-[10px] text-gray-500 mt-0.5">{item.tecidoSelecionado?.composicao || "Composição..."}</p>
                           </>
@@ -1259,7 +1264,12 @@ export default function VisualizacaoEditavel({
                           <div className="flex items-center gap-2">
                             <Select value={item.corSelecionada} onValueChange={val => updateItem(item.id, 'corSelecionada', val)}>
                               <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold min-w-[80px]"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                              <SelectContent>{item.produto?.cores.map((c, cIdx) => <SelectItem key={`${item.id}-cor-${cIdx}`} value={c}>{c}</SelectItem>)}</SelectContent>
+                              <SelectContent>
+                                {item.produto?.cores && item.produto.cores.length > 0 
+                                  ? item.produto.cores.map((c, cIdx) => <SelectItem key={`${item.id}-cor-${cIdx}`} value={c}>{c}</SelectItem>)
+                                  : <div className="p-2 text-[10px] text-gray-500 text-center">Sem cores cadastradas</div>
+                                }
+                              </SelectContent>
                             </Select>
                             <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
                           </div>

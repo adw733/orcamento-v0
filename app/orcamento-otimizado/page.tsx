@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import VisualizacaoEditavel from "@/components/visualizacao-editavel"
+import ChatEdicaoOrcamento from "@/components/chat-edicao-orcamento"
 import { useSearchParams } from "next/navigation"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, DadosEmpresa } from "@/types/types"
 import { pdf } from '@react-pdf/renderer'
@@ -85,6 +86,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
   const [editandoNumero, setEditandoNumero] = useState(false)
   const [numeroTemp, setNumeroTemp] = useState("")
   const [erroNumero, setErroNumero] = useState("")
+  
 
   // Sincronizar dados da empresa do cache
   useEffect(() => {
@@ -833,8 +835,13 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
             setModoEdicaoExterno={setModoEdicao}
           />
         </div>
-
       </div>
+      
+      {/* Chat flutuante de edição com IA */}
+      <ChatEdicaoOrcamento
+        orcamento={orcamento}
+        setOrcamento={setOrcamento}
+      />
 
       {/* Dialog Lista - usando cache global */}
       <Dialog open={mostrarListaOrcamentos} onOpenChange={setMostrarListaOrcamentos}>
