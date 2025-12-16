@@ -20,6 +20,7 @@ import { PDFOrcamento } from '@/components/pdf-orcamento'
 import { PDFTodasFichasTecnicas } from '@/components/pdf-ficha-tecnica'
 import { PageHeader } from '@/components/page-header'
 import { useDataCache } from '@/lib/data-cache'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 // Helper para gerar UUID
 const generateUUID = () => {
@@ -33,6 +34,9 @@ const generateUUID = () => {
 function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrcamentoChange?: (id: string) => void }) {
   const searchParams = useSearchParams()
   const idUrl = id || searchParams.get("id")
+
+  // Obter tenant_id do usuário atual
+  const { tenantId } = useCurrentUser()
 
   // Usar cache global para dados compartilhados
   const { 
@@ -238,7 +242,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
       
       // Salvar o PDF combinado
       const pdfBytes = await pdfDoc.save()
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+      const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' })
       
       console.log('✅ PDF combinado gerado:', blob.size, 'bytes')
       
@@ -381,6 +385,21 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
     }
   }
 
+  const isValidUuid = (value: unknown): value is string => {
+    if (typeof value !== "string") return false
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  }
+
+  const formatSupabaseError = (error: any) => {
+    if (!error) return "Erro desconhecido"
+    if (typeof error === "string") return error
+    const message = error.message || "Erro"
+    const code = error.code ? ` (code: ${error.code})` : ""
+    const details = error.details ? ` | details: ${error.details}` : ""
+    const hint = error.hint ? ` | hint: ${error.hint}` : ""
+    return `${message}${code}${details}${hint}`
+  }
+
   const salvarOrcamento = async () => {
     try {
       setIsSaving(true)
@@ -421,7 +440,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
       const dadosOrcamento = {
         numero: numeroCompleto,
         data: orcamento.data,
-        cliente_id: orcamento.cliente?.id && orcamento.cliente.id.length > 10 ? orcamento.cliente.id : null,
+        cliente_id: isValidUuid(orcamento.cliente?.id) ? orcamento.cliente?.id : null,
         observacoes: orcamento.observacoes,
         condicoes_pagamento: orcamento.condicoesPagamento,
         prazo_entrega: orcamento.prazoEntrega,
@@ -477,7 +496,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
         const item = orcamento.itens[index]
         const dadosItem = {
           orcamento_id: orcamentoId,
-          produto_id: item.produtoId && item.produtoId.length > 5 ? item.produtoId : null,
+          produto_id: isValidUuid(item.produtoId) ? item.produtoId : null,
           quantidade: item.quantidade,
           valor_unitario: item.valorUnitario,
           tecido_nome: item.tecidoSelecionado?.nome,
@@ -488,10 +507,11 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
           observacao_tecnica: item.observacaoTecnica,
           imagem: item.imagem,
           posicao: index,
+          tenant_id: tenantId,
         }
 
         // Se o item já tem ID, tentar atualizar; se não, inserir novo
-        if (item.id && typeof item.id === 'string' && item.id.length > 10) {
+        if (isValidUuid(item.id)) {
           const { data: itemAtualizado, error: updateError } = await supabase
             .from("itens_orcamento")
             .update(dadosItem)
@@ -511,7 +531,9 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
               .single()
 
             if (insertError) {
-              console.error("Erro ao inserir item:", insertError)
+              const msg = formatSupabaseError(insertError)
+              console.error("Erro ao inserir item:", msg, insertError)
+              throw new Error(msg)
             } else if (novoItem) {
               novosItensIds.push(novoItem.id)
             }
@@ -525,7 +547,9 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
             .single()
 
           if (insertError) {
-            console.error("Erro ao inserir item:", insertError)
+            const msg = formatSupabaseError(insertError)
+            console.error("Erro ao inserir item:", msg, insertError)
+            throw new Error(msg)
           } else if (novoItem) {
             novosItensIds.push(novoItem.id)
           }
@@ -534,11 +558,17 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
 
       // Agora deletar apenas os itens que não estão mais na lista (foram removidos pelo usuário)
       if (orcamento.id && novosItensIds.length > 0) {
-        await supabase
+        const { error: deleteError } = await supabase
           .from("itens_orcamento")
           .delete()
           .eq("orcamento_id", orcamentoId)
           .not("id", "in", `(${novosItensIds.join(",")})`)
+
+        if (deleteError) {
+          const msg = formatSupabaseError(deleteError)
+          console.error("Erro ao deletar itens antigos:", msg, deleteError)
+          throw new Error(msg)
+        }
       }
 
       const novoOrcamento = { ...orcamento, id: orcamentoId, numero: numeroCompleto }
@@ -554,7 +584,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
         description: `Orçamento salvo com sucesso`,
       })
     } catch (error: any) {
-      console.error("Erro ao salvar:", error)
+      console.error("Erro ao salvar:", error?.message ? error.message : error, error)
       toast({
         title: "Erro",
         description: error.message || "Erro ao salvar orçamento.",

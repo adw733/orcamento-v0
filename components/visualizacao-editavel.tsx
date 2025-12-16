@@ -1203,23 +1203,60 @@ export default function VisualizacaoEditavel({
                 <div 
                   className={cn(
                     "text-center border-2 border-dashed border-gray-200 rounded-lg p-2 relative flex items-center justify-center h-[280px]",
-                    modoEdicao && "hover:bg-gray-50 transition-colors group"
+                    modoEdicao && "hover:bg-gray-50 transition-colors group cursor-pointer"
                   )}
                   tabIndex={modoEdicao ? 0 : -1}
                   onPaste={modoEdicao ? (e) => handleImagePaste(e, item.id) : undefined}
+                  onClick={modoEdicao ? (e) => {
+                    // Apenas dá foco no container para permitir Ctrl+V
+                    e.currentTarget.focus()
+                  } : undefined}
                   title={modoEdicao ? "Clique para selecionar ou cole uma imagem (Ctrl+V)" : undefined}
                 >
                   <img
                     src={item.imagem || "/placeholder.svg"}
-                    className="max-h-full max-w-[65%] mx-auto object-contain"
+                    className="max-h-full max-w-[65%] mx-auto object-contain pointer-events-none"
                   />
                   {modoEdicao && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity cursor-pointer">
-                      <div className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2">
-                        <Upload className="w-4 h-4" /> Alterar Imagem (ou Ctrl+V)
+                    <>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        id={`file-input-${item.id}`}
+                        className="hidden" 
+                        onChange={e => handleImageUpload(e, item.id)} 
+                      />
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity pointer-events-none group-hover:pointer-events-auto"
+                      >
+                        <button 
+                          type="button"
+                          className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Abre o seletor de arquivo
+                            const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement
+                            input?.click()
+                          }}
+                        >
+                          <Upload className="w-4 h-4" /> Alterar Imagem (ou Ctrl+V)
+                        </button>
+                        {!!item.imagem && (
+                          <button
+                            type="button"
+                            className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-red-50 text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              updateItem(item.id, 'imagem', null)
+                              const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement
+                              if (input) input.value = ""
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" /> Remover
+                          </button>
+                        )}
                       </div>
-                      <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleImageUpload(e, item.id)} />
-                    </div>
+                    </>
                   )}
                 </div>
 
