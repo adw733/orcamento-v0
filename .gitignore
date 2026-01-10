@@ -38,5 +38,10 @@ sistema-versao/
 *.py
 README_CORRECOES.md
 
-# Backups locais (não commitar)
+# Backups locais (não commitar - dados sensíveis)
 backup_antes_saas/
+backup_supabase/*/dados/
+backup_supabase/*/storage/
+backup_supabase/*/schema/
+backup_supabase/*/*.json
+backup_supabase/*/README.md
