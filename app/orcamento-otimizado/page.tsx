@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import VisualizacaoEditavel from "@/components/visualizacao-editavel"
 import ChatEdicaoOrcamento from "@/components/chat-edicao-orcamento"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import type { Cliente, Produto, Orcamento, ItemOrcamento, DadosEmpresa } from "@/types/types"
 import { pdf } from '@react-pdf/renderer'
 import { PDFOrcamento } from '@/components/pdf-orcamento'
@@ -33,6 +33,7 @@ const generateUUID = () => {
 
 function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrcamentoChange?: (id: string) => void }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const idUrl = id || searchParams.get("id")
 
   // Obter tenant_id do usuário atual
@@ -421,7 +422,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
           .from("orcamentos")
           .select("numero")
           .is("deleted_at", null)
-          .order("created_at", { ascending: false })
+          .order("numero", { ascending: false })
           .limit(1)
 
         let proximoNumero = "0001"
@@ -446,6 +447,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
         prazo_entrega: orcamento.prazoEntrega,
         validade_orcamento: orcamento.validadeOrcamento,
         status: orcamento.status || "5 - Proposta",
+        tenant_id: tenantId, // Multi-tenant support
         itens: JSON.stringify({ // Legado
           items: orcamento.itens.map((item) => ({
             id: item.id,
@@ -760,19 +762,24 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
               }
               try {
                 // Buscar próximo número disponível
-                const { data: ultimoOrcamento } = await supabase.from("orcamentos").select("numero").is("deleted_at", null).order("created_at", { ascending: false }).limit(1)
+                const { data: ultimoOrcamento } = await supabase.from("orcamentos").select("numero").is("deleted_at", null).order("numero", { ascending: false }).limit(1)
                 let proximoNumero = "0001"
                 if (ultimoOrcamento && ultimoOrcamento.length > 0) {
                   const numeroAtual = Number.parseInt(ultimoOrcamento[0].numero.split(" - ")[0], 10)
                   if (!isNaN(numeroAtual)) proximoNumero = (numeroAtual + 1).toString().padStart(4, "0")
                 }
                 
+                // Formatar número completo conforme padrão do sistema
+                const primeiroItem = orcamento.itens.length > 0 ? (orcamento.itens[0].produto?.nome || "Item") : "Item"
+                const nomeCliente = orcamento.cliente?.nome || "CLIENTE"
+                const numeroCompleto = `${proximoNumero} - ${primeiroItem} - ${nomeCliente} - ${orcamento.nomeContato || ""}`
+                
                 // Criar cópia local do orçamento SEM SALVAR no banco
                 // Apenas atualiza o estado local para edição
                 const novoOrcamento: Orcamento = {
                   ...orcamento,
                   id: undefined, // Remove o ID para indicar que é novo
-                  numero: proximoNumero,
+                  numero: numeroCompleto,
                   data: new Date().toISOString().split('T')[0],
                   status: "5 - Proposta",
                   // Gerar novos IDs para os itens
@@ -786,8 +793,8 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
                 setOrcamentoOriginal(novoOrcamento)
                 setTemAlteracoes(true) // Marcar como tendo alterações para forçar salvamento
                 
-                // Atualizar URL sem o ID (novo orçamento)
-                window.history.pushState({}, '', '/orcamento-otimizado')
+                // Atualizar URL sem o ID (novo orçamento) - usa router.replace ao invés de pushState
+                router.replace('/orcamento-otimizado')
                 
                 toast({ 
                   title: "📋 Orçamento Copiado", 

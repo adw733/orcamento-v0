@@ -1,9 +1,0 @@
-{
-  "theme": "light",
-  "terminal_shell": "wsl",
-  "auto_refresh": true,
-  "notifications": true,
-  "claude_path": "claude-code",
-  "git_user_name": "Usuario",
-  "git_user_email": "usuario@local.com"
-}
