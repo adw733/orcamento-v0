@@ -1,2 +1,0 @@
-ALTER TABLE movimentacoes_financeiras
-ADD COLUMN sequential_id BIGINT GENERATED ALWAYS AS IDENTITY;
