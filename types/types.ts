@@ -84,3 +84,20 @@ export type Orcamento = {
   valorDesconto?: number // Valor do desconto
   tipoDesconto?: 'percentual' | 'valor' // Tipo do desconto: percentual (%) ou valor fixo (R$)
 }
+
+// Tipos para o planejamento de produção
+export type TarefaPlanejamento = {
+  id: string
+  orcamento_id?: string
+  nome: string
+  data_inicio: string // YYYY-MM-DD
+  data_fim: string // YYYY-MM-DD
+  progresso: number // 0-100
+  dependencias?: string[] // Array de IDs de tarefas
+  cor?: string // Cor da tarefa no Gantt
+  status?: 'pendente' | 'em_andamento' | 'concluida' | 'atrasada'
+  responsavel?: string
+  observacoes?: string
+  created_at?: string
+  updated_at?: string
+}

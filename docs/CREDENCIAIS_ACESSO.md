@@ -1,13 +1,22 @@
 # 🔐 CREDENCIAIS DE ACESSO - Sistema OneBase
 
-**Data:** 29/11/2025 (Atualizado)  
-**URL:** http://localhost:3002 (desenvolvimento - porta pode variar)
+**Data:** 30/01/2026 (Atualizado)  
+**URL:** http://localhost:3000 (desenvolvimento - porta pode variar)
 
 ---
 
 ## 👤 USUÁRIOS DISPONÍVEIS
 
-### 1. Usuário Principal (com dados existentes)
+### 1. Usuário de Teste Principal ⭐
+```
+Email:    adw733@gmail.com
+Senha:    coelho733
+Tenant:   Configurado
+Empresa:  Configurada
+Status:   ✅ USAR ESTE PARA TODOS OS TESTES
+```
+
+### 2. Usuário Principal (com dados existentes)
 ```
 Email:    jordysilva733@gmail.com
 Senha:    [verificar no Supabase Dashboard]

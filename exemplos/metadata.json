@@ -1,0 +1,5 @@
+{
+  "name": "FluxoFabril Visual - Gestor de Produção",
+  "description": "Sistema de gestão de confecção baseado em grafos para otimização de lotes (batching) e cálculo automático de prazos de entrega.",
+  "requestFramePermissions": []
+}

@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+    console.log('[Middleware] Path:', request.nextUrl.pathname)
+    
     let supabaseResponse = NextResponse.next({
         request,
     })
@@ -12,7 +14,9 @@ export async function updateSession(request: NextRequest) {
         {
             cookies: {
                 getAll() {
-                    return request.cookies.getAll()
+                    const cookies = request.cookies.getAll()
+                    console.log('[Middleware] Cookies:', cookies.map(c => c.name))
+                    return cookies
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value, options }) =>
@@ -36,6 +40,8 @@ export async function updateSession(request: NextRequest) {
     const {
         data: { user },
     } = await supabase.auth.getUser()
+    
+    console.log('[Middleware] User:', user?.email || 'none', 'tenant_id:', user?.app_metadata?.tenant_id || 'none')
 
     const isPublicPath = 
         request.nextUrl.pathname.startsWith('/login') ||

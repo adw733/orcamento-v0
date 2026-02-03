@@ -28,6 +28,8 @@ import TabelaProdutos from "@/components/tabela-produtos"
 import GerenciadorGastosReceitas from "@/components/gerenciador-gastos-receitas"
 import DashboardFinanceiro from "@/components/dashboard-financeiro"
 import GerenciadorUsuarios from "@/components/gerenciador-usuarios"
+import PlanejamentoFluxo from "@/components/planejamento-fluxo"
+import TodoList from "@/components/todo-list"
 
 const OrcamentoOtimizado = dynamic(() => import('@/app/orcamento-otimizado/page'), { ssr: false })
 
@@ -40,7 +42,18 @@ const generateUUID = () => {
   })
 }
 
-export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", setAbaAtiva: setAbaAtivaExterna }) {
+interface GeradorOrcamentoProps {
+  abaAtiva?: string
+  setAbaAtiva: (aba: string) => void
+  criandoNovoOrcamento?: boolean
+  setCriandoNovoOrcamento?: (criando: boolean) => void
+  criarNovoOrcamento?: () => void
+}
+
+export function GeradorOrcamento({
+  abaAtiva = "orcamentos",
+  setAbaAtiva
+}: GeradorOrcamentoProps) {
   // Estado inicial comum para evitar detectar alterações falsas
   const orcamentoInicial: Orcamento = {
     numero: "Carregando...",
@@ -63,11 +76,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [orcamento, setOrcamento] = useState<Orcamento>(orcamentoInicial)
   const [isPrinting, setIsPrinting] = useState(false)
-  // Importante para evitar hydration mismatch: o estado inicial de abaAtiva
-  // deve ser determinístico e igual no servidor e no cliente. Por isso,
-  // usamos apenas abaAtivaInicial aqui, sem ler window/location na criação
-  // do estado.
-  const [abaAtiva, setAbaAtiva] = useState<string>(abaAtivaInicial)
   const [isLoading, setIsLoading] = useState(false)
   const [orcamentoSalvo, setOrcamentoSalvo] = useState<string | null>(null)
   // Adicionar um novo estado para controlar se estamos criando um novo orçamento
@@ -96,23 +104,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   // Removemos a lógica que lia o hash da URL para definir o estado inicial
   // de abaAtiva (aplicarHashNaAbaAtiva + listeners). Isso garante que o
   // HTML renderizado no servidor e o primeiro render no cliente partem do
-  // mesmo estado. O hash continua sendo atualizado abaixo, derivado de
-  // abaAtiva/orcamentoOtimizadoId.
-
-  // Efeito para atualizar URL quando estado muda
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      let newHash = `#${abaAtiva}`
-
-      if (abaAtiva === 'orcamento-otimizado' && orcamentoOtimizadoId) {
-        newHash += `?id=${orcamentoOtimizadoId}`
-      }
-
-      if (window.location.hash !== newHash) {
-        window.history.pushState({}, "", newHash)
-      }
-    }
-  }, [abaAtiva, orcamentoOtimizadoId])
+  // mesmo estado. O hash é gerenciado pelo ClientPage.
 
   const handleOrcamentoOtimizadoChange = (id: string) => {
     setOrcamentoOtimizadoId(id || null)
@@ -128,13 +120,6 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
   const recarregarOrcamentosRef = useRef<(() => Promise<void>) | null>(null)
   // Adicionar após a declaração de recarregarOrcamentosRef
   const recarregarLixeiraRef = useRef(null)
-
-  // Sincronizar o estado interno com o externo
-  useEffect(() => {
-    if (setAbaAtivaExterna) {
-      setAbaAtivaExterna(abaAtiva)
-    }
-  }, [abaAtiva, setAbaAtivaExterna])
 
   // Função para verificar se há alterações no orçamento
   const verificarAlteracoes = (orcamentoAtual: Orcamento, orcamentoRef: Orcamento | null) => {
@@ -1008,26 +993,13 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
     carregarDadosIniciais()
 
-    // Verificar hash na URL
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash ? window.location.hash.substring(1) : ""
-      if (hash) {
-        setAbaAtiva(hash)
-      } else {
-        // Se não houver hash, usar o valor inicial
-        if (abaAtivaInicial && abaAtivaInicial !== "orcamento") {
-          window.location.hash = abaAtivaInicial
-        }
-      }
-    }
-
     // Marcar inicialização como completa após um pequeno delay
     const timer = setTimeout(() => {
       setInicializacaoCompleta(true)
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [abaAtivaInicial, orcamentoJaCarregado])
+  }, [orcamentoJaCarregado])
 
   // Adicionar a função para carregar os dados da empresa
   const carregarDadosEmpresa = async () => {
@@ -2412,6 +2384,11 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
 
   const isOrcamentosList = Object.keys(statusMap).includes(abaAtiva);
 
+  // Debug: log to console
+  if (typeof window !== 'undefined') {
+    console.log('[GeradorOrcamento] abaAtiva:', abaAtiva, '| isOrcamentosList:', isOrcamentosList)
+  }
+
   // Títulos para as abas
   const titulosAbas: { [key: string]: { title: string; subtitle: string } } = {
     "orcamento-otimizado": { title: "Edição de Orçamento", subtitle: "Crie e edite orçamentos profissionais para uniformes industriais" },
@@ -2428,6 +2405,7 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
     materiais: { title: "Gerenciador de Materiais", subtitle: "Gerencie os materiais disponíveis" },
     empresa: { title: "Gerenciador de Empresa", subtitle: "Gerencie os dados da sua empresa" },
     lixeira: { title: "Lixeira de Orçamentos", subtitle: "Gerencie orçamentos excluídos e restaure-os se necessário" },
+    planejamento: { title: "Planejamento de Produção", subtitle: "Sistema de fluxos e cronograma visual" },
     "produtos-tabela": { title: "Tabela de Produtos", subtitle: "Visualize e edite seus produtos em formato de tabela" },
   };
 
@@ -2560,6 +2538,20 @@ export function GeradorOrcamento({ abaAtiva: abaAtivaInicial = "orcamentos", set
             }
 
             switch (abaAtiva) {
+              case "planejamento":
+                return (
+                  <div className="h-[calc(100vh-8rem)] -mx-2 md:-mx-4 -mb-2 md:-mb-3">
+                    <PlanejamentoFluxo />
+                  </div>
+                )
+              case "todo":
+                return (
+                  <Card className="shadow-sm border border-gray-200">
+                    <CardContent className="p-3 md:p-4">
+                      <TodoList />
+                    </CardContent>
+                  </Card>
+                )
               case "orcamento-otimizado":
                 return (
                   <div className="h-full overflow-hidden">

@@ -29,6 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="/frappe-gantt.css" />
+      </head>
       <body className={`${inter.className} overflow-x-hidden`}>
         <Providers>
           {children}

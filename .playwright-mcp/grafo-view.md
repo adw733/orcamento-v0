@@ -1,0 +1,150 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "F FluxoFabril" [level=1] [ref=e5]:
+          - generic [ref=e6]: F
+          - text: FluxoFabril
+        - paragraph [ref=e7]: Gestão de Grafos de Produção
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - heading "Etapas de Lote" [level=2] [ref=e11]
+            - generic [ref=e12]: Clique para adicionar
+          - generic [ref=e13]:
+            - button "Compra Material" [ref=e14] [cursor=pointer]:
+              - img [ref=e16]
+              - text: Compra Material
+            - button "Corte" [ref=e17] [cursor=pointer]:
+              - img [ref=e19]
+              - text: Corte
+            - button "Estampa" [ref=e20] [cursor=pointer]:
+              - img [ref=e22]
+              - text: Estampa
+            - button "Costura" [ref=e23] [cursor=pointer]:
+              - img [ref=e25]
+              - text: Costura
+            - button "Revisão" [ref=e26] [cursor=pointer]:
+              - img [ref=e28]
+              - text: Revisão
+            - button "Embalagem" [ref=e29] [cursor=pointer]:
+              - img [ref=e31]
+              - text: Embalagem
+            - button "Entrega" [ref=e32] [cursor=pointer]:
+              - img [ref=e34]
+              - text: Entrega
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - heading "Pedidos Ativos" [level=2] [ref=e37]
+            - button [ref=e38] [cursor=pointer]:
+              - img [ref=e39]
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - generic [ref=e43]: "#001"
+                - generic [ref=e44]: 150 un
+              - heading "Camiseta Algodão Azul" [level=4] [ref=e45]
+              - generic [ref=e48]: Loja Verão
+            - generic [ref=e49]:
+              - generic [ref=e50]:
+                - generic [ref=e51]: "#002"
+                - generic [ref=e52]: 80 un
+              - heading "Moletom Canguru Vermelho" [level=4] [ref=e53]
+              - generic [ref=e56]: SportWay
+            - generic [ref=e57]:
+              - generic [ref=e58]:
+                - generic [ref=e59]: "#003"
+                - generic [ref=e60]: 120 un
+              - heading "Camiseta Algodão Vermelha" [level=4] [ref=e61]
+              - generic [ref=e64]: Loja Verão
+      - generic [ref=e66]:
+        - img [ref=e67]
+        - generic [ref=e69]: "Hoje: 31/01/2026"
+    - generic [ref=e70]:
+      - generic:
+        - generic [ref=e71]:
+          - generic [ref=e72]: "Fluxo:"
+          - generic [ref=e73]:
+            - generic [ref=e74]: Compra
+            - generic [ref=e76]: Estampa
+            - generic [ref=e78]: Costura
+        - generic [ref=e80]:
+          - button "Grafo" [active] [ref=e81] [cursor=pointer]:
+            - img [ref=e82]
+            - text: Grafo
+          - button "Calendário" [ref=e87] [cursor=pointer]:
+            - img [ref=e88]
+            - text: Calendário
+      - generic [ref=e91]:
+        - generic [ref=e93]:
+          - generic:
+            - img:
+              - button "Edge from node-1 to node-3" [ref=e100] [cursor=pointer]
+            - generic:
+              - button "Compra Material Compra Tecidos 001/003 2 dias 2026-02-02 2 Pedidos" [ref=e103]:
+                - generic [ref=e104]:
+                  - generic [ref=e106]:
+                    - img [ref=e108]
+                    - generic [ref=e112]:
+                      - generic [ref=e113]: Compra Material
+                      - heading "Compra Tecidos 001/003" [level=3] [ref=e114]
+                  - generic [ref=e115]:
+                    - generic [ref=e116]:
+                      - generic [ref=e117]:
+                        - img [ref=e118]
+                        - generic [ref=e121]: 2 dias
+                      - generic [ref=e122]: 2026-02-02
+                    - generic [ref=e123]:
+                      - img [ref=e124]
+                      - generic [ref=e129]: 2 Pedidos
+              - button "Compra Material Compra Tecidos Moletom 3 dias 2026-02-03 1 Pedidos" [ref=e131]:
+                - generic [ref=e132]:
+                  - generic [ref=e134]:
+                    - img [ref=e136]
+                    - generic [ref=e140]:
+                      - generic [ref=e141]: Compra Material
+                      - heading "Compra Tecidos Moletom" [level=3] [ref=e142]
+                  - generic [ref=e143]:
+                    - generic [ref=e144]:
+                      - generic [ref=e145]:
+                        - img [ref=e146]
+                        - generic [ref=e149]: 3 dias
+                      - generic [ref=e150]: 2026-02-03
+                    - generic [ref=e151]:
+                      - img [ref=e152]
+                      - generic [ref=e157]: 1 Pedidos
+              - button "Estampa Estampa Mista (Flor) 1 dias 2026-02-03 2 Pedidos" [ref=e159]:
+                - generic [ref=e160]:
+                  - generic [ref=e162]:
+                    - img [ref=e164]
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: Estampa
+                      - heading "Estampa Mista (Flor)" [level=3] [ref=e172]
+                  - generic [ref=e173]:
+                    - generic [ref=e174]:
+                      - generic [ref=e175]:
+                        - img [ref=e176]
+                        - generic [ref=e179]: 1 dias
+                      - generic [ref=e180]: 2026-02-03
+                    - generic [ref=e181]:
+                      - img [ref=e182]
+                      - generic [ref=e187]: 2 Pedidos
+        - img [ref=e94]
+        - generic [ref=e189]:
+          - button "zoom in" [disabled]:
+            - img
+          - button "zoom out" [ref=e190] [cursor=pointer]:
+            - img [ref=e191]
+          - button "fit view" [ref=e193] [cursor=pointer]:
+            - img [ref=e194]
+          - button "toggle interactivity" [ref=e196] [cursor=pointer]:
+            - img [ref=e197]
+        - link "React Flow attribution" [ref=e97] [cursor=pointer]:
+          - /url: https://reactflow.dev
+          - text: React Flow
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e204] [cursor=pointer]:
+    - img [ref=e205]
+  - alert [ref=e99]

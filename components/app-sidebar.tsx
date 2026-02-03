@@ -27,6 +27,8 @@ import {
   CircleDollarSign,
   TrendingUp,
   LayoutDashboard,
+  CalendarRange,
+  ListTodo,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
@@ -89,11 +91,9 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       // Para rotas externas (páginas separadas), usa router.push
       router.push(`/${aba}`)
     } else {
-      // Para navegação interna (hash), mantém comportamento atual
+      // Para navegação interna (hash), usa a função setAbaAtiva do pai
+      // que sincroniza com o hash da URL automaticamente via useEffect no ClientPage
       setAbaAtiva(aba)
-      if (typeof window !== 'undefined') {
-        window.location.hash = aba
-      }
     }
   }
 
@@ -104,6 +104,8 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       items: [
         { id: "orcamento-otimizado", label: "Edição de Orçamento", icon: FileText, isExternal: true },
         { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
+        { id: "planejamento", label: "Planejamento", icon: CalendarRange },
+        { id: "todo", label: "Todo", icon: ListTodo },
         { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
         { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },
         { id: "orcamentos-cobranca", label: "3 - Cobrança", icon: CircleDollarSign },
@@ -148,16 +150,16 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
         variant="outline"
         size="icon"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 shadow-md bg-background"
+        className="lg:hidden fixed top-4 left-4 z-[70] shadow-md bg-background"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
       </Button>
 
       <div
-        className={`h-full ${expandido ? "w-72" : "w-20"} bg-background border-r border-border flex flex-col transition-all duration-300 ease-in-out relative
+        className={`h-full ${expandido ? "w-72" : "w-20"} bg-background border-r border-border flex flex-col transition-all duration-300 ease-in-out relative isolate
                    lg:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} 
-                   fixed lg:static z-40 top-0 left-0 shadow-lg lg:shadow-none`}
+                   fixed lg:static z-[60] top-0 left-0 shadow-lg lg:shadow-none`}
       >
         {/* Collapse/Expand button */}
         <Button
@@ -281,7 +283,7 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50 z-50 lg:hidden backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

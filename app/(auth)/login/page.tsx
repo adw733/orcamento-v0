@@ -19,13 +19,17 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
+        console.log('handleLogin called', { email, password: password ? '***' : '' })
         setLoading(true)
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            console.log('Attempting login...')
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             })
+
+            console.log('Login result:', { error, hasSession: !!data.session, user: data.user?.email })
 
             if (error) {
                 toast.error('Erro ao fazer login: ' + error.message)
@@ -33,11 +37,12 @@ export default function LoginPage() {
             }
 
             toast.success('Login realizado com sucesso!')
+            console.log('Redirecting to /')
             router.push('/')
             router.refresh()
         } catch (error) {
+            console.error('Login error:', error)
             toast.error('Erro inesperado ao fazer login')
-            console.error(error)
         } finally {
             setLoading(false)
         }

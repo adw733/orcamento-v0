@@ -211,15 +211,24 @@ export default function TabelaProdutos() {
         for (let itemIndex = 0; itemIndex < itens.length; itemIndex++) {
           const item = itens[itemIndex]
           
+          // Tentar obter o produtoId de diferentes possíveis formatos
+          const produtoId = item.produtoId || item.produto_id || item.id
+          
+          // Se não encontrar produtoId, pular este item
+          if (!produtoId) {
+            console.warn(`Item sem produtoId no orçamento ${orcamento.numero}:`, item)
+            continue
+          }
+          
           // Buscar o produto para obter o nome
           const { data: produtoData, error: produtoError } = await supabase
             .from("produtos")
             .select("nome")
-            .eq("id", item.produtoId)
+            .eq("id", produtoId)
             .single()
 
           if (produtoError) {
-            console.error(`Erro ao buscar produto ${item.produtoId}:`, produtoError)
+            console.error(`Erro ao buscar produto ${produtoId}:`, produtoError)
             continue
           }
 
@@ -227,7 +236,7 @@ export default function TabelaProdutos() {
           const cor = item.corSelecionada || "Não especificada"
           
           // Obter a observação comercial do item (priorizar do JSON, senão buscar no banco)
-          const observacaoComercial = item.observacaoComercial || observacoesMap.get(item.produtoId) || ""
+          const observacaoComercial = item.observacaoComercial || observacoesMap.get(produtoId) || ""
 
           // Para cada tamanho no item, criar uma entrada na tabela
           if (item.tamanhos && Object.keys(item.tamanhos).length > 0) {
@@ -244,7 +253,7 @@ export default function TabelaProdutos() {
                 orcamentoData: orcamento.data,
                 clienteNome: orcamento.cliente?.nome || "Cliente não especificado",
                 nomeContato: nomeContato,
-                produtoId: item.produtoId,
+                produtoId: produtoId,
                 produtoNome: produtoNome,
                 tamanho: tamanho,
                 cor: cor,
@@ -264,7 +273,7 @@ export default function TabelaProdutos() {
               orcamentoData: orcamento.data,
               clienteNome: orcamento.cliente?.nome || "Cliente não especificado",
               nomeContato: nomeContato,
-              produtoId: item.produtoId,
+              produtoId: produtoId,
               produtoNome: produtoNome,
               tamanho: "Único",
               cor: cor,

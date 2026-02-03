@@ -346,6 +346,59 @@ export interface Database {
           updated_at?: string | null
         }
       }
+      tarefas_planejamento: {
+        Row: {
+          id: string
+          tenant_id: string
+          orcamento_id: string | null
+          nome: string
+          data_inicio: string
+          data_fim: string
+          progresso: number
+          dependencias: string[] | null
+          cor: string | null
+          status: 'pendente' | 'em_andamento' | 'concluida' | 'atrasada'
+          responsavel: string | null
+          observacoes: string | null
+          duracao_horas: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          orcamento_id?: string | null
+          nome: string
+          data_inicio: string
+          data_fim: string
+          progresso?: number
+          dependencias?: string[] | null
+          cor?: string | null
+          status?: 'pendente' | 'em_andamento' | 'concluida' | 'atrasada'
+          responsavel?: string | null
+          observacoes?: string | null
+          duracao_horas?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          orcamento_id?: string | null
+          nome?: string
+          data_inicio?: string
+          data_fim?: string
+          progresso?: number
+          dependencias?: string[] | null
+          cor?: string | null
+          status?: 'pendente' | 'em_andamento' | 'concluida' | 'atrasada'
+          responsavel?: string | null
+          observacoes?: string | null
+          duracao_horas?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "enabled": true
+    },
+    "supabase-gerador-orcamento": {
+      "type": "local",
+      "command": [
+        "uv",
+        "run",
+        "--with",
+        "fastmcp",
+        "--with",
+        "psycopg2-binary",
+        "python",
+        "E:\\Google Drive\\01 - Desenvolvimento\\01 - Ferramentas\\02 - Servidores MCP\\supabase_universal\\servidor_mcp.py",
+        "postgresql://postgres:coelho733coelho@db.fpejkwmapomxfyxmxqrd.supabase.co:6543/postgres"
+      ],
+      "enabled": true
+    }
+  }
+}
