@@ -21,6 +21,8 @@ import {
   Truck,
   ChevronUp,
   ChevronDown,
+  CheckSquare,
+  Square,
   Settings2,
 } from 'lucide-react';
 
@@ -119,6 +121,33 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
     );
   };
 
+  // Selecionar/deselecionar todas as etapas de um produto específico
+  const handleSelectAllForProduct = (productId: string) => {
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config => {
+        if (config.productId === productId) {
+          // Verificar se todas as etapas estão selecionadas
+          const allSelected = Object.values(config.stages).every(v => v === true);
+          // Se todas estão selecionadas, desmarcar todas; senão, marcar todas
+          const newValue = !allSelected;
+          return {
+            ...config,
+            stages: {
+              [StageType.PURCHASE]: newValue,
+              [StageType.CUTTING]: newValue,
+              [StageType.PRINTING]: newValue,
+              [StageType.SEWING]: newValue,
+              [StageType.REVISION]: newValue,
+              [StageType.PACKING]: newValue,
+              [StageType.DELIVERY]: newValue,
+            }
+          };
+        }
+        return config;
+      })
+    );
+  };
+
   const handleSelectAll = (stage: StageType) => {
     const allSelected = configs.every(config => config.stages[stage]);
     setConfigs(prevConfigs =>
@@ -129,6 +158,29 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
           [stage]: !allSelected
         }
       }))
+    );
+  };
+
+  // Selecionar/deselecionar uma etapa específica para todos os produtos de um pedido (orçamento)
+  const handleSelectStageForOrder = (numeroOrcamento: string, stage: StageType) => {
+    // Filtrar apenas os produtos deste orçamento
+    const orderProducts = configs.filter(c => c.productId.split('-')[0] === numeroOrcamento);
+    // Verificar se todos os produtos deste orçamento têm esta etapa selecionada
+    const allSelected = orderProducts.every(c => c.stages[stage]);
+
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config => {
+        if (config.productId.split('-')[0] === numeroOrcamento) {
+          return {
+            ...config,
+            stages: {
+              ...config.stages,
+              [stage]: !allSelected
+            }
+          };
+        }
+        return config;
+      })
     );
   };
 
@@ -293,7 +345,7 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
                   const numeroOrcamentoAtual = config.productId.split('-')[0];
                   const numeroOrcamentoAnterior = index > 0 ? sortedConfigs[index - 1].productId.split('-')[0] : null;
                   const isNovoOrcamento = numeroOrcamentoAnterior === null || numeroOrcamentoAtual !== numeroOrcamentoAnterior;
-                  
+
                   // Obter dados do orçamento para o cabeçalho
                   const pedidoAtual = orders.find(o => o.id === config.productId);
                   const empresaOrcamento = pedidoAtual?.empresa || '';
@@ -303,55 +355,87 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
                       {/* Cabeçalho do orçamento (como na impressão) */}
                       {isNovoOrcamento && (
                         <TableRow className="bg-gray-50 border-t-4 border-gray-300">
-                          <TableCell colSpan={4 + stages.length} className="px-4 py-3">
+                          <TableCell colSpan={4} className="px-4 py-2">
                             <div className="font-semibold text-sm">
                               Orçamento: {numeroOrcamentoAtual} - {empresaOrcamento} - {config.cliente.toUpperCase()}
                             </div>
                           </TableCell>
+                          {/* Botões de etapas para o orçamento */}
+                          {stages.map(stage => {
+                            const Icon = STAGE_ICONS[stage];
+                            // Verificar se todos os produtos deste orçamento têm esta etapa selecionada
+                            const orderProducts = configs.filter(c => c.productId.split('-')[0] === numeroOrcamentoAtual);
+                            const allSelected = orderProducts.length > 0 && orderProducts.every(c => c.stages[stage]);
+
+                            return (
+                              <TableCell key={stage} className="px-2 py-2 text-center">
+                                <button
+                                  onClick={() => handleSelectStageForOrder(numeroOrcamentoAtual, stage)}
+                                  className="p-1 rounded transition-all duration-200 hover:bg-gray-100"
+                                  title={`${allSelected ? 'Desmarcar' : 'Marcar'} ${STAGE_LABELS[stage]} para todo o pedido ${numeroOrcamentoAtual}`}
+                                >
+                                  <Icon className={`h-4 w-4 ${allSelected ? 'text-muted-foreground' : 'text-gray-300'}`} />
+                                </button>
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       )}
-                      
+
                       {/* Linha do produto */}
                       <TableRow
                         className="hover:bg-muted/50 border-b border-gray-200"
                       >
-                    <TableCell className="px-4 py-1.5 align-middle">
-                      <span className="text-sm font-medium">{numeroOrcamentoAtual}</span>
-                    </TableCell>
-                    <TableCell className="px-4 py-1.5 align-middle">
-                      <span className="text-sm font-medium">{config.productName}</span>
-                    </TableCell>
-                    <TableCell className="px-4 py-1.5 align-middle">
-                      <span className="text-sm">{config.cliente}</span>
-                    </TableCell>
-                    <TableCell className="px-4 py-1.5 align-middle">
-                      <Badge variant="outline" className="font-medium">
-                        {config.quantidade}
-                      </Badge>
-                    </TableCell>
-                    {stages.map(stage => {
-                      const isActive = config.stages[stage];
-                      const Icon = STAGE_ICONS[stage];
+                        <TableCell className="px-4 py-1.5 align-middle">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleSelectAllForProduct(config.productId)}
+                              className="p-1 rounded hover:bg-gray-100 transition-colors"
+                              title={Object.values(config.stages).every(v => v) ? 'Desmarcar todas as etapas' : 'Marcar todas as etapas'}
+                            >
+                              {Object.values(config.stages).every(v => v) ? (
+                                <CheckSquare className="h-4 w-4 text-primary" />
+                              ) : (
+                                <Square className="h-4 w-4 text-gray-400" />
+                              )}
+                            </button>
+                            <span className="text-sm font-medium">{numeroOrcamentoAtual}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-1.5 align-middle">
+                          <span className="text-sm font-medium">{config.productName}</span>
+                        </TableCell>
+                        <TableCell className="px-4 py-1.5 align-middle">
+                          <span className="text-sm">{config.cliente}</span>
+                        </TableCell>
+                        <TableCell className="px-4 py-1.5 align-middle">
+                          <Badge variant="outline" className="font-medium">
+                            {config.quantidade}
+                          </Badge>
+                        </TableCell>
+                        {stages.map(stage => {
+                          const isActive = config.stages[stage];
+                          const Icon = STAGE_ICONS[stage];
 
-                      return (
-                        <TableCell key={stage} className="px-2 py-1.5 text-center">
-                          <button
-                            onClick={() => handleStageToggle(config.productId, stage)}
-                            className={`
+                          return (
+                            <TableCell key={stage} className="px-2 py-1.5 text-center">
+                              <button
+                                onClick={() => handleStageToggle(config.productId, stage)}
+                                className={`
                               p-1.5 rounded transition-all duration-200
                               ${isActive
-                                ? `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
-                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                              }
+                                    ? `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
+                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                  }
                             `}
-                            title={`${isActive ? 'Remover' : 'Adicionar'} ${STAGE_LABELS[stage]}`}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                          </button>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                                title={`${isActive ? 'Remover' : 'Adicionar'} ${STAGE_LABELS[stage]}`}
+                              >
+                                <Icon className="h-3.5 w-3.5" />
+                              </button>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
                     </React.Fragment>
                   );
                 })
