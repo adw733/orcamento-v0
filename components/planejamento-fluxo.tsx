@@ -1,14 +1,14 @@
 "use client"
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import ReactFlow, { 
-  addEdge, 
-  Background, 
-  Controls, 
-  Connection, 
-  Edge, 
-  Node, 
-  applyNodeChanges, 
+import ReactFlow, {
+  addEdge,
+  Background,
+  Controls,
+  Connection,
+  Edge,
+  Node,
+  applyNodeChanges,
   applyEdgeChanges,
   OnNodesChange,
   OnEdgesChange,
@@ -68,7 +68,7 @@ const PlanejamentoContent: React.FC = () => {
     ];
 
     // Filtrar apenas etapas ativas
-    const etapasAtivas = stageConfig 
+    const etapasAtivas = stageConfig
       ? etapasDisponiveis.filter(etapa => stageConfig[etapa] === true)
       : etapasDisponiveis; // Se não houver config, usar todas
 
@@ -95,7 +95,7 @@ const PlanejamentoContent: React.FC = () => {
           cliente: pedido.client,
           empresa: pedido.empresa,
           quantidade: pedido.quantity,
-          onDataChange: () => {}
+          onDataChange: () => { }
         }
       });
     });
@@ -106,7 +106,7 @@ const PlanejamentoContent: React.FC = () => {
   // Handler para aplicar configuração do bulk edit
   const handleApplyBulkEdit = useCallback((configs: ProductStageConfig[]) => {
     const todosNos: Node<ProductionNodeData>[] = [];
-    
+
     configs.forEach((config, index) => {
       // Encontrar o pedido correspondente
       const pedido = orders.find(o => o.id === config.productId);
@@ -122,7 +122,7 @@ const PlanejamentoContent: React.FC = () => {
 
     const totalEtapas = todosNos.length;
     const totalProdutos = configs.length;
-    
+
     toast({
       title: "Etapas atualizadas!",
       description: `${totalEtapas} etapa(s) criadas para ${totalProdutos} produto(s).`,
@@ -136,26 +136,26 @@ const PlanejamentoContent: React.FC = () => {
 
       try {
         setIsLoading(true);
-        
+
         // 1. Carregar TODOS os produtos primeiro
         const { data: produtosData, error: prodError } = await supabase
           .from('produtos')
           .select('id, nome, codigo')
           .eq('tenant_id', tenantId);
-        
+
         if (prodError) {
           console.error('Erro ao carregar produtos:', prodError);
           throw prodError;
         }
-        
+
         // Criar Map para busca rápida de nomes de produtos
         const produtosMap = new Map<string, string>(
           (produtosData || []).map((p: any) => [p.id, p.nome])
         );
-        
+
         console.log(`Carregados ${produtosData?.length || 0} produtos no Map`);
         console.log('Exemplos de produtos:', Array.from(produtosMap.entries()).slice(0, 3));
-        
+
         // 2. Buscar APENAS orçamentos em execução (status 4)
         const { data: orcamentos, error } = await supabase
           .from('orcamentos')
@@ -171,7 +171,7 @@ const PlanejamentoContent: React.FC = () => {
         if (orcamentos && orcamentos.length > 0) {
           // Criar um pedido separado para cada produto de cada orçamento
           const pedidos: Order[] = [];
-          
+
           orcamentos.forEach((orc: any) => {
             // Extrair contato e empresa do número do orçamento
             // Formato esperado: "0208 - PRODUTO - AS CALDEIRARIA - SANDRO"
@@ -179,12 +179,12 @@ const PlanejamentoContent: React.FC = () => {
             // Mas pode vir: "0208 - AS CALDEIRARIA - SANDRO" (sem PRODUTO)
             //                [0]          [1]          [2]
             const numeroPartes = orc.numero.split(' - ');
-            
+
             // Se tiver 4 partes: [numero, produto, empresa, contato]
             // Se tiver 3 partes: [numero, empresa, contato]
             let empresaNome: string;
             let contatoNome: string;
-            
+
             if (numeroPartes.length === 4) {
               empresaNome = numeroPartes[2];
               contatoNome = numeroPartes[3];
@@ -195,13 +195,13 @@ const PlanejamentoContent: React.FC = () => {
               empresaNome = 'Empresa não informada';
               contatoNome = numeroPartes[numeroPartes.length - 1] || 'Contato não informado';
             }
-            
+
             const numeroBase = orc.numero.split(' - ')[0];
 
             try {
               const itensData = typeof orc.itens === 'string' ? JSON.parse(orc.itens) : orc.itens;
               const items = itensData?.items || [];
-              
+
               // Criar um pedido para CADA produto do orçamento
               if (items.length > 0) {
                 items.forEach((item: any, index: number) => {
@@ -209,7 +209,7 @@ const PlanejamentoContent: React.FC = () => {
                   const produtoId = item.produtoId || item.produto_id || item.id_produto;
                   const produtoNome = produtosMap.get(produtoId) || 'Produto não identificado';
                   const quantidade = item.quantidade || item.qtd || item.qty || 0;
-                  
+
                   pedidos.push({
                     id: `${numeroBase}-${index + 1}`, // Ex: 0001-1, 0001-2
                     name: produtoNome,
@@ -246,13 +246,13 @@ const PlanejamentoContent: React.FC = () => {
               });
             }
           });
-          
+
           setOrders(pedidos);
-          
+
           // NÃO criar etapas automaticamente - aguardar configuração do usuário
           // O usuário deve abrir o modal de edição em massa para escolher as etapas
           setNodes([]);
-          
+
           // Notificação sobre produtos carregados
           if (pedidos.length > 0) {
             const numOrcamentos = orcamentos.length;
@@ -322,7 +322,7 @@ const PlanejamentoContent: React.FC = () => {
       // Encontrar se o node está dentro de algum grupo
       const groupNode = nodes.find(n => {
         if (n.type !== 'group') return false;
-        
+
         // Verificar se o node está dentro da área do grupo
         const nodeX = node.position.x;
         const nodeY = node.position.y;
@@ -341,14 +341,14 @@ const PlanejamentoContent: React.FC = () => {
 
       if (groupNode) {
         const groupId = groupNode.id.replace('group-', '');
-        
+
         // Adicionar node ao grupo e definir como filho (parentNode)
         setNodes(prev => prev.map(n => {
           if (n.id === node.id) {
             // Calcular posição relativa ao grupo
             const relativeX = node.position.x - groupNode.position.x;
             const relativeY = node.position.y - groupNode.position.y;
-            
+
             return {
               ...n,
               data: { ...n.data, groupId },
@@ -384,7 +384,7 @@ const PlanejamentoContent: React.FC = () => {
               const parentNode = nodes.find(pn => pn.id === n.parentNode);
               const absoluteX = parentNode ? n.position.x + parentNode.position.x : n.position.x;
               const absoluteY = parentNode ? n.position.y + parentNode.position.y : n.position.y;
-              
+
               return {
                 ...n,
                 data: { ...n.data, groupId: undefined },
@@ -440,7 +440,7 @@ const PlanejamentoContent: React.FC = () => {
     };
 
     setNodes(prev => [...prev, groupNode]);
-    
+
     toast({
       title: 'Grupo criado',
       description: `Grupo "${newGroup.name}" criado com sucesso! Arraste tarefas para dentro dele.`,
@@ -466,12 +466,12 @@ const PlanejamentoContent: React.FC = () => {
 
   const deleteGroup = useCallback((groupId: string) => {
     const groupNodeId = `group-${groupId}`;
-    
+
     // Remover grupo e resetar filhos
     setGroups(prev => prev.filter(g => g.id !== groupId));
     setNodes(prev => {
       const groupNode = prev.find(n => n.id === groupNodeId);
-      
+
       return prev
         .filter(n => n.id !== groupNodeId) // Remove o grupo
         .map(node => {
@@ -479,7 +479,7 @@ const PlanejamentoContent: React.FC = () => {
             // Converter posição relativa para absoluta
             const absoluteX = groupNode ? node.position.x + groupNode.position.x : node.position.x;
             const absoluteY = groupNode ? node.position.y + groupNode.position.y : node.position.y;
-            
+
             return {
               ...node,
               data: { ...node.data, groupId: undefined },
@@ -506,17 +506,17 @@ const PlanejamentoContent: React.FC = () => {
       id: `node-${uuidv4().substring(0, 8)}`,
       type: 'manufacturing',
       position: { x: 250, y: 250 },
-      data: { 
-        label: `Novo ${type}`, 
-        type, 
-        duration: 2, 
+      data: {
+        label: `Novo ${type}`,
+        type,
+        duration: 2,
         orderIds: [],
-        onDataChange: () => {} 
+        onDataChange: () => { }
       },
     };
     setNodes((nds) => [...nds, newNode]);
     setSelectedNodeId(newNode.id);
-    
+
     if (viewMode === 'calendar') {
       setViewMode('graph');
     }
@@ -571,53 +571,53 @@ const PlanejamentoContent: React.FC = () => {
   return (
     <div className="flex h-full w-full bg-background overflow-hidden">
       <div className="flex-1 relative bg-muted/30 flex flex-col h-full">
-        {/* Header: Informação e Controles */}
-        <div className="absolute top-6 left-6 right-6 z-10 flex items-start justify-end pointer-events-none gap-4">
-           {/* View Toggle */}
-           <Card className="p-1.5 shadow-lg flex items-center gap-1 pointer-events-auto">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setShowStatusTable(!showStatusTable)}
-                className={`flex items-center gap-2 ${showStatusTable ? 'bg-green-700' : 'bg-green-600'} hover:bg-green-700`}
-                disabled={orders.length === 0}
-              >
-                <Package size={16} />
-                {showStatusTable ? 'Ocultar Tabela' : 'Editar Etapas'}
-              </Button>
-             <Button
-               variant="default"
-               size="sm"
-               onClick={() => setIsGroupModalOpen(true)}
-               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-             >
-               <Plus size={16} />
-               Novo Grupo
-             </Button>
-             <Button
-               variant={viewMode === 'graph' ? 'default' : 'ghost'}
-               size="sm"
-               onClick={() => setViewMode('graph')}
-               className="gap-2"
-             >
-               <LayoutGrid size={16} />
-               Grafo
-             </Button>
-             <Button
-               variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-               size="sm"
-               onClick={() => setViewMode('calendar')}
-               className="gap-2"
-             >
-               <CalendarDays size={16} />
-               Calendário
-             </Button>
-           </Card>
+        {/* Header: Botões de controle - Posicionados fixos para aparecer na área do header */}
+        <div className="fixed top-[1.75rem] right-8 z-50 flex items-center gap-2 pointer-events-none">
+          {/* View Toggle */}
+          <Card className="p-1.5 shadow-lg flex items-center gap-1 pointer-events-auto bg-white/95 backdrop-blur-sm border border-gray-200">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowStatusTable(!showStatusTable)}
+              className={`flex items-center gap-2 ${showStatusTable ? 'bg-green-700' : 'bg-green-600'} hover:bg-green-700`}
+              disabled={orders.length === 0}
+            >
+              <Package size={16} />
+              {showStatusTable ? 'Ocultar Tabela' : 'Editar Etapas'}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setIsGroupModalOpen(true)}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+            >
+              <Plus size={16} />
+              Novo Grupo
+            </Button>
+            <Button
+              variant={viewMode === 'graph' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('graph')}
+              className="gap-2"
+            >
+              <LayoutGrid size={16} />
+              Grafo
+            </Button>
+            <Button
+              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className="gap-2"
+            >
+              <CalendarDays size={16} />
+              Calendário
+            </Button>
+          </Card>
         </div>
 
-        {/* Tabela de Status de Produtos - ACIMA do conteúdo */}
+        {/* Tabela de Status de Produtos - Ocupa toda a área disponível */}
         {showStatusTable && (
-          <div className="px-6 pt-20 pb-4 bg-background border-b overflow-y-auto" style={{ maxHeight: '70vh' }}>
+          <div className="flex-1 px-4 pt-2 pb-2 bg-background overflow-y-auto">
             <ProductStatusTable
               orders={orders}
               onConfigChange={handleApplyBulkEdit}
@@ -647,8 +647,8 @@ const PlanejamentoContent: React.FC = () => {
               </ReactFlow>
             ) : (
               <div className="pt-24 h-full">
-                <TimelineView 
-                  nodes={scheduledNodes} 
+                <TimelineView
+                  nodes={scheduledNodes}
                   onNodeClick={handleTimelineNodeClick}
                   selectedNodeId={selectedNodeId}
                 />
