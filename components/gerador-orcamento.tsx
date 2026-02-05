@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import * as ReactDOM from "react-dom/client"
 import dynamic from 'next/dynamic'
 
@@ -99,6 +99,8 @@ export function GeradorOrcamento({
   const [carregandoOrcamento, setCarregandoOrcamento] = useState(false)
   // Estado para ID do orçamento otimizado
   const [orcamentoOtimizadoId, setOrcamentoOtimizadoId] = useState<string | null>(null)
+  // Estado para botões de ação do planejamento (renderizados no header)
+  const [planejamentoHeaderActions, setPlanejamentoHeaderActions] = useState<React.ReactNode>(null)
 
   // Removemos a lógica que lia o hash da URL para definir o estado inicial
   // de abaAtiva (aplicarHashNaAbaAtiva + listeners). Isso garante que o
@@ -2446,6 +2448,7 @@ export function GeradorOrcamento({
             </div>
           )}
           <PageHeader title={title} subtitle={subtitle}>
+            {abaAtiva === "planejamento" && planejamentoHeaderActions}
             {abaAtiva === "orcamento" && (
               <>
                 <Button
@@ -2540,7 +2543,7 @@ export function GeradorOrcamento({
               case "planejamento":
                 return (
                   <div className="h-[calc(100vh-8rem)] -mx-2 md:-mx-4 -mb-2 md:-mb-3">
-                    <PlanejamentoFluxo />
+                    <PlanejamentoFluxo onHeaderActions={setPlanejamentoHeaderActions} />
                   </div>
                 )
               case "orcamento-otimizado":

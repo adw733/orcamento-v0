@@ -24,11 +24,13 @@ export const calculateSchedules = (nodes: Node<ProductionNodeData>[], edges: Edg
   const queue: string[] = nodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
   const startDates: Record<string, Date> = {};
 
-  // Initial nodes start at manualStartDate or Today
+  // Initial nodes start at manualStartDate, startDate, or Today
   queue.forEach(id => {
     const node = updatedNodes.find(n => n.id === id);
     if (node?.data.manualStartDate) {
       startDates[id] = parseISO(node.data.manualStartDate);
+    } else if (node?.data.startDate) {
+      startDates[id] = parseISO(node.data.startDate);
     } else {
       startDates[id] = today;
     }

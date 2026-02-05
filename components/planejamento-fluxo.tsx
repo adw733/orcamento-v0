@@ -18,7 +18,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
 import { LayoutGrid, CalendarDays, Plus, Package } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 import Sidebar from '@/components/planejamento/Sidebar';
@@ -39,18 +38,21 @@ const nodeTypes = {
   group: GroupNode,
 };
 
-type ViewMode = 'graph' | 'calendar';
+type ViewMode = 'graph' | 'calendar' | 'tabela';
 
-const PlanejamentoContent: React.FC = () => {
+interface PlanejamentoContentProps {
+  onHeaderActions?: (actions: React.ReactNode) => void;
+}
+
+const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActions }) => {
   const [nodes, setNodes] = useState<Node<ProductionNodeData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('graph');
+  const [viewMode, setViewMode] = useState<ViewMode>('tabela');
   const [isLoading, setIsLoading] = useState(true);
   const [groups, setGroups] = useState<ExecutionGroup[]>([]);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-  const [showStatusTable, setShowStatusTable] = useState(false);
   const { tenantId } = useCurrentUser();
   const { toast } = useToast();
 
@@ -109,6 +111,7 @@ const PlanejamentoContent: React.FC = () => {
           quantidade: pedido.quantity,
           startDate: startDateStr,
           endDate: endDateStr,
+          manualStartDate: startDateStr,
           onDataChange: () => { }
         }
       });
@@ -582,95 +585,101 @@ const PlanejamentoContent: React.FC = () => {
     );
   }
 
+  // Enviar botões de ação para o header do parent
+  useEffect(() => {
+    if (!onHeaderActions) return;
+    onHeaderActions(
+      <>
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+          <Button
+            variant={viewMode === 'tabela' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('tabela')}
+            className="gap-2 h-8"
+            disabled={orders.length === 0}
+          >
+            <Package size={15} />
+            Etapas
+          </Button>
+          <Button
+            variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('calendar')}
+            className="gap-2 h-8"
+          >
+            <CalendarDays size={15} />
+            Calendário
+          </Button>
+          <Button
+            variant={viewMode === 'graph' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('graph')}
+            className="gap-2 h-8"
+          >
+            <LayoutGrid size={15} />
+            Grafo
+          </Button>
+        </div>
+        {viewMode === 'graph' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsGroupModalOpen(true)}
+            className="gap-2 h-8"
+          >
+            <Plus size={15} />
+            Novo Grupo
+          </Button>
+        )}
+      </>
+    );
+  }, [viewMode, orders.length, onHeaderActions]);
+
   return (
     <div className="flex h-full w-full bg-background overflow-hidden">
       <div className="flex-1 relative bg-muted/30 flex flex-col h-full">
-        {/* Header: Botões de controle - Posicionados fixos para aparecer na área do header */}
-        <div className="fixed top-[1.75rem] right-8 z-50 flex items-center gap-2 pointer-events-none">
-          {/* View Toggle */}
-          <Card className="p-1.5 shadow-lg flex items-center gap-1 pointer-events-auto bg-white/95 backdrop-blur-sm border border-gray-200">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowStatusTable(!showStatusTable)}
-              className={`flex items-center gap-2 ${showStatusTable ? 'bg-green-700' : 'bg-green-600'} hover:bg-green-700`}
-              disabled={orders.length === 0}
-            >
-              <Package size={16} />
-              {showStatusTable ? 'Ocultar Tabela' : 'Editar Etapas'}
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setIsGroupModalOpen(true)}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-            >
-              <Plus size={16} />
-              Novo Grupo
-            </Button>
-            <Button
-              variant={viewMode === 'graph' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('graph')}
-              className="gap-2"
-            >
-              <LayoutGrid size={16} />
-              Grafo
-            </Button>
-            <Button
-              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('calendar')}
-              className="gap-2"
-            >
-              <CalendarDays size={16} />
-              Calendário
-            </Button>
-          </Card>
-        </div>
+        {/* Content Area */}
+        <div className="flex-1 w-full h-full relative overflow-hidden">
+          {/* Tabela de Status de Produtos */}
+          {viewMode === 'tabela' && (
+            <div className="h-full px-4 pt-2 pb-2 bg-background overflow-y-auto">
+              <ProductStatusTable
+                orders={orders}
+                onConfigChange={handleApplyBulkEdit}
+                onClose={() => setViewMode('calendar')}
+                tenantId={tenantId}
+              />
+            </div>
+          )}
 
-        {/* Tabela de Status de Produtos - Ocupa toda a área disponível */}
-        {showStatusTable && (
-          <div className="flex-1 px-4 pt-2 pb-2 bg-background overflow-y-auto">
-            <ProductStatusTable
-              orders={orders}
-              onConfigChange={handleApplyBulkEdit}
-              onClose={() => setShowStatusTable(false)}
-              tenantId={tenantId}
+          {/* Vista Calendário / Timeline */}
+          {viewMode === 'calendar' && (
+            <TimelineView
+              nodes={scheduledNodes}
+              onNodeClick={handleTimelineNodeClick}
+              selectedNodeId={selectedNodeId}
             />
-          </div>
-        )}
+          )}
 
-        {/* Content Area - Oculto quando tabela está aberta */}
-        {!showStatusTable && (
-          <div className="flex-1 w-full h-full relative">
-            {viewMode === 'graph' ? (
-              <ReactFlow
-                nodes={scheduledNodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={onNodeClick}
-                onNodeDragStop={onNodeDragStop}
-                nodeTypes={nodeTypes}
-                fitView
-                className="bg-background"
-              >
-                <Background color="hsl(var(--muted-foreground) / 0.1)" gap={20} />
-                <Controls />
-              </ReactFlow>
-            ) : (
-              <div className="pt-24 h-full">
-                <TimelineView
-                  nodes={scheduledNodes}
-                  onNodeClick={handleTimelineNodeClick}
-                  selectedNodeId={selectedNodeId}
-                />
-              </div>
-            )}
-          </div>
-        )}
+          {/* Vista Grafo */}
+          {viewMode === 'graph' && (
+            <ReactFlow
+              nodes={scheduledNodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onNodeDragStop={onNodeDragStop}
+              nodeTypes={nodeTypes}
+              fitView
+              className="bg-background"
+            >
+              <Background color="hsl(var(--muted-foreground) / 0.1)" gap={20} />
+              <Controls />
+            </ReactFlow>
+          )}
+        </div>
 
         {selectedNode && (
           <EditStageModal
@@ -695,10 +704,14 @@ const PlanejamentoContent: React.FC = () => {
   );
 };
 
-export default function PlanejamentoFluxo() {
+interface PlanejamentoFluxoProps {
+  onHeaderActions?: (actions: React.ReactNode) => void;
+}
+
+export default function PlanejamentoFluxo({ onHeaderActions }: PlanejamentoFluxoProps) {
   return (
     <ReactFlowProvider>
-      <PlanejamentoContent />
+      <PlanejamentoContent onHeaderActions={onHeaderActions} />
     </ReactFlowProvider>
   );
 }
