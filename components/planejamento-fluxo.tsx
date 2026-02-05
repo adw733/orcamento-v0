@@ -574,18 +574,7 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
     return !edges.some(e => e.target === selectedNodeId);
   }, [selectedNodeId, edges]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando orçamentos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Enviar botões de ação para o header do parent
+  // Enviar botões de ação para o header do parent (MUST be before any early return)
   useEffect(() => {
     if (!onHeaderActions) return;
     onHeaderActions(
@@ -634,6 +623,17 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
       </>
     );
   }, [viewMode, orders.length, onHeaderActions]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando orçamentos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full w-full bg-background overflow-hidden">
