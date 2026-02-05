@@ -636,6 +636,7 @@ const PlanejamentoContent: React.FC = () => {
               orders={orders}
               onConfigChange={handleApplyBulkEdit}
               onClose={() => setShowStatusTable(false)}
+              tenantId={tenantId}
             />
           </div>
         )}

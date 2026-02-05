@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Order, StageType } from '@/types/planejamento';
 import {
   Table,
@@ -11,6 +11,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import {
+  carregarConfiguracoesEtapasPorProdutos,
+  salvarConfiguracoesEtapas,
+  ProductStageConfig as ServiceProductStageConfig,
+} from '@/lib/planejamento/configuracoes-etapas';
 import {
   ShoppingCart,
   Scissors,
@@ -49,6 +55,7 @@ interface ProductStatusTableProps {
   orders: Order[];
   onConfigChange: (configs: ProductStageConfig[]) => void;
   onClose?: () => void;
+  tenantId?: string;
 }
 
 const STAGE_ICONS = {
@@ -84,38 +91,158 @@ const STAGE_COLORS = {
 type SortField = 'numeroOrcamento' | 'productName' | 'cliente' | 'quantidade';
 type SortDirection = 'asc' | 'desc';
 
-export default function ProductStatusTable({ orders, onConfigChange }: ProductStatusTableProps) {
+export default function ProductStatusTable({ orders, onConfigChange, tenantId }: ProductStatusTableProps) {
   const [configs, setConfigs] = useState<ProductStageConfig[]>([]);
   const [sortField, setSortField] = useState<SortField>('numeroOrcamento');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadDone = useRef(false);
+  const { toast } = useToast();
 
-  // Inicializar configurações com todos os pedidos
+  // Carregar configurações salvas do banco de dados
   useEffect(() => {
-    const initialConfigs: ProductStageConfig[] = orders.map(order => ({
-      productId: order.id,
-      productName: order.name,
-      cliente: order.client,
-      quantidade: order.quantity,
-      stages: {
-        [StageType.PURCHASE]: true,
-        [StageType.CUTTING]: true,
-        [StageType.PRINTING]: true,
-        [StageType.SEWING]: true,
-        [StageType.REVISION]: true,
-        [StageType.PACKING]: true,
-        [StageType.DELIVERY]: true,
-      },
-      stageDates: {} // Datas inicialmente vazias
-    }));
-    setConfigs(initialConfigs);
-  }, [orders]);
+    const carregarConfigs = async () => {
+      if (!tenantId || orders.length === 0) {
+        // Se não tem tenantId, criar configs padrão
+        const defaultConfigs: ProductStageConfig[] = orders.map(order => ({
+          productId: order.id,
+          productName: order.name,
+          cliente: order.client,
+          quantidade: order.quantity,
+          stages: {
+            [StageType.PURCHASE]: true,
+            [StageType.CUTTING]: true,
+            [StageType.PRINTING]: true,
+            [StageType.SEWING]: true,
+            [StageType.REVISION]: true,
+            [StageType.PACKING]: true,
+            [StageType.DELIVERY]: true,
+          },
+          stageDates: {}
+        }));
+        setConfigs(defaultConfigs);
+        setIsLoading(false);
+        initialLoadDone.current = true;
+        return;
+      }
 
-  // Atualizar configurações quando houver mudanças
+      try {
+        setIsLoading(true);
+        const productIds = orders.map(o => o.id);
+        const savedConfigs = await carregarConfiguracoesEtapasPorProdutos(tenantId, productIds);
+        
+        // Criar um Map para acesso rápido
+        const savedConfigsMap = new Map(savedConfigs.map(c => [c.productId, c]));
+        
+        // Mesclar configs salvas com orders (para novos produtos que não têm config salva)
+        const mergedConfigs: ProductStageConfig[] = orders.map(order => {
+          const saved = savedConfigsMap.get(order.id);
+          if (saved) {
+            return {
+              ...saved,
+              productName: order.name, // Garantir que o nome está atualizado
+              cliente: order.client,
+              quantidade: order.quantity,
+            };
+          }
+          // Produto novo - criar config padrão
+          return {
+            productId: order.id,
+            productName: order.name,
+            cliente: order.client,
+            quantidade: order.quantity,
+            stages: {
+              [StageType.PURCHASE]: true,
+              [StageType.CUTTING]: true,
+              [StageType.PRINTING]: true,
+              [StageType.SEWING]: true,
+              [StageType.REVISION]: true,
+              [StageType.PACKING]: true,
+              [StageType.DELIVERY]: true,
+            },
+            stageDates: {}
+          };
+        });
+        
+        setConfigs(mergedConfigs);
+        initialLoadDone.current = true;
+      } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+        // Em caso de erro, usar configs padrão
+        const defaultConfigs: ProductStageConfig[] = orders.map(order => ({
+          productId: order.id,
+          productName: order.name,
+          cliente: order.client,
+          quantidade: order.quantity,
+          stages: {
+            [StageType.PURCHASE]: true,
+            [StageType.CUTTING]: true,
+            [StageType.PRINTING]: true,
+            [StageType.SEWING]: true,
+            [StageType.REVISION]: true,
+            [StageType.PACKING]: true,
+            [StageType.DELIVERY]: true,
+          },
+          stageDates: {}
+        }));
+        setConfigs(defaultConfigs);
+        initialLoadDone.current = true;
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    carregarConfigs();
+  }, [orders, tenantId]);
+
+  // Salvar configurações com debounce
+  const salvarConfigs = useCallback(async (configsToSave: ProductStageConfig[]) => {
+    if (!tenantId || configsToSave.length === 0) return;
+
+    try {
+      setIsSaving(true);
+      await salvarConfiguracoesEtapas(configsToSave, tenantId);
+      console.log('Configurações salvas com sucesso');
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as configurações. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [tenantId, toast]);
+
+  // Atualizar configurações e salvar quando houver mudanças
   useEffect(() => {
     if (configs.length > 0) {
       onConfigChange(configs);
+
+      // Salvar no banco com debounce (apenas após o carregamento inicial)
+      if (tenantId && initialLoadDone.current) {
+        // Cancelar timeout anterior
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+
+        // Agendar salvamento para 1 segundo após a última mudança
+        saveTimeoutRef.current = setTimeout(() => {
+          salvarConfigs(configs);
+        }, 1000);
+      }
     }
-  }, [configs]);
+
+    // Cleanup
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [configs, onConfigChange, tenantId, salvarConfigs]);
 
   const handleStageToggle = (productId: string, stage: StageType) => {
     setConfigs(prevConfigs =>
@@ -290,10 +417,25 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
           <span className="bg-primary text-white p-1 rounded-md text-xs">ETAPAS</span>
           Configuração de Etapas por Produto
         </h3>
-        <span className="text-xs text-gray-500">{sortedConfigs.length} produtos</span>
+        <div className="flex items-center gap-2">
+          {isSaving && (
+            <span className="text-xs text-blue-500 flex items-center gap-1">
+              <span className="animate-spin">⏳</span> Salvando...
+            </span>
+          )}
+          {!isSaving && !isLoading && tenantId && (
+            <span className="text-xs text-green-500">✓ Salvo</span>
+          )}
+          <span className="text-xs text-gray-500">{sortedConfigs.length} produtos</span>
+        </div>
       </div>
 
-      {/* Tabela igual à tabela de produtos */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <span className="text-muted-foreground">Carregando configurações...</span>
+        </div>
+      ) : (
+      /* Tabela igual à tabela de produtos */
       <div className="rounded-md border overflow-hidden bg-background">
         <div className="overflow-x-auto">
           <Table>
@@ -497,6 +639,7 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
           </Table>
         </div>
       </div>
+      )}
     </div>
   );
 }
