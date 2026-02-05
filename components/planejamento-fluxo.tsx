@@ -55,7 +55,7 @@ const PlanejamentoContent: React.FC = () => {
   const { toast } = useToast();
 
   // Função para criar etapas baseadas na configuração (vinda do bulk edit ou padrão)
-  const criarEtapasComConfig = useCallback((pedido: Order, indexProduto: number, stageConfig?: Partial<Record<StageType, boolean>>) => {
+  const criarEtapasComConfig = useCallback((pedido: Order, indexProduto: number, stageConfig?: Partial<Record<StageType, boolean>>, stageDates?: Partial<Record<StageType, string>>) => {
     // Se não houver config, usar todas as etapas
     const etapasDisponiveis = [
       StageType.PURCHASE,
@@ -76,10 +76,22 @@ const PlanejamentoContent: React.FC = () => {
     const espacamentoHorizontal = 300;
     const espacamentoVertical = 200;
     const yBase = 100 + (indexProduto * espacamentoVertical);
+    const duracaoPadrao = 2; // Duração em dias
 
     etapasAtivas.forEach((etapa, index) => {
       const nodeId = `${pedido.id}-${etapa.toLowerCase().replace(/\s+/g, '-')}`;
       const xPos = 100 + (index * espacamentoHorizontal);
+
+      // Usar data do stageDates ou undefined
+      const startDateStr = stageDates?.[etapa];
+      let endDateStr: string | undefined = undefined;
+      if (startDateStr) {
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + duracaoPadrao);
+        endDateStr = endDate.toISOString().split('T')[0];
+        console.log(`[criarEtapas] ${pedido.name} - ${etapa}: startDate=${startDateStr}, endDate=${endDateStr}`);
+      }
 
       novasEtapas.push({
         id: nodeId,
@@ -88,13 +100,15 @@ const PlanejamentoContent: React.FC = () => {
         data: {
           label: `${pedido.name} - ${etapa}`,
           type: etapa,
-          duration: 2, // Duração padrão
+          duration: duracaoPadrao,
           orderIds: [pedido.id],
           productName: pedido.name,
           productId: pedido.id,
           cliente: pedido.client,
           empresa: pedido.empresa,
           quantidade: pedido.quantity,
+          startDate: startDateStr,
+          endDate: endDateStr,
           onDataChange: () => { }
         }
       });
@@ -112,8 +126,8 @@ const PlanejamentoContent: React.FC = () => {
       const pedido = orders.find(o => o.id === config.productId);
       if (!pedido) return;
 
-      // Criar etapas apenas para as selecionadas
-      const nosEtapas = criarEtapasComConfig(pedido, index, config.stages);
+      // Criar etapas apenas para as selecionadas, com datas
+      const nosEtapas = criarEtapasComConfig(pedido, index, config.stages, config.stageDates);
       todosNos.push(...nosEtapas);
     });
 

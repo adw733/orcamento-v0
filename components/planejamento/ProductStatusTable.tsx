@@ -24,7 +24,17 @@ import {
   CheckSquare,
   Square,
   Settings2,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+export interface StageDateConfig {
+  enabled: boolean;
+  startDate?: string; // ISO date string
+}
 
 export interface ProductStageConfig {
   productId: string;
@@ -32,6 +42,7 @@ export interface ProductStageConfig {
   cliente: string;
   quantidade: number;
   stages: Partial<Record<StageType, boolean>>;
+  stageDates: Partial<Record<StageType, string>>; // Data de início de cada etapa
 }
 
 interface ProductStatusTableProps {
@@ -93,7 +104,8 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
         [StageType.REVISION]: true,
         [StageType.PACKING]: true,
         [StageType.DELIVERY]: true,
-      }
+      },
+      stageDates: {} // Datas inicialmente vazias
     }));
     setConfigs(initialConfigs);
   }, [orders]);
@@ -181,6 +193,23 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
         }
         return config;
       })
+    );
+  };
+
+  // Atualizar data de início de uma etapa específica
+  const handleDateChange = (productId: string, stage: StageType, date: string) => {
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config =>
+        config.productId === productId
+          ? {
+            ...config,
+            stageDates: {
+              ...config.stageDates,
+              [stage]: date || undefined
+            }
+          }
+          : config
+      )
     );
   };
 
@@ -416,22 +445,46 @@ export default function ProductStatusTable({ orders, onConfigChange }: ProductSt
                         {stages.map(stage => {
                           const isActive = config.stages[stage];
                           const Icon = STAGE_ICONS[stage];
+                          const stageDate = config.stageDates[stage] || '';
 
                           return (
-                            <TableCell key={stage} className="px-2 py-1.5 text-center">
-                              <button
-                                onClick={() => handleStageToggle(config.productId, stage)}
-                                className={`
-                              p-1.5 rounded transition-all duration-200
-                              ${isActive
-                                    ? `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }
-                            `}
-                                title={`${isActive ? 'Remover' : 'Adicionar'} ${STAGE_LABELS[stage]}`}
-                              >
-                                <Icon className="h-3.5 w-3.5" />
-                              </button>
+                            <TableCell key={stage} className="px-1 py-1.5 text-center">
+                              <div className="flex items-center justify-center gap-0.5">
+                                <button
+                                  onClick={() => handleStageToggle(config.productId, stage)}
+                                  className={`
+                                    p-1.5 rounded transition-all duration-200 flex-shrink-0
+                                    ${isActive
+                                      ? `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
+                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                    }
+                                  `}
+                                  title={`${isActive ? 'Remover' : 'Adicionar'} ${STAGE_LABELS[stage]}`}
+                                >
+                                  <Icon className="h-3.5 w-3.5" />
+                                </button>
+                                {isActive && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button
+                                        className={`p-1 rounded hover:bg-gray-100 transition-colors ${stageDate ? 'text-primary' : 'text-gray-400'}`}
+                                        title={stageDate ? format(parseISO(stageDate), "dd/MM/yyyy", { locale: ptBR }) : `Definir data de ${STAGE_LABELS[stage]}`}
+                                      >
+                                        <CalendarIcon className="h-3.5 w-3.5" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <Calendar
+                                        mode="single"
+                                        selected={stageDate ? parseISO(stageDate) : undefined}
+                                        onSelect={(date) => handleDateChange(config.productId, stage, date ? format(date, 'yyyy-MM-dd') : '')}
+                                        locale={ptBR}
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
                             </TableCell>
                           );
                         })}
