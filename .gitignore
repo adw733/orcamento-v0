@@ -45,3 +45,7 @@ backup_supabase/*/storage/
 backup_supabase/*/schema/
 backup_supabase/*/*.json
 backup_supabase/*/README.md
+
+# Playwright MCP (logs e screenshots temporários)
+.playwright-mcp/
+console-errors.txt
