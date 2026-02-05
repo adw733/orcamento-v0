@@ -29,7 +29,6 @@ import GerenciadorGastosReceitas from "@/components/gerenciador-gastos-receitas"
 import DashboardFinanceiro from "@/components/dashboard-financeiro"
 import GerenciadorUsuarios from "@/components/gerenciador-usuarios"
 import PlanejamentoFluxo from "@/components/planejamento-fluxo"
-import TodoList from "@/components/todo-list"
 
 const OrcamentoOtimizado = dynamic(() => import('@/app/orcamento-otimizado/page'), { ssr: false })
 
@@ -2543,14 +2542,6 @@ export function GeradorOrcamento({
                   <div className="h-[calc(100vh-8rem)] -mx-2 md:-mx-4 -mb-2 md:-mb-3">
                     <PlanejamentoFluxo />
                   </div>
-                )
-              case "todo":
-                return (
-                  <Card className="shadow-sm border border-gray-200">
-                    <CardContent className="p-3 md:p-4">
-                      <TodoList />
-                    </CardContent>
-                  </Card>
                 )
               case "orcamento-otimizado":
                 return (

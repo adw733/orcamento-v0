@@ -28,7 +28,6 @@ import {
   TrendingUp,
   LayoutDashboard,
   CalendarRange,
-  ListTodo,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
@@ -105,7 +104,6 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
         { id: "orcamento-otimizado", label: "Edição de Orçamento", icon: FileText, isExternal: true },
         { id: "orcamentos", label: "Todos Orçamentos", icon: Save },
         { id: "planejamento", label: "Planejamento", icon: CalendarRange },
-        { id: "todo", label: "Todo", icon: ListTodo },
         { id: "orcamentos-finalizados", label: "1 - Finalizados", icon: CheckCircle2 },
         { id: "orcamentos-entregues", label: "2 - Entregues", icon: Truck },
         { id: "orcamentos-cobranca", label: "3 - Cobrança", icon: CircleDollarSign },
