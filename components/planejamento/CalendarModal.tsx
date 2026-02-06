@@ -204,11 +204,14 @@ export default function CalendarModal({
     setSelectedDate(date);
     if (date) {
       const dateStr = format(date, 'yyyy-MM-dd');
-      if (bulkMode && bulkTasks && onBulkDateChange) {
+      if (bulkMode && bulkTasks && bulkTasks.length > 0 && onBulkDateChange) {
+        // Modo bulk com tarefas selecionadas: agendar todas
         onBulkDateChange(bulkTasks, dateStr);
-      } else {
+      } else if (!bulkMode) {
+        // Modo individual: agendar tarefa específica
         onDateChange(productId, stage, dateStr);
       }
+      // Se bulkMode sem tarefas: apenas seleciona o dia para visualização (não fecha)
     }
   };
 
