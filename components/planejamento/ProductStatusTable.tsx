@@ -613,7 +613,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             <Icon className="h-3.5 w-3.5" />
           </button>
           {isActive && stageDate && (
-            <span className="text-[9px] text-muted-foreground leading-none">
+            <span className="text-[11px] font-semibold leading-none bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-1.5 py-0.5 rounded-sm">
               {format(parseISO(stageDate), "dd/MM", { locale: ptBR })}
             </span>
           )}
