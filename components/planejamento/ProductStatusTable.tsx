@@ -161,7 +161,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
       return { ...config, stageDates: newStageDates };
     }));
     setSelectedTasks(new Set());
-    setBulkCalendarMode(false);
+    // NÃO fecha o calendário - o usuário fecha manualmente pelo botão
     toast({
       title: "Tarefas agendadas!",
       description: `${tasks.length} tarefa(s) agendada(s) para ${date ? new Date(date + 'T12:00:00').toLocaleDateString('pt-BR') : 'sem data'}.`,
