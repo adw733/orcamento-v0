@@ -33,6 +33,8 @@ import {
   Calendar as CalendarIcon,
   Layers,
   ListOrdered,
+  GripVertical,
+  X,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -101,9 +103,104 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [calendarModal, setCalendarModal] = useState<{ open: boolean; productId: string; productName: string; stage: StageType; currentDate: string } | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [bulkCalendarMode, setBulkCalendarMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadDone = useRef(false);
   const { toast } = useToast();
+
+  // Multi-select: toggle a task in the selection (Ctrl+click)
+  const handleTaskSelect = useCallback((productId: string, stage: StageType, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const key = `${productId}:${stage}`;
+    setSelectedTasks(prev => {
+      const newSet = new Set(prev);
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl+click: toggle individual
+        if (newSet.has(key)) newSet.delete(key);
+        else newSet.add(key);
+      } else {
+        // Regular click: start new selection or deselect
+        if (newSet.has(key) && newSet.size === 1) {
+          newSet.clear();
+        } else {
+          newSet.clear();
+          newSet.add(key);
+        }
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Get bulk tasks from selection
+  const getBulkTasks = useCallback(() => {
+    return Array.from(selectedTasks).map(key => {
+      const sepIdx = key.lastIndexOf(':');
+      const productId = key.substring(0, sepIdx);
+      const stage = key.substring(sepIdx + 1) as StageType;
+      const config = configs.find(c => c.productId === productId);
+      return {
+        productId,
+        stage,
+        productName: config?.productName || '',
+        cliente: config?.cliente || '',
+      };
+    });
+  }, [selectedTasks, configs]);
+
+  // Handle bulk date assignment
+  const handleBulkDateChange = useCallback((tasks: { productId: string; stage: StageType }[], date: string) => {
+    setConfigs(prev => prev.map(config => {
+      const matchingTasks = tasks.filter(t => t.productId === config.productId);
+      if (matchingTasks.length === 0) return config;
+      const newStageDates = { ...config.stageDates };
+      matchingTasks.forEach(t => {
+        newStageDates[t.stage] = date || undefined;
+      });
+      return { ...config, stageDates: newStageDates };
+    }));
+    setSelectedTasks(new Set());
+    setBulkCalendarMode(false);
+    toast({
+      title: "Tarefas agendadas!",
+      description: `${tasks.length} tarefa(s) agendada(s) para ${date ? new Date(date + 'T12:00:00').toLocaleDateString('pt-BR') : 'sem data'}.`,
+    });
+  }, [toast]);
+
+  // Open bulk calendar
+  const openBulkCalendar = useCallback(() => {
+    setBulkCalendarMode(true);
+    setCalendarModal(null); // Close individual calendar if open
+  }, []);
+
+  // Clear selection
+  const clearSelection = useCallback(() => {
+    setSelectedTasks(new Set());
+    setBulkCalendarMode(false);
+  }, []);
+
+  // Drag handlers for selected tasks
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    const tasks = getBulkTasks();
+    e.dataTransfer.setData('application/json', JSON.stringify(tasks));
+    e.dataTransfer.effectAllowed = 'copy';
+    setIsDragging(true);
+
+    // Create custom drag image
+    const dragEl = document.createElement('div');
+    dragEl.className = 'bg-primary text-white px-3 py-1.5 rounded-lg shadow-lg text-sm font-medium';
+    dragEl.textContent = `📅 ${tasks.length} tarefa(s)`;
+    dragEl.style.position = 'absolute';
+    dragEl.style.top = '-1000px';
+    document.body.appendChild(dragEl);
+    e.dataTransfer.setDragImage(dragEl, 0, 0);
+    setTimeout(() => document.body.removeChild(dragEl), 0);
+  }, [getBulkTasks]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   // Carregar configurações salvas do banco de dados
   useEffect(() => {
@@ -472,6 +569,68 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
   };
 
   const calendarIsOpen = calendarModal?.open ?? false;
+  const showCalendar = calendarIsOpen || bulkCalendarMode;
+
+  // Reusable stage cell renderer with multi-select support (no calendar icon)
+  const renderStageCell = (config: ProductStageConfig, stage: StageType) => {
+    const isActive = config.stages[stage];
+    const Icon = STAGE_ICONS[stage];
+    const stageDate = config.stageDates[stage] || '';
+    const taskKey = `${config.productId}:${stage}`;
+    const isSelected = selectedTasks.has(taskKey);
+
+    return (
+      <TableCell key={stage} className="px-1 py-1.5 text-center">
+        <div className="flex flex-col items-center gap-0.5">
+          <button
+            draggable={isActive && isSelected}
+            onDragStart={isActive && isSelected ? handleDragStart : undefined}
+            onDragEnd={isActive && isSelected ? handleDragEnd : undefined}
+            onClick={(e) => {
+              if (isActive && (e.ctrlKey || e.metaKey || selectedTasks.size > 0)) {
+                handleTaskSelect(config.productId, stage, e);
+              } else {
+                handleStageToggle(config.productId, stage);
+              }
+            }}
+            className={`
+              p-1.5 rounded transition-all duration-200 flex-shrink-0
+              ${isActive
+                ? isSelected
+                  ? 'bg-primary text-white shadow-md ring-2 ring-primary ring-offset-1 scale-110 cursor-grab active:cursor-grabbing'
+                  : `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }
+            `}
+            title={
+              isActive && isSelected
+                ? 'Selecionado — Ctrl+clique para desmarcar, ou arraste para o calendário'
+                : isActive
+                  ? `${STAGE_LABELS[stage]}${stageDate ? ` (${format(parseISO(stageDate), "dd/MM", { locale: ptBR })})` : ''} — Ctrl+clique para selecionar`
+                  : `Adicionar ${STAGE_LABELS[stage]}`
+            }
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </button>
+          {isActive && stageDate && (
+            <span className="text-[9px] text-muted-foreground leading-none">
+              {format(parseISO(stageDate), "dd/MM", { locale: ptBR })}
+            </span>
+          )}
+        </div>
+      </TableCell>
+    );
+  };
+
+  // Handle drop on calendar panel from external drag
+  const handleCalendarDrop = useCallback((droppedTasks: { productId: string; stage: StageType; productName: string }[]) => {
+    // Set the dropped tasks as selected and open bulk calendar
+    const newSelection = new Set<string>();
+    droppedTasks.forEach(t => newSelection.add(`${t.productId}:${t.stage}`));
+    setSelectedTasks(newSelection);
+    setBulkCalendarMode(true);
+    setCalendarModal(null);
+  }, []);
 
   return (
     <div className="bg-card rounded-lg shadow-lg p-6 space-y-4">
@@ -482,6 +641,27 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
           Configuração de Etapas por Produto
         </h3>
         <div className="flex items-center gap-2">
+          {/* Botão Calendário */}
+          <button
+            onClick={() => {
+              if (showCalendar) {
+                setCalendarModal(null);
+                setBulkCalendarMode(false);
+              } else {
+                setBulkCalendarMode(true);
+                setCalendarModal(null);
+              }
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+              showCalendar
+                ? 'bg-primary text-white border-primary'
+                : 'bg-background text-foreground border-border hover:bg-muted'
+            }`}
+            title={showCalendar ? 'Fechar calendário' : 'Abrir calendário para agendar'}
+          >
+            <CalendarIcon className="h-3.5 w-3.5" />
+            Calendário
+          </button>
           {/* Toggle de Visualização */}
           <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
             <button
@@ -672,40 +852,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                                 {config.quantidade}
                               </Badge>
                             </TableCell>
-                            {stages.map(stage => {
-                              const isActive = config.stages[stage];
-                              const Icon = STAGE_ICONS[stage];
-                              const stageDate = config.stageDates[stage] || '';
-
-                              return (
-                                <TableCell key={stage} className="px-1 py-1.5 text-center">
-                                  <div className="flex items-center justify-center gap-0.5">
-                                    <button
-                                      onClick={() => handleStageToggle(config.productId, stage)}
-                                      className={`
-                                        p-1.5 rounded transition-all duration-200 flex-shrink-0
-                                        ${isActive
-                                          ? `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
-                                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                        }
-                                      `}
-                                      title={`${isActive ? 'Remover' : 'Adicionar'} ${STAGE_LABELS[stage]}`}
-                                    >
-                                      <Icon className="h-3.5 w-3.5" />
-                                    </button>
-                                    {isActive && (
-                                      <button
-                                        onClick={() => setCalendarModal({ open: true, productId: config.productId, productName: config.productName, stage, currentDate: stageDate })}
-                                        className={`p-1 rounded hover:bg-gray-100 transition-colors ${stageDate ? 'text-primary' : 'text-gray-400'}`}
-                                        title={stageDate ? format(parseISO(stageDate), "dd/MM/yyyy", { locale: ptBR }) : `Definir data de ${STAGE_LABELS[stage]}`}
-                                      >
-                                        <CalendarIcon className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              );
-                            })}
+                            {stages.map(stage => renderStageCell(config, stage))}
                           </TableRow>
                         );
                       })}
@@ -786,40 +933,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                               {config.quantidade}
                             </Badge>
                           </TableCell>
-                          {stages.map(stage => {
-                            const isActive = config.stages[stage];
-                            const Icon = STAGE_ICONS[stage];
-                            const stageDate = config.stageDates[stage] || '';
-
-                            return (
-                              <TableCell key={stage} className="px-1 py-1.5 text-center">
-                                <div className="flex items-center justify-center gap-0.5">
-                                  <button
-                                    onClick={() => handleStageToggle(config.productId, stage)}
-                                    className={`
-                                    p-1.5 rounded transition-all duration-200 flex-shrink-0
-                                    ${isActive
-                                        ? `${STAGE_COLORS[stage]} text-white shadow-sm hover:shadow-md`
-                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                      }
-                                  `}
-                                    title={`${isActive ? 'Remover' : 'Adicionar'} ${STAGE_LABELS[stage]}`}
-                                  >
-                                    <Icon className="h-3.5 w-3.5" />
-                                  </button>
-                                  {isActive && (
-                                    <button
-                                      onClick={() => setCalendarModal({ open: true, productId: config.productId, productName: config.productName, stage, currentDate: stageDate })}
-                                      className={`p-1 rounded hover:bg-gray-100 transition-colors ${stageDate ? 'text-primary' : 'text-gray-400'}`}
-                                      title={stageDate ? format(parseISO(stageDate), "dd/MM/yyyy", { locale: ptBR }) : `Definir data de ${STAGE_LABELS[stage]}`}
-                                    >
-                                      <CalendarIcon className="h-3.5 w-3.5" />
-                                    </button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            );
-                          })}
+                          {stages.map(stage => renderStageCell(config, stage))}
                         </TableRow>
                       </React.Fragment>
                     );
@@ -831,9 +945,12 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
 
           {/* Painel de Calendário - inline ao lado da tabela */}
           <CalendarModal
-            open={calendarIsOpen}
+            open={showCalendar}
             onOpenChange={(open) => {
-              if (!open) setCalendarModal(null);
+              if (!open) {
+                setCalendarModal(null);
+                setBulkCalendarMode(false);
+              }
             }}
             productId={calendarModal?.productId ?? ''}
             productName={calendarModal?.productName ?? ''}
@@ -841,7 +958,45 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             currentDate={calendarModal?.currentDate ?? ''}
             onDateChange={handleDateChange}
             allConfigs={configs}
+            bulkMode={bulkCalendarMode}
+            bulkTasks={bulkCalendarMode ? getBulkTasks() : undefined}
+            onBulkDateChange={handleBulkDateChange}
+            onTasksDrop={handleCalendarDrop}
+            isDraggingTasks={isDragging}
           />
+        </div>
+      )}
+
+      {/* Floating action bar for selected tasks */}
+      {selectedTasks.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-5 py-3 rounded-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-300">
+          <div
+            draggable
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            className="flex items-center gap-2 cursor-grab active:cursor-grabbing select-none"
+            title="Arraste para o calendário"
+          >
+            <GripVertical className="h-4 w-4 opacity-60" />
+            <span className="font-medium text-sm">
+              {selectedTasks.size} tarefa{selectedTasks.size > 1 ? 's' : ''} selecionada{selectedTasks.size > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="w-px h-5 bg-primary-foreground/30" />
+          <button
+            onClick={openBulkCalendar}
+            className="flex items-center gap-1.5 bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+          >
+            <CalendarIcon className="h-3.5 w-3.5" />
+            Agendar
+          </button>
+          <button
+            onClick={clearSelection}
+            className="p-1.5 rounded-lg hover:bg-primary-foreground/20 transition-colors"
+            title="Limpar seleção"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>

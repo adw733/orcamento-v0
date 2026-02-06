@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isSameMonth } from 'date-fns';
@@ -18,6 +18,7 @@ import {
   X,
   Clock,
   PanelRightClose,
+  Layers,
 } from 'lucide-react';
 import { ProductStageConfig } from './ProductStatusTable';
 
@@ -70,6 +71,13 @@ interface ScheduledTask {
   date: string;
 }
 
+interface BulkTask {
+  productId: string;
+  productName: string;
+  stage: StageType;
+  cliente?: string;
+}
+
 interface CalendarModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -79,6 +87,12 @@ interface CalendarModalProps {
   currentDate: string;
   onDateChange: (productId: string, stage: StageType, date: string) => void;
   allConfigs: ProductStageConfig[];
+  // Bulk mode props
+  bulkMode?: boolean;
+  bulkTasks?: BulkTask[];
+  onBulkDateChange?: (tasks: { productId: string; stage: StageType }[], date: string) => void;
+  onTasksDrop?: (tasks: BulkTask[]) => void;
+  isDraggingTasks?: boolean;
 }
 
 export default function CalendarModal({
@@ -90,6 +104,11 @@ export default function CalendarModal({
   currentDate,
   onDateChange,
   allConfigs,
+  bulkMode = false,
+  bulkTasks,
+  onBulkDateChange,
+  onTasksDrop,
+  isDraggingTasks = false,
 }: CalendarModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     currentDate ? parseISO(currentDate) : undefined
@@ -97,14 +116,19 @@ export default function CalendarModal({
   const [viewMonth, setViewMonth] = useState<Date>(
     currentDate ? parseISO(currentDate) : new Date()
   );
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Reset state quando abre com nova tarefa
   useEffect(() => {
-    if (open) {
+    if (open && !bulkMode) {
       setSelectedDate(currentDate ? parseISO(currentDate) : undefined);
       setViewMonth(currentDate ? parseISO(currentDate) : new Date());
     }
-  }, [open, currentDate]);
+    if (open && bulkMode) {
+      setSelectedDate(undefined);
+      setViewMonth(new Date());
+    }
+  }, [open, currentDate, bulkMode]);
 
   // Fechar com ESC
   useEffect(() => {
@@ -179,14 +203,92 @@ export default function CalendarModal({
   const handleSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     if (date) {
-      onDateChange(productId, stage, format(date, 'yyyy-MM-dd'));
+      const dateStr = format(date, 'yyyy-MM-dd');
+      if (bulkMode && bulkTasks && onBulkDateChange) {
+        onBulkDateChange(bulkTasks, dateStr);
+      } else {
+        onDateChange(productId, stage, dateStr);
+      }
     }
   };
 
   const handleClearDate = () => {
     setSelectedDate(undefined);
-    onDateChange(productId, stage, '');
+    if (!bulkMode) {
+      onDateChange(productId, stage, '');
+    }
   };
+
+  // Drag and Drop handlers for the calendar panel (when closed, as drop zone opener)
+  const handlePanelDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  }, []);
+
+  const handlePanelDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handlePanelDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (Array.isArray(data) && data.length > 0 && onTasksDrop) {
+        onTasksDrop(data);
+      }
+    } catch (err) {
+      console.error('Error parsing dropped data:', err);
+    }
+  }, [onTasksDrop]);
+
+  // Track which day cell is being hovered during drag
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+
+  // Handle drop directly on a specific day cell
+  const handleDayDrop = useCallback((date: Date, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverDay(null);
+    setIsDragOver(false);
+
+    const dateStr = format(date, 'yyyy-MM-dd');
+
+    try {
+      const raw = e.dataTransfer.getData('application/json');
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data) && data.length > 0 && onBulkDateChange) {
+          onBulkDateChange(data, dateStr);
+          return;
+        }
+      }
+    } catch {
+      // Not JSON data
+    }
+
+    // Fallback: if already in bulk mode with bulkTasks
+    if (bulkMode && bulkTasks && onBulkDateChange) {
+      onBulkDateChange(bulkTasks, dateStr);
+    }
+  }, [bulkMode, bulkTasks, onBulkDateChange]);
+
+  const handleDayDragOver = useCallback((date: Date, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    setDragOverDay(format(date, 'yyyy-MM-dd'));
+  }, []);
+
+  const handleDayDragLeave = useCallback((e: React.DragEvent) => {
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDragOverDay(null);
+    }
+  }, []);
 
   const StageIcon = STAGE_ICONS[stage];
 
@@ -230,28 +332,74 @@ export default function CalendarModal({
   };
 
   return (
-    <div
-      className={`
-        flex-shrink-0 border-l bg-background flex flex-col
-        transition-all duration-300 ease-in-out overflow-hidden
-        ${open ? 'w-[340px] opacity-100' : 'w-0 opacity-0 border-l-0'}
-      `}
-    >
+    <>
+      {/* Drop zone overlay quando arrastando e painel fechado */}
+      {!open && isDraggingTasks && (
+        <div
+          onDragOver={handlePanelDragOver}
+          onDragLeave={handlePanelDragLeave}
+          onDrop={handlePanelDrop}
+          className={`
+            flex-shrink-0 w-[120px] border-l-2 border-dashed flex items-center justify-center
+            transition-all duration-300 ease-in-out
+            ${isDragOver
+              ? 'border-primary bg-primary/10 w-[200px]'
+              : 'border-muted-foreground/30 bg-muted/20'
+            }
+          `}
+        >
+          <div className="flex flex-col items-center gap-2 text-center p-3">
+            <CalendarIcon className={`h-8 w-8 ${isDragOver ? 'text-primary animate-pulse' : 'text-muted-foreground/50'}`} />
+            <span className={`text-xs font-medium ${isDragOver ? 'text-primary' : 'text-muted-foreground/50'}`}>
+              {isDragOver ? 'Solte aqui!' : 'Solte para agendar'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Painel principal do calendário */}
+      <div
+        onDragOver={open ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } : undefined}
+        className={`
+          flex-shrink-0 border-l bg-background flex flex-col
+          transition-all duration-300 ease-in-out overflow-hidden
+          ${open ? 'w-[340px] opacity-100' : 'w-0 opacity-0 border-l-0'}
+          ${dragOverDay ? 'ring-2 ring-primary ring-inset' : ''}
+        `}
+      >
       {open && (
         <div className="w-[340px] flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-b bg-muted/30 flex-shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`p-1.5 rounded ${STAGE_COLORS[stage]} text-white flex-shrink-0`}>
-                {StageIcon && <StageIcon className="h-3.5 w-3.5" />}
+          <div className={`flex items-center justify-between px-3 py-2.5 border-b flex-shrink-0 ${bulkMode ? 'bg-primary/10' : 'bg-muted/30'}`}>
+            {bulkMode && bulkTasks ? (
+              /* Bulk mode header */
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded bg-primary text-white flex-shrink-0">
+                  <Layers className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs font-semibold truncate">
+                    Agendar {bulkTasks.length} tarefa{bulkTasks.length > 1 ? 's' : ''}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Clique em uma data para agendar todas
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h3 className="text-xs font-semibold truncate">Agendar {STAGE_LABELS[stage]}</h3>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {productName} — Ped. {productId.split('-')[0]}
-                </p>
+            ) : (
+              /* Single task header */
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`p-1.5 rounded ${STAGE_COLORS[stage]} text-white flex-shrink-0`}>
+                  {StageIcon && <StageIcon className="h-3.5 w-3.5" />}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs font-semibold truncate">Agendar {STAGE_LABELS[stage]}</h3>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {productName} — Ped. {productId.split('-')[0]}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
             <button
               onClick={() => onOpenChange(false)}
               className="p-1 rounded-md hover:bg-muted transition-colors flex-shrink-0"
@@ -260,6 +408,30 @@ export default function CalendarModal({
               <PanelRightClose className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Bulk tasks list */}
+          {bulkMode && bulkTasks && bulkTasks.length > 0 && (
+            <div className="px-3 py-2 border-b bg-primary/5 max-h-32 overflow-y-auto flex-shrink-0">
+              <div className="space-y-1">
+                {bulkTasks.map((task, idx) => {
+                  const TaskIcon = STAGE_ICONS[task.stage];
+                  return (
+                    <div
+                      key={`${task.productId}-${task.stage}-${idx}`}
+                      className="flex items-center gap-1.5 text-[11px]"
+                    >
+                      <div className={`p-0.5 rounded ${STAGE_COLORS[task.stage]} text-white flex-shrink-0`}>
+                        {TaskIcon && <TaskIcon className="h-2.5 w-2.5" />}
+                      </div>
+                      <span className="truncate font-medium">{task.productName}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-muted-foreground truncate">{STAGE_LABELS[task.stage]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Calendário */}
           <div className="px-2 pt-2 pb-1.5 border-b flex-shrink-0">
@@ -274,12 +446,25 @@ export default function CalendarModal({
               modifiersStyles={modifiersStyles}
               className="rounded-md mx-auto"
               components={{
-                DayContent: ({ date }) => (
-                  <div className="flex flex-col items-center">
-                    <span>{date.getDate()}</span>
-                    {renderDay(date)}
-                  </div>
-                ),
+                DayContent: ({ date }) => {
+                  const dateKey = format(date, 'yyyy-MM-dd');
+                  const isDayDragOver = dragOverDay === dateKey;
+
+                  return (
+                    <div
+                      onDragOver={(e) => handleDayDragOver(date, e)}
+                      onDragLeave={handleDayDragLeave}
+                      onDrop={(e) => handleDayDrop(date, e)}
+                      className={`
+                        flex flex-col items-center w-full h-full rounded-md transition-colors
+                        ${isDayDragOver ? 'bg-primary/30 ring-2 ring-primary scale-110' : ''}
+                      `}
+                    >
+                      <span>{date.getDate()}</span>
+                      {renderDay(date)}
+                    </div>
+                  );
+                },
               }}
             />
 
@@ -414,5 +599,6 @@ export default function CalendarModal({
         </div>
       )}
     </div>
+    </>
   );
 }
