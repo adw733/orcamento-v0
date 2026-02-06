@@ -19,6 +19,7 @@ import {
   Clock,
   PanelRightClose,
   Layers,
+  Check,
 } from 'lucide-react';
 import { ProductStageConfig } from './ProductStatusTable';
 
@@ -201,17 +202,18 @@ export default function CalendarModal({
   }, [allScheduledTasks, viewMonth]);
 
   const handleSelect = (date: Date | undefined) => {
+    // Apenas seleciona o dia para visualização — nunca agenda automaticamente
     setSelectedDate(date);
-    if (date) {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      if (bulkMode && bulkTasks && bulkTasks.length > 0 && onBulkDateChange) {
-        // Modo bulk com tarefas selecionadas: agendar todas
-        onBulkDateChange(bulkTasks, dateStr);
-      } else if (!bulkMode) {
-        // Modo individual: agendar tarefa específica
-        onDateChange(productId, stage, dateStr);
-      }
-      // Se bulkMode sem tarefas: apenas seleciona o dia para visualização (não fecha)
+  };
+
+  // Confirmar agendamento na data selecionada (botão explícito)
+  const handleConfirmDate = () => {
+    if (!selectedDate) return;
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    if (bulkMode && bulkTasks && bulkTasks.length > 0 && onBulkDateChange) {
+      onBulkDateChange(bulkTasks, dateStr);
+    } else if (!bulkMode) {
+      onDateChange(productId, stage, dateStr);
     }
   };
 
@@ -471,23 +473,38 @@ export default function CalendarModal({
               }}
             />
 
-            {/* Data selecionada */}
+            {/* Data selecionada + botão confirmar */}
             <div className="mt-1.5">
               {selectedDate ? (
-                <div className="flex items-center justify-between bg-primary/5 rounded-md px-2.5 py-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <CalendarIcon className="h-3 w-3 text-primary flex-shrink-0" />
-                    <span className="text-xs font-medium truncate">
-                      {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                    </span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between bg-primary/5 rounded-md px-2.5 py-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <CalendarIcon className="h-3 w-3 text-primary flex-shrink-0" />
+                      <span className="text-xs font-medium truncate">
+                        {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleClearDate}
+                      className="p-0.5 rounded-full hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors flex-shrink-0"
+                      title="Remover data"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
-                  <button
-                    onClick={handleClearDate}
-                    className="p-0.5 rounded-full hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors flex-shrink-0"
-                    title="Remover data"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                  {/* Botão confirmar agendamento */}
+                  {((bulkMode && bulkTasks && bulkTasks.length > 0) || !bulkMode) && (
+                    <button
+                      onClick={handleConfirmDate}
+                      className="w-full flex items-center justify-center gap-1.5 bg-primary text-white rounded-md px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      {bulkMode && bulkTasks && bulkTasks.length > 0
+                        ? `Agendar ${bulkTasks.length} tarefa${bulkTasks.length > 1 ? 's' : ''} nesta data`
+                        : `Agendar ${STAGE_LABELS[stage] || 'etapa'} nesta data`
+                      }
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="text-center text-[11px] text-muted-foreground py-1">
