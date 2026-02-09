@@ -28,7 +28,8 @@ import {
   Package,
   Truck,
   CalendarDays,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 
 interface TimelineViewProps {
@@ -36,14 +37,15 @@ interface TimelineViewProps {
   onNodeClick: (nodeId: string) => void;
   selectedNodeId: string | null;
   onTaskDateChange?: (nodeId: string, newStartDate: string) => void;
+  onClearOrderDates?: (nodeIds: string[]) => void;
 }
 
 const CELL_WIDTH = 36;
 const SIDEBAR_WIDTH = 260;
 const HEADER_HEIGHT = 68;
-const ROW_HEIGHT = 40;
-const GROUP_HEADER_HEIGHT = 32;
-const BAR_HEIGHT = 16;
+const ROW_HEIGHT = 28;
+const GROUP_HEADER_HEIGHT = 28;
+const BAR_HEIGHT = 14;
 const BAR_GAP = 2;
 
 const STAGE_SHORT_LABELS: Record<string, string> = {
@@ -84,7 +86,7 @@ interface GroupedOrder {
   }[];
 }
 
-const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selectedNodeId, onTaskDateChange }) => {
+const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selectedNodeId, onTaskDateChange, onClearOrderDates }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -392,6 +394,20 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
                     <span className="text-[10px] text-muted-foreground truncate flex-1">
                       {group.empresa} {group.cliente ? `· ${group.cliente}` : ''}
                     </span>
+                    {totalStagesWithDate > 0 && onClearOrderDates && (
+                      <button
+                        className="text-[9px] text-destructive/70 hover:text-destructive bg-destructive/10 hover:bg-destructive/20 px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0 transition-colors"
+                        title="Limpar todas as datas deste pedido"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const allNodeIds = group.produtos.flatMap(p => p.nodes.map(n => n.id));
+                          onClearOrderDates(allNodeIds);
+                        }}
+                      >
+                        <Trash2 size={10} />
+                        Limpar datas
+                      </button>
+                    )}
                     <span className="text-[9px] text-muted-foreground bg-background px-1.5 py-0.5 rounded-full flex-shrink-0">
                       {group.produtos.length}p · {totalStagesWithDate}t
                     </span>
@@ -501,9 +517,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
                           const shortLabel = STAGE_SHORT_LABELS[node.data.type] || '';
                           const color = STAGE_BAR_COLORS[node.data.type] || '#6b7280';
 
-                          // Distribuir barras em 2 sub-linhas para evitar sobreposição visual
-                          const stageIndex = STAGE_ORDER.indexOf(node.data.type);
-                          const yOffset = 4 + (stageIndex % 2 === 0 ? 0 : BAR_HEIGHT + BAR_GAP);
+                          // Todas as barras na mesma linha, centralizadas verticalmente
+                          const yOffset = (ROW_HEIGHT - BAR_HEIGHT) / 2;
 
                           const isDragged = draggedNodeId === node.id;
 

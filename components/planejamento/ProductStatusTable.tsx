@@ -35,6 +35,7 @@ import {
   ListOrdered,
   GripVertical,
   X,
+  Trash2,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -559,6 +560,46 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
     );
   };
 
+  // Função para limpar todas as datas de um pedido (todos os produtos do orçamento)
+  const handleClearOrderDates = (numeroOrcamento: string) => {
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config => {
+        if (config.productId.split('-')[0] === numeroOrcamento) {
+          return {
+            ...config,
+            stageDates: {}
+          };
+        }
+        return config;
+      })
+    );
+
+    toast({
+      title: "Datas removidas!",
+      description: `Todas as datas do pedido ${numeroOrcamento} foram removidas.`,
+    });
+  };
+
+  // Função para limpar todas as datas de um grupo de produto (todas as instâncias do produto)
+  const handleClearProductGroupDates = (productName: string) => {
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config => {
+        if (config.productName === productName) {
+          return {
+            ...config,
+            stageDates: {}
+          };
+        }
+        return config;
+      })
+    );
+
+    toast({
+      title: "Datas removidas!",
+      description: `Todas as datas para o produto "${productName}" foram removidas.`,
+    });
+  };
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? (
@@ -652,11 +693,10 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                 setCalendarModal(null);
               }
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
-              showCalendar
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showCalendar
                 ? 'bg-primary text-white border-primary'
                 : 'bg-background text-foreground border-border hover:bg-muted'
-            }`}
+              }`}
             title={showCalendar ? 'Fechar calendário' : 'Abrir calendário para agendar'}
           >
             <CalendarIcon className="h-3.5 w-3.5" />
@@ -796,6 +836,16 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                             <Badge variant="outline" className="text-xs">
                               Total: {group.totalQuantidade} un
                             </Badge>
+                            {group.items.some(item => Object.keys(item.stageDates).length > 0) && (
+                              <button
+                                onClick={() => handleClearProductGroupDates(group.productName)}
+                                className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-auto"
+                                title="Limpar todas as datas deste grupo"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Limpar datas
+                              </button>
+                            )}
                           </div>
                         </TableCell>
                         {/* Botões de etapas para o grupo de produto */}
@@ -876,8 +926,20 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                         {isNovoOrcamento && (
                           <TableRow className="bg-gray-50 border-t-4 border-gray-300">
                             <TableCell colSpan={4} className="px-4 py-2">
-                              <div className="font-semibold text-sm">
-                                Orçamento: {numeroOrcamentoAtual} - {empresaOrcamento} - {config.cliente.toUpperCase()}
+                              <div className="flex items-center justify-between">
+                                <div className="font-semibold text-sm">
+                                  Orçamento: {numeroOrcamentoAtual} - {empresaOrcamento} - {config.cliente.toUpperCase()}
+                                </div>
+                                {configs.some(c => c.productId.split('-')[0] === numeroOrcamentoAtual && Object.keys(c.stageDates).length > 0) && (
+                                  <button
+                                    onClick={() => handleClearOrderDates(numeroOrcamentoAtual)}
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                                    title="Limpar todas as datas deste pedido"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    Limpar datas
+                                  </button>
+                                )}
                               </div>
                             </TableCell>
                             {/* Botões de etapas para o orçamento */}

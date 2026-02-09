@@ -546,6 +546,27 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
     });
   }, [toast]);
 
+  // Handler para limpar todas as datas de um pedido
+  const handleClearOrderDates = useCallback((nodeIds: string[]) => {
+    setNodes(prevNodes => prevNodes.map(node => {
+      if (!nodeIds.includes(node.id)) return node;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          startDate: undefined,
+          endDate: undefined,
+          manualStartDate: undefined,
+        }
+      };
+    }));
+
+    toast({
+      title: "Datas removidas!",
+      description: `${nodeIds.length} tarefa(s) tiveram suas datas removidas.`,
+    });
+  }, [toast]);
+
   const handleAddNode = useCallback((type: StageType) => {
     const newNode: Node<ProductionNodeData> = {
       id: `node-${uuidv4().substring(0, 8)}`,
@@ -687,6 +708,7 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
               onNodeClick={handleTimelineNodeClick}
               selectedNodeId={selectedNodeId}
               onTaskDateChange={handleTaskDateChange}
+              onClearOrderDates={handleClearOrderDates}
             />
           )}
 
