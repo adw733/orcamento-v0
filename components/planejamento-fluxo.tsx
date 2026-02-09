@@ -518,6 +518,34 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
     setSelectedNodeId(nodeId);
   }, []);
 
+  // Handler para quando uma barra de tarefa é arrastada para um novo dia no Gantt
+  const handleTaskDateChange = useCallback((nodeId: string, newStartDate: string) => {
+    setNodes(prevNodes => prevNodes.map(node => {
+      if (node.id !== nodeId) return node;
+
+      const duration = node.data.duration || 2;
+      const startDate = new Date(newStartDate + 'T12:00:00');
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + duration);
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          startDate: newStartDate,
+          endDate: endDateStr,
+          manualStartDate: newStartDate,
+        }
+      };
+    }));
+
+    toast({
+      title: "Tarefa movida!",
+      description: `Reagendada para ${new Date(newStartDate + 'T12:00:00').toLocaleDateString('pt-BR')}.`,
+    });
+  }, [toast]);
+
   const handleAddNode = useCallback((type: StageType) => {
     const newNode: Node<ProductionNodeData> = {
       id: `node-${uuidv4().substring(0, 8)}`,
@@ -658,6 +686,7 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
               nodes={scheduledNodes}
               onNodeClick={handleTimelineNodeClick}
               selectedNodeId={selectedNodeId}
+              onTaskDateChange={handleTaskDateChange}
             />
           )}
 

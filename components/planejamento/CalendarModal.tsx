@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -14,7 +15,7 @@ import {
   CheckCircle2,
   Package,
   Truck,
-  Calendar as CalendarIcon,
+  
   X,
   Clock,
   PanelRightClose,
@@ -354,7 +355,7 @@ export default function CalendarModal({
           `}
         >
           <div className="flex flex-col items-center gap-2 text-center p-3">
-            <CalendarIcon className={`h-8 w-8 ${isDragOver ? 'text-primary animate-pulse' : 'text-muted-foreground/50'}`} />
+            <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }} className={`h-8 w-8 ${isDragOver ? 'text-primary animate-pulse' : 'text-muted-foreground/50'}`} />
             <span className={`text-xs font-medium ${isDragOver ? 'text-primary' : 'text-muted-foreground/50'}`}>
               {isDragOver ? 'Solte aqui!' : 'Solte para agendar'}
             </span>
@@ -367,11 +368,11 @@ export default function CalendarModal({
         <div
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
           className={`
-            flex-shrink-0 border-l bg-background flex flex-col w-[340px]
+            flex-shrink-0 border-l bg-background flex flex-col w-[450px]
             ${dragOverDay ? 'ring-2 ring-primary ring-inset' : ''}
           `}
         >
-          <div className="w-[340px] flex flex-col h-full">
+          <div className="w-[450px] flex flex-col h-full">
             {/* Header */}
             <div className={`flex items-center justify-between px-3 py-2.5 border-b flex-shrink-0 ${bulkMode ? 'bg-primary/10' : 'bg-muted/30'}`}>
               {bulkMode && bulkTasks ? (
@@ -438,7 +439,7 @@ export default function CalendarModal({
 
             {/* Calendário */}
             <div className="px-2 pt-2 pb-1.5 border-b flex-shrink-0">
-              <Calendar
+              <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }}
                 mode="single"
                 selected={selectedDate}
                 onSelect={handleSelect}
@@ -477,7 +478,7 @@ export default function CalendarModal({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between bg-primary/5 rounded-md px-2.5 py-1.5">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <CalendarIcon className="h-3 w-3 text-primary flex-shrink-0" />
+                        <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }} className="h-3 w-3 text-primary flex-shrink-0" />
                         <span className="text-xs font-medium truncate">
                           {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </span>
@@ -531,7 +532,7 @@ export default function CalendarModal({
               <div className="flex-1 overflow-y-auto px-2.5 pb-2">
                 {tasksForSelectedDate.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-4 text-center">
-                    <CalendarIcon className="h-6 w-6 text-muted-foreground/30 mb-1" />
+                    <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }} className="h-6 w-6 text-muted-foreground/30 mb-1" />
                     <p className="text-[11px] text-muted-foreground">
                       {selectedDate ? 'Nenhuma tarefa neste dia' : 'Selecione um dia'}
                     </p>
@@ -620,3 +621,5 @@ export default function CalendarModal({
     </>
   );
 }
+
+

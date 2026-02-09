@@ -389,43 +389,23 @@ export default function PlanejamentoGantt() {
           view_modes: ["Quarter Day", "Half Day", "Day", "Week", "Month"],
           bar_height: 30,
           bar_corner_radius: 3,
+          readonly: false,
           arrow_curve: 5,
           padding: 18,
           view_mode: viewMode,
-          date_format: "YYYY-MM-DD",
-          language: "pt-BR",
-          custom_popup_html: function(task: any) {
-            const taskData = displayTasks.find(t => t.id === task.id)
-            return `
-              <div class="p-3 text-sm rounded shadow-lg bg-popover text-popover-foreground border border-border w-72">
-                <div class="flex items-center justify-between mb-2">
-                  <h5 class="font-bold">${task.name}</h5>
-                  ${taskData?.orcamento_numero ? `<span class="text-xs text-muted-foreground">#${taskData.orcamento_numero}</span>` : ''}
-                </div>
-                <p class="text-xs text-muted-foreground mb-2">
-                  ${format(parseISO(task.start), "dd/MM/yyyy HH:mm")} - ${format(parseISO(task.end), "dd/MM/yyyy HH:mm")}
-                </p>
-                ${taskData?.duracao_horas ? `<p class="text-xs mb-2">Duração: ${taskData.duracao_horas}h</p>` : ''}
-                ${taskData?.responsavel ? `<p class="text-xs mb-2">Responsável: ${taskData.responsavel}</p>` : ''}
-                <div class="flex items-center justify-between text-xs mb-1">
-                  <span>Progresso:</span>
-                  <span class="font-medium">${task.progress}%</span>
-                </div>
-                <div class="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-primary h-full" style="width: ${task.progress}%"></div>
-                </div>
-              </div>
-            `
-          },
-          on_click: (task: any) => {
-            const foundTask = displayTasks.find(t => t.id === task.id)
-            if (foundTask) {
-              setCurrentTask(foundTask)
-              setIsDialogOpen(true)
-            }
-          },
-          on_date_change: (task: any, start: Date, end: Date) => {
-            handleDateChange(task.id, start, end)
+          language: "pt-br",
+          on_date_change: (task: any, start: string, end: string) => {
+            console.log("MOVENDO TAREFA:", task.id, start, end);
+            setAllTasks(prev => prev.map(t => {
+              if (t.id === task.id) {
+                return { ...t, start, end };
+              }
+              return t;
+            }));
+            toast({
+              title: "Data atualizada",
+              description: `${task.name} movida para ${format(parseISO(start), "dd/MM/yyyy", { locale: ptBR })}`,
+            });
           },
           on_progress_change: (task: any, progress: number) => {
             handleProgressChange(task.id, progress)
@@ -1277,6 +1257,13 @@ export default function PlanejamentoGantt() {
           fill: #fff;
           font-weight: 500;
           font-size: 12px;
+          pointer-events: none;
+        }
+        .gantt .bar-wrapper {
+          cursor: grab;
+        }
+        .gantt .bar-wrapper:active {
+          cursor: grabbing;
         }
         .gantt .bar-progress {
           fill: rgba(255, 255, 255, 0.3);
@@ -1326,3 +1313,9 @@ export default function PlanejamentoGantt() {
     </div>
   )
 }
+
+
+
+
+
+
