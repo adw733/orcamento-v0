@@ -279,6 +279,35 @@ export default function VisualizacaoEditavel({
     setOrcamentoRef.current({ ...orcamentoRef.current, itens: orcamentoRef.current.itens.filter(i => i.id !== id) })
   }, [])
 
+  const cloneItemCompleto = useCallback((itemId: string) => {
+    const indexAtual = orcamentoRef.current.itens.findIndex(i => i.id === itemId)
+    if (indexAtual === -1) return
+
+    const itemOriginal = orcamentoRef.current.itens[indexAtual]
+    const itemClonado: ItemOrcamento = {
+      ...itemOriginal,
+      id: crypto.randomUUID(),
+      produto: itemOriginal.produto
+        ? {
+            ...itemOriginal.produto,
+            tecidos: itemOriginal.produto.tecidos.map((tecido) => ({ ...tecido })),
+            cores: [...itemOriginal.produto.cores],
+            tamanhosDisponiveis: [...itemOriginal.produto.tamanhosDisponiveis],
+          }
+        : undefined,
+      tecidoSelecionado: itemOriginal.tecidoSelecionado ? { ...itemOriginal.tecidoSelecionado } : undefined,
+      tamanhos: { ...(itemOriginal.tamanhos || {}) },
+      estampas: itemOriginal.estampas?.map((estampa) => ({
+        ...estampa,
+        id: crypto.randomUUID(),
+      })),
+    }
+
+    const novosItens = [...orcamentoRef.current.itens]
+    novosItens.splice(indexAtual + 1, 0, itemClonado)
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, itemId: string) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader()
@@ -920,7 +949,39 @@ export default function VisualizacaoEditavel({
                             </td>
                           )}
                           <td className="py-0.5 px-1 align-middle text-center font-semibold text-gray-600">
-                            {idx + 1}
+                            {modoEdicao ? (
+                              <div className="relative mx-auto h-6 w-full max-w-[56px]">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute left-0 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-red-500 opacity-0 transition-opacity group-hover:opacity-100"
+                                  title="Remover item"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeItem(item.id)
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                                <span className="pointer-events-none absolute inset-0 flex items-center justify-center">{idx + 1}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-primary opacity-0 transition-opacity group-hover:opacity-100"
+                                  title="Clonar item completo"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    cloneItemCompleto(item.id)
+                                  }}
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              idx + 1
+                            )}
                           </td>
                           <td className="py-0.5 px-2 align-top">
                             {modoEdicao ? (
@@ -956,14 +1017,6 @@ export default function VisualizacaoEditavel({
                                   placeholder="Obs. Comercial"
                                   className="text-[10px] text-gray-500 italic w-full mt-0.5 h-5 px-0"
                                 />
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute -left-8 top-0 h-6 w-6 opacity-0 group-hover:opacity-100 text-red-500"
-                                  onClick={() => removeItem(item.id)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
                               </div>
                             ) : (
                               <div>
