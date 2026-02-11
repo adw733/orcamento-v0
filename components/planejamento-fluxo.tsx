@@ -688,10 +688,10 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
   }
 
   return (
-    <div className="flex h-full w-full bg-background overflow-hidden">
-      <div className="flex-1 relative bg-muted/30 flex flex-col h-full">
+    <div className="flex h-full w-full bg-background overflow-hidden min-w-0">
+      <div className="flex-1 relative bg-muted/30 flex flex-col h-full min-w-0">
         {/* Content Area */}
-        <div className="flex-1 w-full h-full relative overflow-hidden">
+        <div className="flex-1 w-full h-full relative overflow-hidden min-w-0">
           {/* Tabela de Status de Produtos */}
           {viewMode === 'tabela' && (
             <div className="h-full px-4 pt-2 pb-2 bg-background overflow-y-auto">

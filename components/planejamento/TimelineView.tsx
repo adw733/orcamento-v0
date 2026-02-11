@@ -47,6 +47,8 @@ const ROW_HEIGHT = 28;
 const GROUP_HEADER_HEIGHT = 28;
 const BAR_HEIGHT = 14;
 const BAR_GAP = 2;
+const SCROLL_EDGE_THRESHOLD_CELLS = 8;
+const RANGE_EXTENSION_DAYS = 30;
 
 const STAGE_SHORT_LABELS: Record<string, string> = {
   [StageType.PURCHASE]: 'Comp',
@@ -89,6 +91,10 @@ interface GroupedOrder {
 const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selectedNodeId, onTaskDateChange, onClearOrderDates }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const headerScrollRef = useRef<HTMLDivElement>(null);
+  const didInitialAutoScrollRef = useRef(false);
+  const pendingLeftShiftDaysRef = useRef(0);
+  const isExtendingRangeRef = useRef(false);
+  const lastScrollLeftRef = useRef(0);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
@@ -134,20 +140,18 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
     return Array.from(map.values()).sort((a, b) => a.orderId.localeCompare(b.orderId));
   }, [nodes]);
 
-  const { days, months, startDate } = useMemo(() => {
-    if (nodes.length === 0) return { days: [], months: [], startDate: new Date() };
+  const baseRange = useMemo(() => {
+    if (nodes.length === 0) {
+      const start = addDays(new Date(), -3);
+      const end = addDays(new Date(), 30);
+      return { start, end };
+    }
 
     const nodesWithDates = nodes.filter(n => n.data.startDate || n.data.endDate);
-
     if (nodesWithDates.length === 0) {
-      // Fallback: show 30 days from today
-      const viewStart = addDays(new Date(), -3);
-      const viewEnd = addDays(new Date(), 30);
-      return {
-        days: eachDayOfInterval({ start: viewStart, end: viewEnd }),
-        months: eachMonthOfInterval({ start: viewStart, end: viewEnd }),
-        startDate: viewStart
-      };
+      const start = addDays(new Date(), -3);
+      const end = addDays(new Date(), 30);
+      return { start, end };
     }
 
     const dates = nodesWithDates.flatMap(n => [
@@ -157,36 +161,103 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
 
     const minDate = min([...dates, new Date()]);
     const maxDate = max([...dates, addDays(new Date(), 14)]);
-    const viewStart = addDays(minDate, -2);
-    const viewEnd = addDays(maxDate, 7);
-
     return {
-      days: eachDayOfInterval({ start: viewStart, end: viewEnd }),
-      months: eachMonthOfInterval({ start: viewStart, end: viewEnd }),
-      startDate: viewStart
+      start: addDays(minDate, -2),
+      end: addDays(maxDate, 7),
     };
   }, [nodes]);
+
+  const [timelineRange, setTimelineRange] = useState(() => baseRange);
+
+  useEffect(() => {
+    setTimelineRange(prev => {
+      const start = prev.start < baseRange.start ? prev.start : baseRange.start;
+      const end = prev.end > baseRange.end ? prev.end : baseRange.end;
+      if (start.getTime() === prev.start.getTime() && end.getTime() === prev.end.getTime()) {
+        return prev;
+      }
+      return { start, end };
+    });
+  }, [baseRange]);
+
+  const { days, months, startDate } = useMemo(() => {
+    const start = timelineRange.start;
+    const end = timelineRange.end;
+    return {
+      days: eachDayOfInterval({ start, end }),
+      months: eachMonthOfInterval({ start, end }),
+      startDate: start
+    };
+  }, [timelineRange]);
 
   // Sincronizar scroll horizontal entre header e body
   useEffect(() => {
     const body = scrollContainerRef.current;
     if (!body) return;
+
+    const threshold = CELL_WIDTH * SCROLL_EDGE_THRESHOLD_CELLS;
+
+    const extendRange = (direction: 'left' | 'right') => {
+      if (isExtendingRangeRef.current) return;
+      isExtendingRangeRef.current = true;
+
+      if (direction === 'left') {
+        pendingLeftShiftDaysRef.current += RANGE_EXTENSION_DAYS;
+        setTimelineRange(prev => ({
+          start: addDays(prev.start, -RANGE_EXTENSION_DAYS),
+          end: prev.end
+        }));
+      } else {
+        setTimelineRange(prev => ({
+          start: prev.start,
+          end: addDays(prev.end, RANGE_EXTENSION_DAYS)
+        }));
+      }
+    };
+
     const handleScroll = () => {
       if (headerScrollRef.current) {
         headerScrollRef.current.scrollLeft = body.scrollLeft;
+      }
+
+      const currentLeft = body.scrollLeft;
+      const horizontalMoved = currentLeft !== lastScrollLeftRef.current;
+      lastScrollLeftRef.current = currentLeft;
+      if (!horizontalMoved) return;
+      if (body.scrollWidth <= body.clientWidth + CELL_WIDTH) return;
+
+      const remaining = body.scrollWidth - (body.scrollLeft + body.clientWidth);
+      if (body.scrollLeft <= threshold) {
+        extendRange('left');
+      } else if (remaining <= threshold) {
+        extendRange('right');
       }
     };
     body.addEventListener('scroll', handleScroll, { passive: true });
     return () => body.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Após estender à esquerda, compensa o scroll para manter a posição visual
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+
+    if (pendingLeftShiftDaysRef.current > 0) {
+      scrollContainerRef.current.scrollLeft += pendingLeftShiftDaysRef.current * CELL_WIDTH;
+      pendingLeftShiftDaysRef.current = 0;
+    }
+
+    isExtendingRangeRef.current = false;
+  }, [days.length]);
+
   // Scroll automático para o dia atual
   useEffect(() => {
+    if (didInitialAutoScrollRef.current) return;
     if (scrollContainerRef.current && days.length > 0) {
       const todayIndex = days.findIndex(d => isToday(d));
       if (todayIndex !== -1) {
         scrollContainerRef.current.scrollLeft = Math.max(0, (todayIndex * CELL_WIDTH) - 200);
       }
+      didInitialAutoScrollRef.current = true;
     }
   }, [days.length]);
 
@@ -278,7 +349,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
   }
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
+    <div className="flex flex-col h-full bg-background overflow-hidden min-w-0">
       {/* LEGENDA COMPACTA */}
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-1.5 bg-muted/30 border-b border-border">
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">Legenda:</span>
@@ -307,10 +378,10 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
           </span>
         </div>
 
-        <div className="flex-1 overflow-hidden" ref={headerScrollRef}>
+        <div className="flex-1 overflow-hidden min-w-0" ref={headerScrollRef}>
           <div style={{ width: totalGridWidth }}>
             {/* Meses */}
-            <div className="flex border-b border-border/50" style={{ height: 24 }}>
+            <div className="flex border-b border-border/50" style={{ height: 24 }} data-testid="timeline-month-row">
               {months.map((month, idx) => {
                 const monthDays = days.filter(d => isSameMonth(d, month));
                 return (
@@ -353,7 +424,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ nodes, onNodeClick, selecte
       </div>
 
       {/* ===== BODY SCROLLÁVEL ===== */}
-      <div className="flex-1 overflow-auto relative" ref={scrollContainerRef}>
+      <div className="flex-1 overflow-auto relative min-w-0" ref={scrollContainerRef} data-testid="timeline-scroll-container">
         {/* Linha vertical HOJE */}
         {days.map((day, i) => isToday(day) ? (
           <div

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Plus, Trash2, Save, RefreshCw, Loader2, ZoomIn, ZoomOut, Link2, Calendar, Clock, Package } from "lucide-react"
-import { format, addDays, addHours, parseISO, differenceInDays, differenceInHours, startOfDay } from "date-fns"
+import { format, addDays, addHours, addMonths, addYears, parseISO, differenceInDays, differenceInHours, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
@@ -74,10 +74,89 @@ const STATUS_TO_LABEL: Record<string, string> = {
   "atrasada": "Atrasado"
 }
 
+const addByGanttUnit = (date: Date, amount: number, unit?: string) => {
+  switch (unit) {
+    case "hour":
+      return addHours(date, amount)
+    case "day":
+      return addDays(date, amount)
+    case "week":
+      return addDays(date, amount * 7)
+    case "month":
+      return addMonths(date, amount)
+    case "year":
+      return addYears(date, amount)
+    default:
+      return addDays(date, amount)
+  }
+}
+
+const attachContinuousTimelineScroll = (chart: any) => {
+  const container = chart?.$container as HTMLElement | undefined
+  if (!container || typeof chart?.setup_date_values !== "function" || typeof chart?.render !== "function") {
+    return null
+  }
+
+  let extending = false
+
+  const extendRange = (direction: "left" | "right") => {
+    if (extending) return
+
+    const unit = chart?.config?.unit
+    const columnWidth = Number(chart?.config?.column_width || 45)
+    const extendUnits = Number(chart?.config?.extend_by_units || 10)
+    if (!unit || !Number.isFinite(columnWidth) || !Number.isFinite(extendUnits)) return
+    if (!(chart.gantt_start instanceof Date) || !(chart.gantt_end instanceof Date)) return
+
+    extending = true
+    const prevScroll = container.scrollLeft
+
+    if (direction === "left") {
+      chart.gantt_start = addByGanttUnit(chart.gantt_start, -extendUnits, unit)
+    } else {
+      chart.gantt_end = addByGanttUnit(chart.gantt_end, extendUnits, unit)
+    }
+
+    chart.setup_date_values()
+    chart.render()
+
+    if (direction === "left") {
+      container.scrollLeft = prevScroll + (columnWidth * extendUnits)
+    } else {
+      container.scrollLeft = prevScroll
+    }
+
+    requestAnimationFrame(() => {
+      extending = false
+    })
+  }
+
+  const handleScroll = () => {
+    const threshold = Number(chart?.config?.column_width || 45) * 2
+    const remaining = container.scrollWidth - (container.scrollLeft + container.clientWidth)
+
+    if (container.scrollLeft <= threshold) {
+      extendRange("left")
+      return
+    }
+
+    if (remaining <= threshold) {
+      extendRange("right")
+    }
+  }
+
+  container.addEventListener("scroll", handleScroll, { passive: true })
+
+  return () => {
+    container.removeEventListener("scroll", handleScroll)
+  }
+}
+
 export default function PlanejamentoGantt() {
   const ganttRef = useRef<HTMLDivElement>(null)
   const [gantt, setGantt] = useState<any>(null)
   const [GanttChart, setGanttChart] = useState<any>(null)
+  const continuousScrollCleanupRef = useRef<(() => void) | null>(null)
   const [allTasks, setAllTasks] = useState<PlanejamentoTask[]>([])
   const [displayTasks, setDisplayTasks] = useState<PlanejamentoTask[]>([])
   const [orcamentos, setOrcamentos] = useState<OrcamentoSimples[]>([])
@@ -378,6 +457,11 @@ export default function PlanejamentoGantt() {
   
   // Inicializar o Gantt
   useEffect(() => {
+    if (continuousScrollCleanupRef.current) {
+      continuousScrollCleanupRef.current()
+      continuousScrollCleanupRef.current = null
+    }
+
     if (ganttRef.current && displayTasks.length > 0 && GanttChart) {
       ganttRef.current.innerHTML = ""
       
@@ -390,6 +474,7 @@ export default function PlanejamentoGantt() {
           bar_height: 30,
           bar_corner_radius: 3,
           readonly: false,
+          infinite_padding: true,
           arrow_curve: 5,
           padding: 18,
           view_mode: viewMode,
@@ -413,13 +498,23 @@ export default function PlanejamentoGantt() {
         })
         
         setGantt(newGantt)
+        continuousScrollCleanupRef.current = attachContinuousTimelineScroll(newGantt)
       } catch (error) {
         console.error("Erro ao inicializar Gantt:", error)
       }
     }
   }, [displayTasks, viewMode, GanttChart])
 
-  // Atualizar quando mudar o modo de visualização
+  // Limpar listener de scroll infinito ao desmontar
+  useEffect(() => {
+    return () => {
+      if (continuousScrollCleanupRef.current) {
+        continuousScrollCleanupRef.current()
+        continuousScrollCleanupRef.current = null
+      }
+    }
+  }, [])
+
   const handleViewModeChange = (mode: "Quarter Day" | "Half Day" | "Day" | "Week" | "Month") => {
     setViewMode(mode)
     if (gantt) {
