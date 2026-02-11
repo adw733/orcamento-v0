@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import {
   carregarConfiguracoesEtapasPorProdutos,
   salvarConfiguracoesEtapas,
+  salvarDuracoesGlobais,
+  carregarDuracoesGlobais,
   ProductStageConfig as ServiceProductStageConfig,
 } from '@/lib/planejamento/configuracoes-etapas';
 import {
@@ -36,8 +38,10 @@ import {
   GripVertical,
   X,
   Trash2,
+  Play,
+  Clock,
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import CalendarModal from './CalendarModal';
 
@@ -53,6 +57,7 @@ export interface ProductStageConfig {
   quantidade: number;
   stages: Partial<Record<StageType, boolean>>;
   stageDates: Partial<Record<StageType, string>>; // Data de início de cada etapa
+  stageDurations?: Partial<Record<StageType, number>>; // Duração em dias de cada etapa (override individual)
 }
 
 interface ProductStatusTableProps {
@@ -96,6 +101,17 @@ type SortField = 'numeroOrcamento' | 'productName' | 'cliente' | 'quantidade';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'byOrder' | 'byProduct';
 
+// Durações padrão por etapa (em dias)
+const DEFAULT_STAGE_DURATIONS: Record<StageType, number> = {
+  [StageType.PURCHASE]: 3,
+  [StageType.CUTTING]: 2,
+  [StageType.PRINTING]: 2,
+  [StageType.SEWING]: 3,
+  [StageType.REVISION]: 1,
+  [StageType.PACKING]: 1,
+  [StageType.DELIVERY]: 1,
+};
+
 export default function ProductStatusTable({ orders, onConfigChange, tenantId }: ProductStatusTableProps) {
   const [configs, setConfigs] = useState<ProductStageConfig[]>([]);
   const [sortField, setSortField] = useState<SortField>('numeroOrcamento');
@@ -107,9 +123,186 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [bulkCalendarMode, setBulkCalendarMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [globalDurations, setGlobalDurations] = useState<Record<StageType, number>>({ ...DEFAULT_STAGE_DURATIONS });
+  const [showDurationEditor, setShowDurationEditor] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const durationSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadDone = useRef(false);
+  const durationsLoadDone = useRef(false);
   const { toast } = useToast();
+
+  // Distribuir datas automaticamente: do pedido mais antigo ao mais recente
+  // Regra: Todas as compras do mesmo pedido começam no mesmo dia.
+  // Cada produto segue suas etapas sequencialmente.
+  // O próximo pedido só começa após TODOS os produtos do pedido atual terminarem.
+  const handleAutoDistribute = useCallback(() => {
+    const stages = Object.values(StageType);
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
+    // 1. Agrupar configs por número do pedido
+    const orderGroups: Map<string, typeof configs> = new Map();
+    configs.forEach(config => {
+      const orderNum = config.productId.split('-')[0];
+      if (!orderGroups.has(orderNum)) {
+        orderGroups.set(orderNum, []);
+      }
+      orderGroups.get(orderNum)!.push(config);
+    });
+
+    // 2. Ordenar pedidos do mais antigo ao mais recente
+    const sortedOrderNums = [...orderGroups.keys()].sort((a, b) => {
+      return (parseInt(a) || 0) - (parseInt(b) || 0);
+    });
+
+    // 3. Processar cada pedido sequencialmente
+    let orderStartDate = new Date(today); // Data de início do pedido atual
+    const allUpdatedConfigs: ProductStageConfig[] = [];
+
+    sortedOrderNums.forEach(orderNum => {
+      const orderConfigs = orderGroups.get(orderNum)!;
+      // Ordenar produtos dentro do pedido por sub-índice
+      orderConfigs.sort((a, b) => {
+        const subA = parseInt(a.productId.split('-')[1]) || 0;
+        const subB = parseInt(b.productId.split('-')[1]) || 0;
+        return subA - subB;
+      });
+
+      let orderMaxEndDate = new Date(orderStartDate); // Rastrear quando o pedido inteiro termina
+
+      // Processar cada produto do pedido
+      orderConfigs.forEach(config => {
+        const newStageDates: Partial<Record<StageType, string>> = {};
+        const newStageDurations: Partial<Record<StageType, number>> = {};
+        const activeStages = stages.filter(stage => config.stages[stage]);
+
+        // A primeira etapa (Compra) SEMPRE começa na data de início do pedido
+        // As etapas seguintes são sequenciais a partir do fim da anterior
+        let currentDate = new Date(orderStartDate);
+
+        activeStages.forEach((stage, idx) => {
+          const duration = config.stageDurations?.[stage] ?? globalDurations[stage];
+          newStageDurations[stage] = duration;
+
+          if (idx === 0) {
+            // Primeira etapa: começa na data de início do pedido (mesmo dia para todos os produtos)
+            newStageDates[stage] = format(currentDate, 'yyyy-MM-dd');
+          } else {
+            // Etapas seguintes: começam quando a etapa anterior termina
+            newStageDates[stage] = format(currentDate, 'yyyy-MM-dd');
+          }
+
+          // Avançar a data atual pela duração desta etapa
+          currentDate = addDays(currentDate, duration);
+        });
+
+        // Rastrear a data mais tardia de término dentro deste pedido
+        if (currentDate > orderMaxEndDate) {
+          orderMaxEndDate = new Date(currentDate);
+        }
+
+        allUpdatedConfigs.push({
+          ...config,
+          stageDates: newStageDates,
+          stageDurations: newStageDurations,
+        });
+      });
+
+      // O próximo pedido começa quando TODOS os produtos deste pedido terminarem
+      orderStartDate = new Date(orderMaxEndDate);
+    });
+
+    setConfigs(allUpdatedConfigs);
+
+    // Calcular tempo total de produção
+    let maxEndDate = today;
+    allUpdatedConfigs.forEach(config => {
+      const activeStages = stages.filter(stage => config.stages[stage]);
+      activeStages.forEach(stage => {
+        const startDate = config.stageDates[stage] ? parseISO(config.stageDates[stage]!) : null;
+        const duration = config.stageDurations?.[stage] ?? globalDurations[stage];
+        if (startDate) {
+          const endDate = addDays(startDate, duration);
+          if (endDate > maxEndDate) maxEndDate = endDate;
+        }
+      });
+    });
+
+    const totalDays = Math.ceil((maxEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    toast({
+      title: "📅 Datas distribuídas!",
+      description: `${allUpdatedConfigs.length} produto(s) agendados. Tempo total estimado: ${totalDays} dias (até ${format(maxEndDate, "dd/MM/yyyy", { locale: ptBR })}).`,
+    });
+  }, [configs, globalDurations, toast]);
+
+  // Atualizar duração global de uma etapa
+  const handleGlobalDurationChange = useCallback((stage: StageType, newDuration: number) => {
+    if (newDuration < 1) newDuration = 1;
+    if (newDuration > 90) newDuration = 90;
+    setGlobalDurations(prev => ({ ...prev, [stage]: newDuration }));
+  }, []);
+
+  // Atualizar duração individual de uma etapa para um produto específico
+  const handleIndividualDurationChange = useCallback((productId: string, stage: StageType, newDuration: number) => {
+    if (newDuration < 1) newDuration = 1;
+    if (newDuration > 90) newDuration = 90;
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config =>
+        config.productId === productId
+          ? {
+            ...config,
+            stageDurations: {
+              ...config.stageDurations,
+              [stage]: newDuration,
+            }
+          }
+          : config
+      )
+    );
+  }, []);
+
+  // Carregar durações globais do banco de dados
+  useEffect(() => {
+    if (!tenantId) return;
+    const carregarDuracoes = async () => {
+      try {
+        const saved = await carregarDuracoesGlobais(tenantId);
+        if (saved) {
+          setGlobalDurations(prev => ({ ...prev, ...saved }));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar durações globais:', error);
+      } finally {
+        durationsLoadDone.current = true;
+      }
+    };
+    carregarDuracoes();
+  }, [tenantId]);
+
+  // Salvar durações globais com debounce
+  useEffect(() => {
+    if (!tenantId || !durationsLoadDone.current) return;
+
+    if (durationSaveTimeoutRef.current) {
+      clearTimeout(durationSaveTimeoutRef.current);
+    }
+
+    durationSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await salvarDuracoesGlobais(globalDurations, tenantId);
+        console.log('Durações globais salvas com sucesso');
+      } catch (error) {
+        console.error('Erro ao salvar durações globais:', error);
+      }
+    }, 1000);
+
+    return () => {
+      if (durationSaveTimeoutRef.current) {
+        clearTimeout(durationSaveTimeoutRef.current);
+      }
+    };
+  }, [globalDurations, tenantId]);
 
   // Multi-select: toggle a task in the selection (Ctrl+click)
   const handleTaskSelect = useCallback((productId: string, stage: StageType, e: React.MouseEvent) => {
@@ -207,7 +400,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
   useEffect(() => {
     const carregarConfigs = async () => {
       if (!tenantId || orders.length === 0) {
-        // Se não tem tenantId, criar configs padrão
+        // Se não tem tenantId, criar configs padrão com durações globais
         const defaultConfigs: ProductStageConfig[] = orders.map(order => ({
           productId: order.id,
           productName: order.name,
@@ -222,7 +415,8 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             [StageType.PACKING]: true,
             [StageType.DELIVERY]: true,
           },
-          stageDates: {}
+          stageDates: {},
+          stageDurations: { ...globalDurations },
         }));
         setConfigs(defaultConfigs);
         setIsLoading(false);
@@ -242,14 +436,24 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
         const mergedConfigs: ProductStageConfig[] = orders.map(order => {
           const saved = savedConfigsMap.get(order.id);
           if (saved) {
+            // Preencher durações individuais com globais onde estiverem faltando
+            const mergedDurations: Partial<Record<StageType, number>> = { ...globalDurations };
+            if (saved.stageDurations) {
+              Object.entries(saved.stageDurations).forEach(([key, val]) => {
+                if (val !== undefined && val !== null) {
+                  mergedDurations[key as StageType] = val;
+                }
+              });
+            }
             return {
               ...saved,
               productName: order.name, // Garantir que o nome está atualizado
               cliente: order.client,
               quantidade: order.quantity,
+              stageDurations: mergedDurations,
             };
           }
-          // Produto novo - criar config padrão
+          // Produto novo - criar config padrão com durações globais
           return {
             productId: order.id,
             productName: order.name,
@@ -264,7 +468,8 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
               [StageType.PACKING]: true,
               [StageType.DELIVERY]: true,
             },
-            stageDates: {}
+            stageDates: {},
+            stageDurations: { ...globalDurations },
           };
         });
 
@@ -287,7 +492,8 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             [StageType.PACKING]: true,
             [StageType.DELIVERY]: true,
           },
-          stageDates: {}
+          stageDates: {},
+          stageDurations: { ...globalDurations },
         }));
         setConfigs(defaultConfigs);
         initialLoadDone.current = true;
@@ -619,6 +825,8 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
     const stageDate = config.stageDates[stage] || '';
     const taskKey = `${config.productId}:${stage}`;
     const isSelected = selectedTasks.has(taskKey);
+    const duration = config.stageDurations?.[stage] ?? globalDurations[stage];
+    const isCustomDuration = config.stageDurations?.[stage] !== undefined && config.stageDurations[stage] !== globalDurations[stage];
 
     return (
       <TableCell key={stage} className="px-1 py-1.5 text-center">
@@ -647,7 +855,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
               isActive && isSelected
                 ? 'Selecionado — Ctrl+clique para desmarcar, ou arraste para o calendário'
                 : isActive
-                  ? `${STAGE_LABELS[stage]}${stageDate ? ` (${format(parseISO(stageDate), "dd/MM", { locale: ptBR })})` : ''} — Ctrl+clique para selecionar`
+                  ? `${STAGE_LABELS[stage]} (${duration}d)${stageDate ? ` — ${format(parseISO(stageDate), "dd/MM", { locale: ptBR })}` : ''} — Ctrl+clique para selecionar`
                   : `Adicionar ${STAGE_LABELS[stage]}`
             }
           >
@@ -657,6 +865,28 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             <span className="text-[11px] font-semibold leading-none bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-1.5 py-0.5 rounded-sm">
               {format(parseISO(stageDate), "dd/MM", { locale: ptBR })}
             </span>
+          )}
+          {isActive && showDurationEditor && (
+            <div className="flex items-center gap-0.5 mt-0.5">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleIndividualDurationChange(config.productId, stage, duration - 1); }}
+                className="w-4 h-4 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-[9px] font-bold leading-none"
+              >
+                -
+              </button>
+              <span className={`text-[10px] font-bold min-w-[16px] text-center leading-none ${isCustomDuration ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'
+                }`}
+                title={isCustomDuration ? `Duração personalizada (global: ${globalDurations[stage]}d)` : `Duração padrão global`}
+              >
+                {duration}d
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleIndividualDurationChange(config.productId, stage, duration + 1); }}
+                className="w-4 h-4 flex items-center justify-center rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-[9px] font-bold leading-none"
+              >
+                +
+              </button>
+            </div>
           )}
         </div>
       </TableCell>
@@ -681,7 +911,28 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
           <span className="bg-primary text-white p-1 rounded-md text-xs">ETAPAS</span>
           Configuração de Etapas por Produto
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Botão Distribuir Datas */}
+          <button
+            onClick={handleAutoDistribute}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all border bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 shadow-sm hover:shadow-md"
+            title="Distribuir datas automaticamente do pedido mais antigo ao mais recente"
+          >
+            <Play className="h-3.5 w-3.5" />
+            Distribuir Datas
+          </button>
+          {/* Botão Durações */}
+          <button
+            onClick={() => setShowDurationEditor(!showDurationEditor)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showDurationEditor
+              ? 'bg-amber-500 text-white border-amber-500'
+              : 'bg-background text-foreground border-border hover:bg-muted'
+              }`}
+            title="Configurar durações padrão de cada etapa"
+          >
+            <Clock className="h-3.5 w-3.5" />
+            Durações
+          </button>
           {/* Botão Calendário */}
           <button
             onClick={() => {
@@ -694,8 +945,8 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
               }
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showCalendar
-                ? 'bg-primary text-white border-primary'
-                : 'bg-background text-foreground border-border hover:bg-muted'
+              ? 'bg-primary text-white border-primary'
+              : 'bg-background text-foreground border-border hover:bg-muted'
               }`}
             title={showCalendar ? 'Fechar calendário' : 'Abrir calendário para agendar'}
           >
@@ -738,6 +989,67 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
           <span className="text-xs text-gray-500">{sortedConfigs.length} produtos</span>
         </div>
       </div>
+
+      {/* Painel de Durações Expandido */}
+      {showDurationEditor && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Duração Padrão por Etapa (dias)
+            </h4>
+            <button
+              onClick={() => setGlobalDurations({ ...DEFAULT_STAGE_DURATIONS })}
+              className="text-xs text-amber-600 hover:text-amber-800 underline"
+            >
+              Restaurar padrão
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+            {Object.values(StageType).map(stage => {
+              const Icon = STAGE_ICONS[stage];
+              return (
+                <div key={stage} className="flex flex-col items-center gap-1.5 p-2 bg-white dark:bg-gray-900 rounded-lg border border-amber-100 dark:border-amber-900">
+                  <div className={`p-1.5 rounded ${STAGE_COLORS[stage]} text-white`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400 text-center leading-tight">
+                    {STAGE_LABELS[stage]}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleGlobalDurationChange(stage, globalDurations[stage] - 1)}
+                      className="w-5 h-5 flex items-center justify-center rounded bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-bold"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={globalDurations[stage]}
+                      onChange={(e) => handleGlobalDurationChange(stage, parseInt(e.target.value) || 1)}
+                      className="w-10 h-5 text-center text-xs font-bold border border-amber-200 rounded bg-white dark:bg-gray-800 text-amber-800 dark:text-amber-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      onClick={() => handleGlobalDurationChange(stage, globalDurations[stage] + 1)}
+                      className="w-5 h-5 flex items-center justify-center rounded bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-[9px] text-amber-500">
+                    {globalDurations[stage] === 1 ? '1 dia' : `${globalDurations[stage]} dias`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-2">
+            💡 Ajuste as durações e clique em <strong>Distribuir Datas</strong> para reorganizar automaticamente.
+          </p>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
@@ -803,6 +1115,9 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                         <div className="flex flex-col items-center gap-0.5">
                           <Icon className="h-4 w-4" />
                           <span className="text-[10px]">{STAGE_LABELS[stage]}</span>
+                          <span className="text-[9px] font-mono text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
+                            {globalDurations[stage]}d
+                          </span>
                         </div>
                       </TableHead>
                     );

@@ -9,6 +9,7 @@ export interface ProductStageConfig {
   quantidade: number;
   stages: Partial<Record<StageType, boolean>>;
   stageDates: Partial<Record<StageType, string>>;
+  stageDurations?: Partial<Record<StageType, number>>;
 }
 
 // Interface do banco de dados (usando tabela existente planejamento_etapas_config)
@@ -22,6 +23,7 @@ interface ConfiguracaoEtapaDB {
   stages: {
     enabled: Partial<Record<StageType, boolean>>;
     dates: Partial<Record<StageType, string>>;
+    durations?: Partial<Record<StageType, number>>;
   };
   created_at?: string;
   updated_at?: string;
@@ -38,13 +40,14 @@ function configToDb(config: ProductStageConfig, tenantId: string): ConfiguracaoE
     stages: {
       enabled: config.stages,
       dates: config.stageDates,
+      durations: config.stageDurations,
     },
   };
 }
 
 // Converter formato do banco para config
 function dbToConfig(db: ConfiguracaoEtapaDB): ProductStageConfig {
-  const stages = db.stages || { enabled: {}, dates: {} };
+  const stages = db.stages || { enabled: {}, dates: {}, durations: {} };
   return {
     productId: db.product_id,
     productName: db.product_name || '',
@@ -52,6 +55,7 @@ function dbToConfig(db: ConfiguracaoEtapaDB): ProductStageConfig {
     quantidade: db.quantidade || 0,
     stages: stages.enabled || {},
     stageDates: stages.dates || {},
+    stageDurations: stages.durations || {},
   };
 }
 
@@ -163,4 +167,59 @@ export async function deletarConfiguracoesOrcamento(
     console.error('Erro ao deletar configurações do orçamento:', error);
     throw error;
   }
+}
+
+// === Durações globais ===
+// Salva as durações globais (padrão por tipo de etapa) no banco usando uma chave especial
+const GLOBAL_DURATIONS_KEY = '__global_durations__';
+
+export async function salvarDuracoesGlobais(
+  durations: Record<StageType, number>,
+  tenantId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('planejamento_etapas_config')
+    .upsert({
+      tenant_id: tenantId,
+      product_id: GLOBAL_DURATIONS_KEY,
+      product_name: 'Durações Globais',
+      cliente: null,
+      quantidade: null,
+      stages: {
+        enabled: {},
+        dates: {},
+        durations: durations,
+      },
+    } as any, {
+      onConflict: 'tenant_id,product_id',
+    });
+
+  if (error) {
+    console.error('Erro ao salvar durações globais:', error);
+    throw error;
+  }
+}
+
+export async function carregarDuracoesGlobais(
+  tenantId: string
+): Promise<Record<StageType, number> | null> {
+  const { data, error } = await supabase
+    .from('planejamento_etapas_config')
+    .select('stages')
+    .eq('tenant_id', tenantId)
+    .eq('product_id', GLOBAL_DURATIONS_KEY)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Não encontrado - retornar null para usar defaults
+      return null;
+    }
+    console.error('Erro ao carregar durações globais:', error);
+    return null;
+  }
+
+  const record = data as any;
+  const stages = record?.stages;
+  return stages?.durations || null;
 }

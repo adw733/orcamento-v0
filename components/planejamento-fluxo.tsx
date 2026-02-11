@@ -57,7 +57,7 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
   const { toast } = useToast();
 
   // Função para criar etapas baseadas na configuração (vinda do bulk edit ou padrão)
-  const criarEtapasComConfig = useCallback((pedido: Order, indexProduto: number, stageConfig?: Partial<Record<StageType, boolean>>, stageDates?: Partial<Record<StageType, string>>) => {
+  const criarEtapasComConfig = useCallback((pedido: Order, indexProduto: number, stageConfig?: Partial<Record<StageType, boolean>>, stageDates?: Partial<Record<StageType, string>>, stageDurations?: Partial<Record<StageType, number>>) => {
     // Se não houver config, usar todas as etapas
     const etapasDisponiveis = [
       StageType.PURCHASE,
@@ -78,11 +78,14 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
     const espacamentoHorizontal = 300;
     const espacamentoVertical = 200;
     const yBase = 100 + (indexProduto * espacamentoVertical);
-    const duracaoPadrao = 2; // Duração em dias
+    const duracaoPadrao = 2; // Duração padrão em dias
 
     etapasAtivas.forEach((etapa, index) => {
       const nodeId = `${pedido.id}-${etapa.toLowerCase().replace(/\s+/g, '-')}`;
       const xPos = 100 + (index * espacamentoHorizontal);
+
+      // Usar duração da config ou padrão
+      const duration = stageDurations?.[etapa] ?? duracaoPadrao;
 
       // Usar data do stageDates ou undefined
       const startDateStr = stageDates?.[etapa];
@@ -90,9 +93,9 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
       if (startDateStr) {
         const startDate = new Date(startDateStr);
         const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + duracaoPadrao);
+        endDate.setDate(endDate.getDate() + duration);
         endDateStr = endDate.toISOString().split('T')[0];
-        console.log(`[criarEtapas] ${pedido.name} - ${etapa}: startDate=${startDateStr}, endDate=${endDateStr}`);
+        console.log(`[criarEtapas] ${pedido.name} - ${etapa}: startDate=${startDateStr}, endDate=${endDateStr}, duration=${duration}d`);
       }
 
       novasEtapas.push({
@@ -102,7 +105,7 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
         data: {
           label: `${pedido.name} - ${etapa}`,
           type: etapa,
-          duration: duracaoPadrao,
+          duration: duration,
           orderIds: [pedido.id],
           productName: pedido.name,
           productId: pedido.id,
@@ -129,8 +132,8 @@ const PlanejamentoContent: React.FC<PlanejamentoContentProps> = ({ onHeaderActio
       const pedido = orders.find(o => o.id === config.productId);
       if (!pedido) return;
 
-      // Criar etapas apenas para as selecionadas, com datas
-      const nosEtapas = criarEtapasComConfig(pedido, index, config.stages, config.stageDates);
+      // Criar etapas apenas para as selecionadas, com datas e durações
+      const nosEtapas = criarEtapasComConfig(pedido, index, config.stages, config.stageDates, config.stageDurations);
       todosNos.push(...nosEtapas);
     });
 
