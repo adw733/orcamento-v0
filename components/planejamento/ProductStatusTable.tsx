@@ -17,7 +17,6 @@ import {
   salvarConfiguracoesEtapas,
   salvarDuracoesGlobais,
   carregarDuracoesGlobais,
-  ProductStageConfig as ServiceProductStageConfig,
 } from '@/lib/planejamento/configuracoes-etapas';
 import {
   ShoppingCart,
@@ -40,6 +39,7 @@ import {
   Trash2,
   Play,
   Clock,
+  MessageSquare,
 } from 'lucide-react';
 import { format, parseISO, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,6 +55,7 @@ export interface ProductStageConfig {
   productName: string;
   cliente: string;
   quantidade: number;
+  observacao?: string;
   stages: Partial<Record<StageType, boolean>>;
   stageDates: Partial<Record<StageType, string>>; // Data de início de cada etapa
   stageDurations?: Partial<Record<StageType, number>>; // Duração em dias de cada etapa (override individual)
@@ -125,6 +126,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
   const [isDragging, setIsDragging] = useState(false);
   const [globalDurations, setGlobalDurations] = useState<Record<StageType, number>>({ ...DEFAULT_STAGE_DURATIONS });
   const [showDurationEditor, setShowDurationEditor] = useState(false);
+  const [showObservationColumn, setShowObservationColumn] = useState(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const durationSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadDone = useRef(false);
@@ -135,6 +137,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
   // Regra: Todas as compras do mesmo pedido começam no mesmo dia.
   // Cada produto segue suas etapas sequencialmente.
   // O próximo pedido só começa após TODOS os produtos do pedido atual terminarem.
+  // IMPORTANTE: Datas já configuradas manualmente são mantidas.
   const handleAutoDistribute = useCallback(() => {
     const stages = Object.values(StageType);
     const today = new Date();
@@ -176,24 +179,31 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
         const newStageDurations: Partial<Record<StageType, number>> = {};
         const activeStages = stages.filter(stage => config.stages[stage]);
 
-        // A primeira etapa (Compra) SEMPRE começa na data de início do pedido
+        // A primeira etapa começa na data de início do pedido
         // As etapas seguintes são sequenciais a partir do fim da anterior
+        // RESPEITAR datas já configuradas manualmente
         let currentDate = new Date(orderStartDate);
 
-        activeStages.forEach((stage, idx) => {
-          const duration = config.stageDurations?.[stage] ?? globalDurations[stage];
+        activeStages.forEach((stage) => {
+          // SEMPRE usar globalDurations como fonte de verdade para auto-distribuição
+          // (são os valores mostrados no cabeçalho da tabela)
+          const duration = globalDurations[stage];
           newStageDurations[stage] = duration;
 
-          if (idx === 0) {
-            // Primeira etapa: começa na data de início do pedido (mesmo dia para todos os produtos)
-            newStageDates[stage] = format(currentDate, 'yyyy-MM-dd');
+          // Se já existe uma data configurada manualmente, mantê-la
+          const existingDate = config.stageDates[stage];
+          if (existingDate) {
+            newStageDates[stage] = existingDate;
+            // Avançar currentDate para após o término desta etapa (usando a data manual)
+            const manualDate = parseISO(existingDate);
+            manualDate.setHours(12, 0, 0, 0);
+            currentDate = addDays(manualDate, duration);
           } else {
-            // Etapas seguintes: começam quando a etapa anterior termina
+            // Sem data manual: atribuir automaticamente
             newStageDates[stage] = format(currentDate, 'yyyy-MM-dd');
+            // Avançar a data atual pela duração desta etapa
+            currentDate = addDays(currentDate, duration);
           }
-
-          // Avançar a data atual pela duração desta etapa
-          currentDate = addDays(currentDate, duration);
         });
 
         // Rastrear a data mais tardia de término dentro deste pedido
@@ -406,6 +416,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
           productName: order.name,
           cliente: order.client,
           quantidade: order.quantity,
+          observacao: '',
           stages: {
             [StageType.PURCHASE]: true,
             [StageType.CUTTING]: true,
@@ -436,20 +447,15 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
         const mergedConfigs: ProductStageConfig[] = orders.map(order => {
           const saved = savedConfigsMap.get(order.id);
           if (saved) {
-            // Preencher durações individuais com globais onde estiverem faltando
+            // Sincronizar durações individuais com as globais atuais
+            // (as globais são a fonte de verdade)
             const mergedDurations: Partial<Record<StageType, number>> = { ...globalDurations };
-            if (saved.stageDurations) {
-              Object.entries(saved.stageDurations).forEach(([key, val]) => {
-                if (val !== undefined && val !== null) {
-                  mergedDurations[key as StageType] = val;
-                }
-              });
-            }
             return {
               ...saved,
               productName: order.name, // Garantir que o nome está atualizado
               cliente: order.client,
               quantidade: order.quantity,
+              observacao: saved.observacao || '',
               stageDurations: mergedDurations,
             };
           }
@@ -459,6 +465,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             productName: order.name,
             cliente: order.client,
             quantidade: order.quantity,
+            observacao: '',
             stages: {
               [StageType.PURCHASE]: true,
               [StageType.CUTTING]: true,
@@ -483,6 +490,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
           productName: order.name,
           cliente: order.client,
           quantidade: order.quantity,
+          observacao: '',
           stages: {
             [StageType.PURCHASE]: true,
             [StageType.CUTTING]: true,
@@ -648,6 +656,19 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
     );
   };
 
+  const handleObservationChange = useCallback((productId: string, observacao: string) => {
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config =>
+        config.productId === productId
+          ? {
+            ...config,
+            observacao: observacao.slice(0, 140),
+          }
+          : config
+      )
+    );
+  }, []);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -806,6 +827,21 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
     });
   };
 
+  // Função para limpar TODAS as datas de todos os produtos (global)
+  const handleClearAllDates = useCallback(() => {
+    setConfigs(prevConfigs =>
+      prevConfigs.map(config => ({
+        ...config,
+        stageDates: {}
+      }))
+    );
+
+    toast({
+      title: "Datas removidas!",
+      description: "Todas as datas de todos os produtos foram removidas.",
+    });
+  }, [toast]);
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? (
@@ -829,7 +865,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
     const isCustomDuration = config.stageDurations?.[stage] !== undefined && config.stageDurations[stage] !== globalDurations[stage];
 
     return (
-      <TableCell key={stage} className="px-1 py-1.5 text-center">
+      <TableCell key={stage} className="px-1 py-1 text-center">
         <div className="flex flex-col items-center gap-0.5">
           <button
             draggable={isActive && isSelected}
@@ -893,6 +929,23 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
     );
   };
 
+  const renderObservationCell = (config: ProductStageConfig) => {
+    if (!showObservationColumn) return null;
+
+    return (
+      <TableCell className="px-2 py-1 align-middle min-w-[220px]">
+        <input
+          type="text"
+          value={config.observacao || ''}
+          onChange={(e) => handleObservationChange(config.productId, e.target.value)}
+          placeholder="Observação da tarefa"
+          maxLength={140}
+          className="w-full h-7 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </TableCell>
+    );
+  };
+
   // Handle drop on calendar panel from external drag
   const handleCalendarDrop = useCallback((droppedTasks: { productId: string; stage: StageType; productName: string }[]) => {
     // Set the dropped tasks as selected and open bulk calendar
@@ -921,6 +974,17 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
             <Play className="h-3.5 w-3.5" />
             Distribuir Datas
           </button>
+          {/* Botão Limpar Todas as Datas */}
+          {configs.some(c => Object.keys(c.stageDates).length > 0) && (
+            <button
+              onClick={handleClearAllDates}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all border bg-red-600 text-white border-red-600 hover:bg-red-700 shadow-sm hover:shadow-md"
+              title="Limpar todas as datas de todos os produtos"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Limpar Datas
+            </button>
+          )}
           {/* Botão Durações */}
           <button
             onClick={() => setShowDurationEditor(!showDurationEditor)}
@@ -978,6 +1042,17 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
               <span className="hidden sm:inline">Por Produto</span>
             </button>
           </div>
+          <button
+            onClick={() => setShowObservationColumn(prev => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${showObservationColumn
+              ? 'bg-primary text-white border-primary'
+              : 'bg-background text-foreground border-border hover:bg-muted'
+              }`}
+            title={showObservationColumn ? 'Ocultar coluna de observação' : 'Mostrar coluna de observação'}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{showObservationColumn ? 'Ocultar Obs' : 'Mostrar Obs'}</span>
+          </button>
           {isSaving && (
             <span className="text-xs text-blue-500 flex items-center gap-1">
               <span className="animate-spin">⏳</span> Salvando...
@@ -1061,10 +1136,10 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
           {/* Tabela - encolhe quando o painel abre */}
           <div className="flex-1 min-w-0 overflow-x-auto transition-all duration-300">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
+              <TableHeader className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
+                <TableRow className="bg-muted/60">
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-4 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                     onClick={() => handleSort('numeroOrcamento')}
                   >
                     <div className="flex items-center">
@@ -1073,7 +1148,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-4 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                     onClick={() => handleSort('productName')}
                   >
                     <div className="flex items-center">
@@ -1083,7 +1158,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-4 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                     onClick={() => handleSort('cliente')}
                   >
                     <div className="flex items-center">
@@ -1092,7 +1167,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                     </div>
                   </TableHead>
                   <TableHead
-                    className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                    className="px-4 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                     onClick={() => handleSort('quantidade')}
                   >
                     <div className="flex items-center">
@@ -1108,7 +1183,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                     return (
                       <TableHead
                         key={stage}
-                        className="px-2 py-3 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                        className="px-2 py-2 text-center font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                         onClick={() => handleSelectAll(stage)}
                         title={`${allSelected ? 'Desmarcar' : 'Marcar'} todos - ${STAGE_LABELS[stage]}`}
                       >
@@ -1122,12 +1197,20 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                       </TableHead>
                     );
                   })}
+                  {showObservationColumn && (
+                    <TableHead className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[220px]">
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare className="h-4 w-4" />
+                        Observação
+                      </div>
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {configs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4 + stages.length} className="px-4 py-4 text-center text-muted-foreground">
+                    <TableCell colSpan={4 + stages.length + (showObservationColumn ? 1 : 0)} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="text-center py-8 bg-accent/30 rounded-lg">
                         <Package className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                         <h4 className="text-lg font-medium text-gray-600">Nenhum produto disponível</h4>
@@ -1141,7 +1224,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                     <React.Fragment key={group.productName}>
                       {/* Cabeçalho do grupo de produto */}
                       <TableRow className="bg-gray-50 border-t-4 border-gray-300">
-                        <TableCell colSpan={4} className="px-4 py-2">
+                        <TableCell colSpan={4} className="px-4 py-1.5">
                           <div className="flex items-center gap-2">
                             <Layers className="h-4 w-4 text-gray-600" />
                             <span className="font-semibold text-sm">{group.productName}</span>
@@ -1169,7 +1252,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                           const allSelected = group.items.every(c => c.stages[stage]);
 
                           return (
-                            <TableCell key={stage} className="px-2 py-2 text-center">
+                            <TableCell key={stage} className="px-2 py-1.5 text-center">
                               <button
                                 onClick={() => handleSelectStageForGroup(group.productName, stage)}
                                 className="p-1 rounded transition-all duration-200 hover:bg-gray-100"
@@ -1180,6 +1263,11 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                             </TableCell>
                           );
                         })}
+                        {showObservationColumn && (
+                          <TableCell className="px-2 py-1.5 text-xs text-muted-foreground">
+                            Observação
+                          </TableCell>
+                        )}
                       </TableRow>
 
                       {/* Itens do grupo */}
@@ -1190,7 +1278,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                             key={config.productId}
                             className="hover:bg-muted/50 border-b border-gray-200"
                           >
-                            <TableCell className="px-4 py-1.5 align-middle">
+                            <TableCell className="px-4 py-1 align-middle">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleSelectAllForProduct(config.productId)}
@@ -1206,18 +1294,19 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                                 <span className="text-sm font-medium">{numeroOrcamento}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="px-4 py-1.5 align-middle">
+                            <TableCell className="px-4 py-1 align-middle">
                               <span className="text-sm text-muted-foreground">{config.productName}</span>
                             </TableCell>
-                            <TableCell className="px-4 py-1.5 align-middle">
+                            <TableCell className="px-4 py-1 align-middle">
                               <span className="text-sm">{config.cliente}</span>
                             </TableCell>
-                            <TableCell className="px-4 py-1.5 align-middle">
+                            <TableCell className="px-4 py-1 align-middle">
                               <Badge variant="outline" className="font-medium">
                                 {config.quantidade}
                               </Badge>
                             </TableCell>
                             {stages.map(stage => renderStageCell(config, stage))}
+                            {renderObservationCell(config)}
                           </TableRow>
                         );
                       })}
@@ -1240,7 +1329,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                         {/* Cabeçalho do orçamento (como na impressão) */}
                         {isNovoOrcamento && (
                           <TableRow className="bg-gray-50 border-t-4 border-gray-300">
-                            <TableCell colSpan={4} className="px-4 py-2">
+                            <TableCell colSpan={4} className="px-4 py-1.5">
                               <div className="flex items-center justify-between">
                                 <div className="font-semibold text-sm">
                                   Orçamento: {numeroOrcamentoAtual} - {empresaOrcamento} - {config.cliente.toUpperCase()}
@@ -1265,7 +1354,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                               const allSelected = orderProducts.length > 0 && orderProducts.every(c => c.stages[stage]);
 
                               return (
-                                <TableCell key={stage} className="px-2 py-2 text-center">
+                                <TableCell key={stage} className="px-2 py-1.5 text-center">
                                   <button
                                     onClick={() => handleSelectStageForOrder(numeroOrcamentoAtual, stage)}
                                     className="p-1 rounded transition-all duration-200 hover:bg-gray-100"
@@ -1276,6 +1365,11 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                                 </TableCell>
                               );
                             })}
+                            {showObservationColumn && (
+                              <TableCell className="px-2 py-1.5 text-xs text-muted-foreground">
+                                Observação
+                              </TableCell>
+                            )}
                           </TableRow>
                         )}
 
@@ -1283,7 +1377,7 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                         <TableRow
                           className="hover:bg-muted/50 border-b border-gray-200"
                         >
-                          <TableCell className="px-4 py-1.5 align-middle">
+                          <TableCell className="px-4 py-1 align-middle">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleSelectAllForProduct(config.productId)}
@@ -1299,18 +1393,19 @@ export default function ProductStatusTable({ orders, onConfigChange, tenantId }:
                               <span className="text-sm font-medium">{numeroOrcamentoAtual}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-1.5 align-middle">
+                          <TableCell className="px-4 py-1 align-middle">
                             <span className="text-sm font-medium">{config.productName}</span>
                           </TableCell>
-                          <TableCell className="px-4 py-1.5 align-middle">
+                          <TableCell className="px-4 py-1 align-middle">
                             <span className="text-sm">{config.cliente}</span>
                           </TableCell>
-                          <TableCell className="px-4 py-1.5 align-middle">
+                          <TableCell className="px-4 py-1 align-middle">
                             <Badge variant="outline" className="font-medium">
                               {config.quantidade}
                             </Badge>
                           </TableCell>
                           {stages.map(stage => renderStageCell(config, stage))}
+                          {renderObservationCell(config)}
                         </TableRow>
                       </React.Fragment>
                     );

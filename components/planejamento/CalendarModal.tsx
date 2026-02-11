@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Package,
   Truck,
-  
+
   X,
   Clock,
   PanelRightClose,
@@ -355,7 +355,7 @@ export default function CalendarModal({
           `}
         >
           <div className="flex flex-col items-center gap-2 text-center p-3">
-            <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }} className={`h-8 w-8 ${isDragOver ? 'text-primary animate-pulse' : 'text-muted-foreground/50'}`} />
+            <CalendarIcon className={`h-8 w-8 ${isDragOver ? 'text-primary animate-pulse' : 'text-muted-foreground/50'}`} />
             <span className={`text-xs font-medium ${isDragOver ? 'text-primary' : 'text-muted-foreground/50'}`}>
               {isDragOver ? 'Solte aqui!' : 'Solte para agendar'}
             </span>
@@ -439,7 +439,7 @@ export default function CalendarModal({
 
             {/* Calendário */}
             <div className="px-2 pt-2 pb-1.5 border-b flex-shrink-0">
-              <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }}
+              <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={handleSelect}
@@ -448,7 +448,8 @@ export default function CalendarModal({
                 onMonthChange={setViewMonth}
                 modifiers={modifiers}
                 modifiersStyles={modifiersStyles}
-                className="rounded-md mx-auto"
+                className="w-full rounded-md mx-auto"
+                classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }}
                 components={{
                   DayContent: ({ date }) => {
                     const dateKey = format(date, 'yyyy-MM-dd');
@@ -478,7 +479,7 @@ export default function CalendarModal({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between bg-primary/5 rounded-md px-2.5 py-1.5">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }} className="h-3 w-3 text-primary flex-shrink-0" />
+                        <CalendarIcon className="h-3 w-3 text-primary flex-shrink-0" />
                         <span className="text-xs font-medium truncate">
                           {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </span>
@@ -532,7 +533,7 @@ export default function CalendarModal({
               <div className="flex-1 overflow-y-auto px-2.5 pb-2">
                 {tasksForSelectedDate.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-4 text-center">
-                    <Calendar className="w-full" classNames={{ months: "w-full", month: "w-full", table: "w-full", head_cell: "w-[14.28%]", cell: "w-[14.28%] h-9", day: "w-full h-9" }} className="h-6 w-6 text-muted-foreground/30 mb-1" />
+                    <CalendarIcon className="h-6 w-6 text-muted-foreground/30 mb-1" />
                     <p className="text-[11px] text-muted-foreground">
                       {selectedDate ? 'Nenhuma tarefa neste dia' : 'Selecione um dia'}
                     </p>

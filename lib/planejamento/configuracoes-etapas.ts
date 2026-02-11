@@ -7,6 +7,7 @@ export interface ProductStageConfig {
   productName: string;
   cliente: string;
   quantidade: number;
+  observacao?: string;
   stages: Partial<Record<StageType, boolean>>;
   stageDates: Partial<Record<StageType, string>>;
   stageDurations?: Partial<Record<StageType, number>>;
@@ -24,6 +25,7 @@ interface ConfiguracaoEtapaDB {
     enabled: Partial<Record<StageType, boolean>>;
     dates: Partial<Record<StageType, string>>;
     durations?: Partial<Record<StageType, number>>;
+    observacao?: string;
   };
   created_at?: string;
   updated_at?: string;
@@ -41,6 +43,7 @@ function configToDb(config: ProductStageConfig, tenantId: string): ConfiguracaoE
       enabled: config.stages,
       dates: config.stageDates,
       durations: config.stageDurations,
+      observacao: config.observacao || '',
     },
   };
 }
@@ -53,6 +56,7 @@ function dbToConfig(db: ConfiguracaoEtapaDB): ProductStageConfig {
     productName: db.product_name || '',
     cliente: db.cliente || '',
     quantidade: db.quantidade || 0,
+    observacao: stages.observacao || '',
     stages: stages.enabled || {},
     stageDates: stages.dates || {},
     stageDurations: stages.durations || {},
