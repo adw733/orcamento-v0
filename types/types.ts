@@ -64,6 +64,8 @@ export type ItemOrcamento = {
   imagem?: string
   observacaoComercial?: string // Observação que aparece no orçamento
   observacaoTecnica?: string // Observação que aparece na ficha técnica
+  // Campos de desconto unitário
+  descontoUnitarioPercentual?: number // Desconto em percentual por peça (ex: 10 = 10%)
 }
 
 // Atualizar o tipo Orcamento para incluir os campos de contato

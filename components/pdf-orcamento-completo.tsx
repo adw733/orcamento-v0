@@ -48,6 +48,26 @@ export const PDFOrcamentoCompleto: React.FC<PDFOrcamentoCompletoProps> = ({
 }) => {
   const total = calcularTotal()
   const totalComFrete = total + (orcamento.valorFrete || 0)
+  
+  // Calcular subtotal bruto (sem descontos unitários)
+  const subtotalBruto = orcamento.itens.reduce((total, item) => {
+    return total + item.quantidade * item.valorUnitario
+  }, 0)
+  
+  // Calcular total de descontos unitários
+  const totalDescontoUnitario = orcamento.itens.reduce((total, item) => {
+    const descontoPercentual = item.descontoUnitarioPercentual || 0
+    if (descontoPercentual > 0) {
+      const valorDesconto = item.quantidade * item.valorUnitario * (descontoPercentual / 100)
+      return total + valorDesconto
+    }
+    return total
+  }, 0)
+  
+  // Calcular desconto geral (apenas em valor)
+  const valorDescontoGeral = orcamento.valorDesconto || 0
+  
+  const totalFinal = totalComFrete - valorDescontoGeral
 
   // Estilos (copiados do componente original)
   const styles = StyleSheet.create({
@@ -176,23 +196,52 @@ export const PDFOrcamentoCompleto: React.FC<PDFOrcamentoCompletoProps> = ({
     tableRowAlt: {
       backgroundColor: '#f9fafb',
     },
+    // Colunas para tabela principal do orçamento
     colNum: {
       width: '5%',
       textAlign: 'center',
     },
     colProduto: {
-      width: '30%',
+      width: '28%',
     },
     colQtd: {
-      width: '10%',
+      width: '8%',
       textAlign: 'center',
     },
     colValorUnit: {
-      width: '15%',
+      width: '13%',
+      textAlign: 'right',
+    },
+    colDesconto: {
+      width: '10%',
       textAlign: 'right',
     },
     colTotal: {
-      width: '15%',
+      width: '13%',
+      textAlign: 'right',
+    },
+    // Colunas alternativas (renomeadas para evitar conflito)
+    col1: {
+      width: '5%',
+      textAlign: 'center',
+    },
+    col2: {
+      width: '28%',
+    },
+    col3: {
+      width: '8%',
+      textAlign: 'center',
+    },
+    col4: {
+      width: '13%',
+      textAlign: 'right',
+    },
+    col5: {
+      width: '10%',
+      textAlign: 'right',
+    },
+    col6: {
+      width: '13%',
       textAlign: 'right',
     },
     totalSection: {
@@ -391,35 +440,72 @@ export const PDFOrcamentoCompleto: React.FC<PDFOrcamentoCompletoProps> = ({
               <Text style={styles.col2}>Produto</Text>
               <Text style={styles.col3}>Qtd</Text>
               <Text style={styles.col4}>Valor Unit.</Text>
-              <Text style={styles.col5}>Subtotal</Text>
+              <Text style={styles.col5}>Desc. %</Text>
+              <Text style={styles.col6}>Subtotal</Text>
             </View>
-            {orcamento.itens.map((item, idx) => (
-              <View key={idx} style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}>
-                <Text style={styles.col1}>{idx + 1}</Text>
-                <Text style={styles.col2}>{item.produto?.nome || "Produto"}</Text>
-                <Text style={styles.col3}>{item.quantidade}</Text>
-                <Text style={styles.col4}>R$ {item.valorUnitario.toFixed(2)}</Text>
-                <Text style={styles.col5}>R$ {(item.quantidade * item.valorUnitario).toFixed(2)}</Text>
-              </View>
-            ))}
+            {orcamento.itens.map((item, idx) => {
+              const descontoPercentual = item.descontoUnitarioPercentual || 0
+              const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
+              const subtotalItem = item.quantidade * valorComDesconto
+              
+              return (
+                <View key={idx} style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}>
+                  <Text style={styles.col1}>{idx + 1}</Text>
+                  <Text style={styles.col2}>{item.produto?.nome || "Produto"}</Text>
+                  <Text style={styles.col3}>{item.quantidade}</Text>
+                  <Text style={styles.col4}>R$ {item.valorUnitario.toFixed(2)}</Text>
+                  <Text style={[styles.col5, descontoPercentual > 0 && { color: '#ea580c' }]}>
+                    {descontoPercentual > 0 ? `${descontoPercentual.toFixed(1)}%` : '-'}
+                  </Text>
+                  <Text style={styles.col6}>R$ {subtotalItem.toFixed(2)}</Text>
+                </View>
+              )
+            })}
           </View>
         </View>
 
         {/* Totais */}
         <View style={styles.totalsSection}>
+          {/* Subtotal Bruto */}
           <View style={styles.totalRow}>
-            <Text>Subtotal:</Text>
-            <Text>R$ {total.toFixed(2)}</Text>
+            <Text style={{ color: '#6b7280' }}>Subtotal Bruto:</Text>
+            <Text style={{ color: '#6b7280' }}>R$ {subtotalBruto.toFixed(2)}</Text>
           </View>
+          
+          {/* Desconto Unitário */}
+          {totalDescontoUnitario > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={{ color: '#ea580c' }}>Desconto Unitário (%):</Text>
+              <Text style={{ color: '#ea580c' }}>- R$ {totalDescontoUnitario.toFixed(2)}</Text>
+            </View>
+          )}
+          
+          {/* Valor dos Produtos */}
+          <View style={styles.totalRow}>
+            <Text style={{ fontWeight: 'bold' }}>Valor dos Produtos:</Text>
+            <Text style={{ fontWeight: 'bold' }}>R$ {total.toFixed(2)}</Text>
+          </View>
+          
+          {/* Frete */}
           {(orcamento.valorFrete || 0) > 0 && (
             <View style={styles.totalRow}>
               <Text>Frete:</Text>
               <Text>R$ {(orcamento.valorFrete || 0).toFixed(2)}</Text>
             </View>
           )}
+          
+          {/* Desconto Geral */}
+          {valorDescontoGeral > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={{ color: '#dc2626' }}>Desconto Geral (R$):</Text>
+              <Text style={{ color: '#dc2626' }}>- R$ {valorDescontoGeral.toFixed(2)}</Text>
+            </View>
+          )}
+          
+          {/* Total Final */}
           <View style={[styles.totalRow, styles.totalRowFinal]}>
             <Text>TOTAL:</Text>
-            <Text>R$ {totalComFrete.toFixed(2)}</Text>
+            <Text>R$ {totalFinal.toFixed(2)}</Text>
           </View>
         </View>
 

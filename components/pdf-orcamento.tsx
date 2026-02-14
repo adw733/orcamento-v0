@@ -150,15 +150,19 @@ const styles = StyleSheet.create({
     width: '25%',
   },
   colQtd: {
-    width: '10%',
+    width: '8%',
     textAlign: 'center',
   },
   colValorUnit: {
-    width: '15%',
+    width: '13%',
+    textAlign: 'right',
+  },
+  colDescontoUnit: {
+    width: '10%',
     textAlign: 'right',
   },
   colTotal: {
-    width: '15%',
+    width: '14%',
     textAlign: 'right',
   },
   productName: {
@@ -279,15 +283,23 @@ export const PDFOrcamento: React.FC<PDFOrcamentoProps> = ({ orcamento, dadosEmpr
   const total = calcularTotal()
   const subtotal = total + (orcamento.valorFrete || 0)
   
-  // Calcular desconto
-  let valorDescontoCalculado = 0
-  if (orcamento.valorDesconto && orcamento.valorDesconto > 0) {
-    if (orcamento.tipoDesconto === 'percentual') {
-      valorDescontoCalculado = (subtotal * orcamento.valorDesconto) / 100
-    } else {
-      valorDescontoCalculado = orcamento.valorDesconto
+  // Calcular subtotal bruto (sem descontos unitários)
+  const subtotalBruto = orcamento.itens.reduce((total, item) => {
+    return total + item.quantidade * item.valorUnitario
+  }, 0)
+  
+  // Calcular total de descontos unitários
+  const totalDescontoUnitario = orcamento.itens.reduce((total, item) => {
+    const descontoPercentual = item.descontoUnitarioPercentual || 0
+    if (descontoPercentual > 0) {
+      const valorDesconto = item.quantidade * item.valorUnitario * (descontoPercentual / 100)
+      return total + valorDesconto
     }
-  }
+    return total
+  }, 0)
+  
+  // Calcular desconto geral (agora sempre em valor)
+  const valorDescontoCalculado = orcamento.valorDesconto || 0
   
   const totalFinal = subtotal - valorDescontoCalculado
 
@@ -387,51 +399,82 @@ export const PDFOrcamento: React.FC<PDFOrcamentoProps> = ({ orcamento, dadosEmpr
               <Text style={styles.colTamanhos}>Tamanhos</Text>
               <Text style={styles.colQtd}>Qtd.</Text>
               <Text style={styles.colValorUnit}>Valor Unit.</Text>
+              <Text style={styles.colDescontoUnit}>Desc. %</Text>
               <Text style={styles.colTotal}>Total</Text>
             </View>
 
             {/* Linhas da Tabela */}
-            {orcamento.itens.map((item, idx) => (
-              <View key={item.id} style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}>
-                <Text style={styles.colNum}>{idx + 1}</Text>
-                <View style={styles.colProduto}>
-                  <Text style={styles.productName}>{item.produto?.nome || "Produto"}</Text>
-                  {item.observacaoComercial && (
-                    <Text style={styles.productObs}>{item.observacaoComercial}</Text>
-                  )}
-                </View>
-                <View style={styles.colTamanhos}>
-                  <Text>
-                    {ordenarTamanhos(item.tamanhos || {})
-                      .map(([tam, qtd]) => `${tam}-${qtd}`)
-                      .join(', ')}
+            {orcamento.itens.map((item, idx) => {
+              const descontoPercentual = item.descontoUnitarioPercentual || 0
+              const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
+              const totalItem = item.quantidade * valorComDesconto
+              
+              return (
+                <View key={item.id} style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}>
+                  <Text style={styles.colNum}>{idx + 1}</Text>
+                  <View style={styles.colProduto}>
+                    <Text style={styles.productName}>{item.produto?.nome || "Produto"}</Text>
+                    {item.observacaoComercial && (
+                      <Text style={styles.productObs}>{item.observacaoComercial}</Text>
+                    )}
+                  </View>
+                  <View style={styles.colTamanhos}>
+                    <Text>
+                      {ordenarTamanhos(item.tamanhos || {})
+                        .map(([tam, qtd]) => `${tam}-${qtd}`)
+                        .join(', ')}
+                    </Text>
+                  </View>
+                  <Text style={styles.colQtd}>{item.quantidade}</Text>
+                  <Text style={styles.colValorUnit}>R$ {item.valorUnitario.toFixed(2)}</Text>
+                  <Text style={[styles.colDescontoUnit, descontoPercentual > 0 && { color: '#ea580c' }]}>
+                    {descontoPercentual > 0 ? `${descontoPercentual.toFixed(1)}%` : '-'}
                   </Text>
+                  <Text style={styles.colTotal}>R$ {totalItem.toFixed(2)}</Text>
                 </View>
-                <Text style={styles.colQtd}>{item.quantidade}</Text>
-                <Text style={styles.colValorUnit}>R$ {item.valorUnitario.toFixed(2)}</Text>
-                <Text style={styles.colTotal}>R$ {(item.quantidade * item.valorUnitario).toFixed(2)}</Text>
-              </View>
-            ))}
+              )
+            })}
           </View>
 
           {/* Totais */}
           <View style={styles.totalSection}>
+            {/* Subtotal Bruto */}
+            <View style={styles.totalRow}>
+              <Text style={[styles.totalLabel, { color: '#6b7280' }]}>Subtotal Bruto:</Text>
+              <Text style={[styles.totalValue, { color: '#6b7280' }]}>R$ {subtotalBruto.toFixed(2)}</Text>
+            </View>
+            
+            {/* Desconto Unitário */}
+            {totalDescontoUnitario > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalLabel, { color: '#ea580c' }]}>Desconto Unitário (%):</Text>
+                <Text style={[styles.totalValue, { color: '#ea580c' }]}>- R$ {totalDescontoUnitario.toFixed(2)}</Text>
+              </View>
+            )}
+            
+            {/* Valor dos Produtos (após descontos unitários) */}
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Valor dos Produtos:</Text>
               <Text style={styles.totalValue}>R$ {total.toFixed(2)}</Text>
             </View>
+            
+            {/* Frete */}
             {orcamento.valorFrete !== undefined && orcamento.valorFrete > 0 && (
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Valor do Frete:</Text>
                 <Text style={styles.totalValue}>R$ {orcamento.valorFrete.toFixed(2)}</Text>
               </View>
             )}
+            
+            {/* Desconto Geral (apenas em valor) */}
             {valorDescontoCalculado > 0 && (
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Desconto ({orcamento.tipoDesconto === 'percentual' ? `${orcamento.valorDesconto}%` : 'R$'}):</Text>
+                <Text style={styles.totalLabel}>Desconto Geral (R$):</Text>
                 <Text style={[styles.totalValue, { color: '#dc2626' }]}>- R$ {valorDescontoCalculado.toFixed(2)}</Text>
               </View>
             )}
+            
+            {/* Total Final */}
             <View style={[styles.totalRow, styles.totalFinal]}>
               <Text style={styles.totalLabel}>TOTAL:</Text>
               <Text style={styles.totalValue}>R$ {totalFinal.toFixed(2)}</Text>

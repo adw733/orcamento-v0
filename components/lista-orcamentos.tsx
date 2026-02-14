@@ -172,9 +172,11 @@ export default function ListaOrcamentos({
   const calcularTotal = (orcamento: Partial<Orcamento>) => {
     if (!orcamento.itens || !Array.isArray(orcamento.itens)) return 0
 
-    // Calcular o total dos itens
+    // Calcular o total dos itens com desconto unitário
     const totalItens = orcamento.itens.reduce((total, item) => {
-      return total + (item.quantidade || 0) * (item.valorUnitario || 0)
+      const descontoPercentual = item.descontoUnitarioPercentual || 0
+      const valorUnitario = (item.valorUnitario || 0) * (1 - descontoPercentual / 100)
+      return total + (item.quantidade || 0) * valorUnitario
     }, 0)
 
     // Adicionar o valor do frete, se existir

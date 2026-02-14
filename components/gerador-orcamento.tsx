@@ -160,7 +160,8 @@ export function GeradorOrcamento({
         (itemAtual.observacaoComercial || '') !== (itemRef.observacaoComercial || '') ||
         (itemAtual.observacaoTecnica || '') !== (itemRef.observacaoTecnica || '') ||
         JSON.stringify(itemAtual.tamanhos || {}) !== JSON.stringify(itemRef.tamanhos || {}) ||
-        (itemAtual.estampas?.length || 0) !== (itemRef.estampas?.length || 0)
+        (itemAtual.estampas?.length || 0) !== (itemRef.estampas?.length || 0) ||
+        Number(itemAtual.descontoUnitarioPercentual || 0) !== Number(itemRef.descontoUnitarioPercentual || 0)
       ) {
         return true
       }
@@ -662,6 +663,7 @@ export function GeradorOrcamento({
             observacaoComercial: item.observacaoComercial,
             observacaoTecnica: item.observacaoTecnica,
             imagem: item.imagem,
+            descontoUnitarioPercentual: item.descontoUnitarioPercentual,
           }))
         }
       }
@@ -693,6 +695,7 @@ export function GeradorOrcamento({
             observacao_tecnica: item.observacaoTecnica,
             imagem: item.imagem,
             posicao: index + 1, // Adicionar posição baseada no índice do array
+            desconto_unitario_percentual: item.descontoUnitarioPercentual || 0,
           })
           .select()
           .single()
@@ -806,6 +809,7 @@ export function GeradorOrcamento({
             observacao_tecnica: item.observacaoTecnica,
             imagem: item.imagem,
             posicao: index + 1, // Adicionar posição baseada no índice do array
+            desconto_unitario_percentual: item.descontoUnitarioPercentual || 0,
           })
           .select()
           .single()
@@ -1834,7 +1838,9 @@ export function GeradorOrcamento({
 
   const calcularTotal = () => {
     return orcamento.itens.reduce((total, item) => {
-      return total + item.quantidade * item.valorUnitario
+      const descontoPercentual = item.descontoUnitarioPercentual || 0
+      const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
+      return total + item.quantidade * valorComDesconto
     }, 0)
   }
 

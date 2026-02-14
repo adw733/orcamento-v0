@@ -863,12 +863,13 @@ export default function VisualizacaoEditavel({
                   <thead className="bg-primary text-white">
                     <tr>
                       {modoEdicao && <th className="p-2 text-center rounded-tl-md w-[40px] print:hidden"></th>}
-                      <th className={cn("p-2 text-center w-[8%]", !modoEdicao && "rounded-tl-md")}>#</th>
-                      <th className="p-2 text-left w-[27%]">Produto</th>
-                      <th className="p-2 text-left w-[25%]">Tamanhos</th>
-                      <th className="p-2 text-center w-[10%]">Qtd.</th>
-                      <th className="p-2 text-right w-[13%]">Valor Unit.</th>
-                      <th className="p-2 text-right rounded-tr-md w-[17%]">Total</th>
+                      <th className={cn("p-2 text-center w-[6%]", !modoEdicao && "rounded-tl-md")}>#</th>
+                      <th className="p-2 text-left w-[24%]">Produto</th>
+                      <th className="p-2 text-left w-[22%]">Tamanhos</th>
+                      <th className="p-2 text-center w-[8%]">Qtd.</th>
+                      <th className="p-2 text-right w-[12%]">Valor Unit.</th>
+                      <th className="p-2 text-right w-[10%]">Desc. %</th>
+                      <th className="p-2 text-right rounded-tr-md w-[15%]">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1063,8 +1064,31 @@ export default function VisualizacaoEditavel({
                               <span>R$ {item.valorUnitario.toFixed(2)}</span>
                             )}
                           </td>
+                          <td className="py-0.5 px-2 text-right align-middle">
+                            {modoEdicao ? (
+                              <InputTransparente
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                value={item.descontoUnitarioPercentual || 0}
+                                onChange={e => updateItem(item.id, 'descontoUnitarioPercentual', Number(e.target.value))}
+                                className="text-right w-full text-orange-600"
+                                placeholder="0%"
+                              />
+                            ) : (
+                              <span className={item.descontoUnitarioPercentual && item.descontoUnitarioPercentual > 0 ? "text-orange-600 font-medium" : ""}>
+                                {item.descontoUnitarioPercentual && item.descontoUnitarioPercentual > 0 ? `${item.descontoUnitarioPercentual.toFixed(1)}%` : "-"}
+                              </span>
+                            )}
+                          </td>
                           <td className="py-0.5 px-2 text-right align-middle font-bold text-primary">
-                            R$ {(item.quantidade * item.valorUnitario).toFixed(2)}
+                            {(() => {
+                              const descontoPercentual = item.descontoUnitarioPercentual || 0
+                              const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
+                              const total = item.quantidade * valorComDesconto
+                              return `R$ ${total.toFixed(2)}`
+                            })()}
                           </td>
                         </tr>
                       </React.Fragment>
@@ -1080,13 +1104,49 @@ export default function VisualizacaoEditavel({
                         </td>
                       </tr>
                     )}
+                    {/* Mostrar subtotal bruto (sem descontos unitários) */}
                     <tr>
-                      <td colSpan={modoEdicao ? 6 : 5} className="p-2 text-right border-t border-primary">Valor dos Produtos:</td>
+                      <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t border-primary text-gray-600">
+                        Subtotal Bruto:
+                      </td>
+                      <td className="p-2 text-right border-t border-primary text-gray-600">
+                        R$ {orcamento.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0).toFixed(2)}
+                      </td>
+                    </tr>
+                    
+                    {/* Mostrar desconto unitário total se houver */}
+                    {(() => {
+                      const totalDescontoUnitario = orcamento.itens.reduce((total, item) => {
+                        const descontoPercentual = item.descontoUnitarioPercentual || 0
+                        if (descontoPercentual > 0) {
+                          const valorDesconto = item.quantidade * item.valorUnitario * (descontoPercentual / 100)
+                          return total + valorDesconto
+                        }
+                        return total
+                      }, 0)
+                      
+                      if (totalDescontoUnitario > 0 || modoEdicao) {
+                        return (
+                          <tr>
+                            <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right text-orange-600">
+                              Desconto Unitário (%):
+                            </td>
+                            <td className="p-2 text-right text-orange-600">
+                              - R$ {totalDescontoUnitario.toFixed(2)}
+                            </td>
+                          </tr>
+                        )
+                      }
+                      return null
+                    })()}
+                    
+                    <tr>
+                      <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t border-primary">Valor dos Produtos:</td>
                       <td className="p-2 text-right border-t border-primary">R$ {calcularTotal().toFixed(2)}</td>
                     </tr>
                     {(modoEdicao || (orcamento.valorFrete !== undefined && orcamento.valorFrete > 0)) && (
                       <tr>
-                        <td colSpan={modoEdicao ? 6 : 5} className="p-2 text-right">
+                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right">
                           {modoEdicao ? (
                             <div className="flex justify-end items-center gap-2">
                               Frete: R$ <InputTransparente type="number" value={orcamento.valorFrete || 0} onChange={e => updateOrcamentoField('valorFrete', Number(e.target.value))} className="w-16 text-right" />
@@ -1100,18 +1160,10 @@ export default function VisualizacaoEditavel({
                     )}
                     {(modoEdicao || (orcamento.valorDesconto !== undefined && orcamento.valorDesconto > 0)) && (
                       <tr>
-                        <td colSpan={modoEdicao ? 6 : 5} className="p-2 text-right">
+                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right">
                           {modoEdicao ? (
                             <div className="flex justify-end items-center gap-2">
-                              Desconto:
-                              <button
-                                type="button"
-                                onClick={() => updateOrcamentoField('tipoDesconto', orcamento.tipoDesconto === 'percentual' ? 'valor' : 'percentual')}
-                                className="px-2 py-0.5 text-xs rounded border border-primary/30 hover:bg-primary/10 transition-colors min-w-[32px]"
-                                title={orcamento.tipoDesconto === 'percentual' ? 'Clique para mudar para valor fixo (R$)' : 'Clique para mudar para percentual (%)'}
-                              >
-                                {orcamento.tipoDesconto === 'percentual' ? '%' : 'R$'}
-                              </button>
+                              Desconto Geral:
                               <InputTransparente 
                                 type="number" 
                                 value={orcamento.valorDesconto || 0} 
@@ -1120,32 +1172,19 @@ export default function VisualizacaoEditavel({
                               />
                             </div>
                           ) : (
-                            <span>Desconto ({orcamento.tipoDesconto === 'percentual' ? '%' : 'R$'}):</span>
+                            <span>Desconto Geral (R$):</span>
                           )}
                         </td>
                         <td className="p-2 text-right text-red-600">
-                          - R$ {(() => {
-                            const subtotal = calcularTotal() + (orcamento.valorFrete || 0)
-                            if (orcamento.tipoDesconto === 'percentual') {
-                              return ((subtotal * (orcamento.valorDesconto || 0)) / 100).toFixed(2)
-                            }
-                            return (orcamento.valorDesconto || 0).toFixed(2)
-                          })()}
+                          - R$ {(orcamento.valorDesconto || 0).toFixed(2)}
                         </td>
                       </tr>
                     )}
                     <tr className="font-bold text-primary">
-                      <td colSpan={modoEdicao ? 6 : 5} className="p-2 text-right border-t-2 border-primary">TOTAL:</td>
+                      <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t-2 border-primary">TOTAL:</td>
                       <td className="p-2 text-right border-t-2 border-primary">R$ {(() => {
                         const subtotal = calcularTotal() + (orcamento.valorFrete || 0)
-                        let desconto = 0
-                        if (orcamento.valorDesconto && orcamento.valorDesconto > 0) {
-                          if (orcamento.tipoDesconto === 'percentual') {
-                            desconto = (subtotal * orcamento.valorDesconto) / 100
-                          } else {
-                            desconto = orcamento.valorDesconto
-                          }
-                        }
+                        const desconto = orcamento.valorDesconto || 0
                         return (subtotal - desconto).toFixed(2)
                       })()}</td>
                     </tr>

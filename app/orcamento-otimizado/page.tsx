@@ -194,7 +194,11 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
   }
 
   const calcularTotal = () => {
-    return orcamento.itens.reduce((total, item) => total + (item.quantidade * item.valorUnitario), 0)
+    return orcamento.itens.reduce((total, item) => {
+      const descontoPercentual = item.descontoUnitarioPercentual || 0
+      const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
+      return total + (item.quantidade * valorComDesconto)
+    }, 0)
   }
 
   // Função para gerar PDF do Orçamento COMPLETO (com fichas técnicas)

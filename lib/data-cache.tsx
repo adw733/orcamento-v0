@@ -465,6 +465,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
             produto: produto ? { ...produto, tecidos, cores } : undefined,
             tecidoSelecionado: tecidos.find((t: any) => t.nome === item.tecido_nome) || (tecidos[0] || undefined),
             corSelecionada: item.cor_selecionada || (cores[0] || ""),
+            descontoUnitarioPercentual: jsonItem?.descontoUnitarioPercentual || item.desconto_unitario_percentual || 0,
           }
         })
       )
