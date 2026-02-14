@@ -121,20 +121,37 @@ export const PDFOrcamentoCompleto: React.FC<PDFOrcamentoCompletoProps> = ({
     },
     clientBox: {
       backgroundColor: '#f0f4f8',
-      padding: 10,
+      padding: 12,
       borderRadius: 4,
     },
-    clientRow: {
+    clientRowTwoCol: {
       flexDirection: 'row',
-      marginBottom: 3,
+      marginBottom: 6,
+      gap: 20,
+    },
+    clientCol: {
+      flexDirection: 'row',
+      flex: 1,
+    },
+    clientRowAddress: {
+      flexDirection: 'row',
+      marginBottom: 6,
+      alignItems: 'flex-start',
     },
     clientLabel: {
       fontWeight: 'bold',
       marginRight: 5,
       fontSize: 9,
+      color: '#0f4c81',
     },
     clientValue: {
       fontSize: 9,
+      flex: 1,
+    },
+    clientValueAddress: {
+      fontSize: 9,
+      flex: 1,
+      flexWrap: 'wrap',
     },
     table: {
       marginTop: 8,
@@ -320,26 +337,47 @@ export const PDFOrcamentoCompleto: React.FC<PDFOrcamentoCompletoProps> = ({
         {/* Dados do Cliente */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>DADOS DO CLIENTE</Text>
-          <View style={styles.clientInfo}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Cliente:</Text>
-              <Text>{orcamento.cliente?.nome || "-"}</Text>
+          <View style={styles.clientBox}>
+            {/* Linha 1: Nome e CNPJ */}
+            <View style={styles.clientRowTwoCol}>
+              <View style={styles.clientCol}>
+                <Text style={styles.clientLabel}>Nome:</Text>
+                <Text style={styles.clientValue}>{orcamento.cliente?.nome || "-"}</Text>
+              </View>
+              <View style={styles.clientCol}>
+                <Text style={styles.clientLabel}>CNPJ:</Text>
+                <Text style={styles.clientValue}>{orcamento.cliente?.cnpj || "-"}</Text>
+              </View>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>CNPJ:</Text>
-              <Text>{orcamento.cliente?.cnpj || "-"}</Text>
+            
+            {/* Linha 2: Endereço (largura total com quebra) */}
+            <View style={styles.clientRowAddress}>
+              <Text style={styles.clientLabel}>Endereço:</Text>
+              <Text style={styles.clientValueAddress}>{orcamento.cliente?.endereco || "-"}</Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Telefone:</Text>
-              <Text>{orcamento.cliente?.telefone || "-"}</Text>
+            
+            {/* Linha 3: Email e Telefone */}
+            <View style={styles.clientRowTwoCol}>
+              <View style={styles.clientCol}>
+                <Text style={styles.clientLabel}>Email:</Text>
+                <Text style={styles.clientValue}>{orcamento.cliente?.email || "-"}</Text>
+              </View>
+              <View style={styles.clientCol}>
+                <Text style={styles.clientLabel}>Telefone:</Text>
+                <Text style={styles.clientValue}>{orcamento.cliente?.telefone || "-"}</Text>
+              </View>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Email:</Text>
-              <Text>{orcamento.cliente?.email || "-"}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Endereço:</Text>
-              <Text>{orcamento.cliente?.endereco || "-"}</Text>
+            
+            {/* Linha 4: Contato e Tel. Contato */}
+            <View style={styles.clientRowTwoCol}>
+              <View style={styles.clientCol}>
+                <Text style={styles.clientLabel}>Contato:</Text>
+                <Text style={styles.clientValue}>{orcamento.nomeContato || "-"}</Text>
+              </View>
+              <View style={styles.clientCol}>
+                <Text style={styles.clientLabel}>Tel. Contato:</Text>
+                <Text style={styles.clientValue}>{orcamento.telefoneContato || "-"}</Text>
+              </View>
             </View>
           </View>
         </View>

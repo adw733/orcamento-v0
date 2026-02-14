@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
 import DashboardFinanceiro from "@/components/dashboard-financeiro"
 import type { Metadata } from "next"
 
@@ -6,6 +8,13 @@ export const metadata: Metadata = {
   description: "Análise financeira e DRE da sua empresa",
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/login")
+  }
+
   return <DashboardFinanceiro />
 }

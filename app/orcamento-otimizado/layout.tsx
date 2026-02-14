@@ -1,42 +1,18 @@
-"use client"
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { OrcamentoOtimizadoClientLayout } from "./client-layout"
 
-import { useState } from "react"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
-import { useRouter } from "next/navigation"
-
-export default function OrcamentoOtimizadoLayout({
+export default async function OrcamentoOtimizadoLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const router = useRouter()
-    const [abaAtiva, setAbaAtiva] = useState("orcamento-otimizado")
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const handleAbaChange = (aba: string) => {
-        if (aba === "orcamento-otimizado") {
-            // Já estamos aqui
-            return
-        }
-        // Redirecionar para a home com a hash correta
-        router.push(`/#${aba}`)
+    if (!user) {
+        redirect("/login")
     }
 
-    const handleCriarNovoOrcamento = () => {
-        router.push("/#orcamento")
-    }
-
-    return (
-        <SidebarProvider>
-            <AppSidebar
-                abaAtiva={abaAtiva}
-                setAbaAtiva={handleAbaChange}
-                criandoNovoOrcamento={false}
-                criarNovoOrcamento={handleCriarNovoOrcamento}
-            />
-            <SidebarInset>
-                {children}
-            </SidebarInset>
-        </SidebarProvider>
-    )
+    return <OrcamentoOtimizadoClientLayout>{children}</OrcamentoOtimizadoClientLayout>
 }

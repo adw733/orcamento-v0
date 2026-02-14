@@ -781,30 +781,37 @@ export default function VisualizacaoEditavel({
 
                 {modoEdicao ? (
                   <div className="bg-accent p-2 rounded-md text-xs grid grid-cols-2 gap-x-4 gap-y-1">
+                    {/* Nome - apenas visualização */}
                     <div className="flex items-center gap-1 col-span-2 md:col-span-1">
                       <span className="font-medium whitespace-nowrap">Nome:</span>
-                      <InputTransparente value={orcamento.cliente?.nome || ""} onChange={e => updateClienteField('nome', e.target.value)} className="font-bold w-full" />
+                      <span className="font-bold w-full">{orcamento.cliente?.nome || "-"}</span>
                     </div>
+                    {/* CNPJ - apenas visualização */}
                     <div className="flex items-center gap-1 col-span-2 md:col-span-1">
                       <span className="font-medium whitespace-nowrap">CNPJ:</span>
-                      <InputTransparente value={orcamento.cliente?.cnpj || ""} onChange={e => updateClienteField('cnpj', e.target.value)} className="w-full" />
+                      <span className="w-full">{orcamento.cliente?.cnpj || "-"}</span>
                     </div>
-                    <div className="flex items-center gap-1 col-span-2">
+                    {/* Endereço - apenas visualização com quebra de linha */}
+                    <div className="flex items-start gap-1 col-span-2">
                       <span className="font-medium whitespace-nowrap">Endereço:</span>
-                      <InputTransparente value={orcamento.cliente?.endereco || ""} onChange={e => updateClienteField('endereco', e.target.value)} className="w-full" />
+                      <span className="w-full break-words whitespace-normal">{orcamento.cliente?.endereco || "-"}</span>
                     </div>
+                    {/* Email - apenas visualização */}
                     <div className="flex items-center gap-1 col-span-2 md:col-span-1">
                       <span className="font-medium whitespace-nowrap">Email:</span>
-                      <InputTransparente value={orcamento.cliente?.email || ""} onChange={e => updateClienteField('email', e.target.value)} className="w-full" />
+                      <span className="w-full">{orcamento.cliente?.email || "-"}</span>
                     </div>
+                    {/* Telefone - apenas visualização */}
                     <div className="flex items-center gap-1 col-span-2 md:col-span-1">
                       <span className="font-medium whitespace-nowrap">Telefone:</span>
-                      <InputTransparente value={orcamento.cliente?.telefone || ""} onChange={e => updateClienteField('telefone', e.target.value)} className="w-full" />
+                      <span className="w-full">{orcamento.cliente?.telefone || "-"}</span>
                     </div>
+                    {/* Contato - editável */}
                     <div className="flex items-center gap-1 col-span-2 md:col-span-1">
                       <span className="font-medium whitespace-nowrap">Contato:</span>
                       <InputTransparente value={orcamento.nomeContato || ""} onChange={e => updateOrcamentoField('nomeContato', e.target.value)} className="w-full" />
                     </div>
+                    {/* Tel. Contato - editável */}
                     <div className="flex items-center gap-1 col-span-2 md:col-span-1">
                       <span className="font-medium whitespace-nowrap">Tel. Contato:</span>
                       <InputTransparente value={orcamento.telefoneContato || ""} onChange={e => updateOrcamentoField('telefoneContato', e.target.value)} className="w-full" />
