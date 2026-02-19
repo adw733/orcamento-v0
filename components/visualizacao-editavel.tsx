@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Plus, Trash2, Upload, Search, Calendar as CalendarIcon, Check, Eye, Edit3, FileDown, Save, AlertCircle, Copy, ChevronUp, ChevronDown, Monitor, Smartphone, ZoomIn, ZoomOut, RotateCw, Grid3x3 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Plus, Trash2, Upload, Search, Calendar as CalendarIcon, Check, Eye, Edit3, FileDown, Save, AlertCircle, Copy, ChevronUp, ChevronDown, Monitor, Smartphone, ZoomIn, ZoomOut, RotateCw, Grid3x3, ArrowLeftRight, RefreshCw, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -195,6 +196,7 @@ export default function VisualizacaoEditavel({
   // Estados para selects/autocompletes
   const [openCliente, setOpenCliente] = useState(false)
   const [openProduto, setOpenProduto] = useState<string | null>(null) // ID do item sendo editado
+  const [swapPendente, setSwapPendente] = useState<{ itemId: string; novoProduto: Produto } | null>(null)
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
   
   // Estados para tipos de tamanho
@@ -305,6 +307,20 @@ export default function VisualizacaoEditavel({
 
     const novosItens = [...orcamentoRef.current.itens]
     novosItens.splice(indexAtual + 1, 0, itemClonado)
+    setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+  }, [])
+
+  // Troca somente o produto, preservando tamanhos, valor, cores, tecidos e demais configurações
+  const trocarApenasProduto = useCallback((itemId: string, novoProduto: Produto) => {
+    const novosItens = orcamentoRef.current.itens.map(item => {
+      if (item.id !== itemId) return item
+      return {
+        ...item,
+        produtoId: novoProduto.id,
+        produto: novoProduto,
+        // Preserva: tamanhos, valorUnitario, corSelecionada, tecidoSelecionado, estampas, etc.
+      }
+    })
     setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
   }, [])
 
@@ -997,7 +1013,14 @@ export default function VisualizacaoEditavel({
                                 <Popover open={openProduto === item.id} onOpenChange={o => setOpenProduto(o ? item.id : null)}>
                                   <PopoverTrigger asChild>
                                     <div className="font-bold cursor-pointer hover:text-primary hover:underline">
-                                      {item.produto?.nome || "Selecione um produto..."}
+                                      {item.produto?.nome ? (
+                                        <>
+                                          {item.produto.codigo && (
+                                            <span className="font-mono text-[10px] font-normal text-gray-400 mr-1">[{item.produto.codigo}]</span>
+                                          )}
+                                          {item.produto.nome}
+                                        </>
+                                      ) : "Selecione um produto..."}
                                     </div>
                                   </PopoverTrigger>
                                   <PopoverContent className="p-0 w-[300px]" align="start">
@@ -1006,10 +1029,17 @@ export default function VisualizacaoEditavel({
                                       <CommandList>
                                         <CommandGroup>
                                           {produtos.map(p => (
-                                            <CommandItem key={p.id} onSelect={() => {
-                                              updateItem(item.id, 'produtoId', p.id)
-                                              setOpenProduto(null)
+                                            <CommandItem key={p.id} value={`${p.codigo} ${p.nome}`} onSelect={() => {
+                                              const itemAtual = orcamentoRef.current.itens.find(i => i.id === item.id)
+                                              if (itemAtual?.produtoId && itemAtual.produtoId !== p.id) {
+                                                setSwapPendente({ itemId: item.id, novoProduto: p })
+                                                setOpenProduto(null)
+                                              } else {
+                                                updateItem(item.id, 'produtoId', p.id)
+                                                setOpenProduto(null)
+                                              }
                                             }}>
+                                              <span className="font-mono text-[10px] text-gray-400 mr-2 shrink-0">{p.codigo}</span>
                                               {p.nome}
                                             </CommandItem>
                                           ))}
@@ -1028,7 +1058,10 @@ export default function VisualizacaoEditavel({
                               </div>
                             ) : (
                               <div>
-                                <p className="font-medium text-xs leading-tight mb-1">{item.produto?.nome}</p>
+                                <p className="font-medium text-xs leading-tight mb-1">
+                {item.produto?.codigo && <span className="font-mono text-[10px] font-normal text-gray-400 mr-1">[{item.produto.codigo}]</span>}
+                {item.produto?.nome}
+              </p>
                                 {item.observacaoComercial && (
                                   <div className="text-gray-600 italic text-[10px] leading-relaxed">{item.observacaoComercial}</div>
                                 )}
@@ -1622,6 +1655,76 @@ export default function VisualizacaoEditavel({
 
         </div>
       </div>
+
+      {/* Dialog de Confirmação para Troca de Produto */}
+      <Dialog open={swapPendente !== null} onOpenChange={o => !o && setSwapPendente(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <ArrowLeftRight className="h-4 w-4 text-primary" />
+              Trocar produto
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Novo produto selecionado:
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Badge do produto */}
+          <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 mb-1">
+            {swapPendente?.novoProduto.codigo && (
+              <span className="font-mono text-xs text-primary/70 mr-1.5 bg-primary/10 px-1.5 py-0.5 rounded">
+                {swapPendente.novoProduto.codigo}
+              </span>
+            )}
+            <span className="font-semibold text-sm">{swapPendente?.novoProduto.nome}</span>
+          </div>
+
+          <p className="text-xs text-muted-foreground mb-3">Como deseja aplicar a troca?</p>
+
+          <div className="flex flex-col gap-2">
+            {/* Opção 1 - só troca o produto */}
+            <button
+              onClick={() => {
+                if (!swapPendente) return
+                trocarApenasProduto(swapPendente.itemId, swapPendente.novoProduto)
+                setSwapPendente(null)
+              }}
+              className="flex items-start gap-3 rounded-lg border-2 border-primary bg-primary/5 hover:bg-primary/10 p-3 text-left transition-colors"
+            >
+              <ArrowLeftRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-primary leading-snug">Trocar apenas o produto</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Mantém tamanhos, quantidades, valores e demais configurações</p>
+              </div>
+            </button>
+
+            {/* Opção 2 - substitui tudo */}
+            <button
+              onClick={() => {
+                if (!swapPendente) return
+                updateItem(swapPendente.itemId, 'produtoId', swapPendente.novoProduto.id)
+                setSwapPendente(null)
+              }}
+              className="flex items-start gap-3 rounded-lg border-2 border-orange-400 bg-orange-50 hover:bg-orange-100 p-3 text-left transition-colors"
+            >
+              <RefreshCw className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-orange-600 leading-snug">Substituir completamente</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Reseta tamanhos, valor base e configurações do produto anterior</p>
+              </div>
+            </button>
+
+            {/* Cancelar */}
+            <button
+              onClick={() => setSwapPendente(null)}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 py-2 text-sm text-muted-foreground transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+              Cancelar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
