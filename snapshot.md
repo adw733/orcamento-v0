@@ -1,0 +1,23 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: Login
+      - generic [ref=e7]: Entre na sua conta para continuar
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - text: Email
+        - textbox "Email" [ref=e11]:
+          - /placeholder: seu@email.com
+          - text: adw733@gmail.com
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Senha
+          - button "Esqueci minha senha" [ref=e15] [cursor=pointer]
+        - textbox "Senha" [active] [ref=e16]: mcp
+      - button "Entrar" [ref=e17] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e18]

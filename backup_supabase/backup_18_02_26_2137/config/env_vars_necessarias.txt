@@ -1,0 +1,16 @@
+VARIÁVEIS NECESSÁRIAS PARA O SISTEMA FUNCIONAR
+===============================================
+Ao restaurar, preencha estas variáveis no .env.local:
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+GEMINI_API_KEY=
+NEXT_TELEMETRY_DISABLED=
+SUPABASE_DB_PASSWORD=
+SUPABASE_ACCESS_TOKEN=
+
+ONDE ENCONTRAR OS VALORES:
+  - Supabase > Settings > API Keys (URL, anon key, service role key)
+  - URL do projeto original: https://fpejkwmapomxfyxmxqrd.supabase.co
+  - Painel: https://supabase.com/dashboard

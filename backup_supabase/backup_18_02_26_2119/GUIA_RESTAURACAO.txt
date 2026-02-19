@@ -1,0 +1,99 @@
+================================================================================
+GUIA DE RESTAURAÇÃO COMPLETO - GERADOR DE ORÇAMENTOS
+================================================================================
+Data do backup : 18/02/2026, 21:20:15
+Duração        : 27.02s
+Total registros: 1719
+Tabelas        : 15/15 com sucesso
+================================================================================
+
+PASSO 1 - CRIAR/ACESSAR PROJETO SUPABASE
+-----------------------------------------
+  a) Acesse https://supabase.com/dashboard
+  b) Crie um novo projeto (ou use o mesmo se ainda existir)
+  c) Anote: URL do projeto, chave anon e service_role key
+
+PASSO 2 - CONFIGURAR VARIÁVEIS DE AMBIENTE
+-------------------------------------------
+  a) Abra: config/env_vars_necessarias.txt
+  b) Crie o arquivo .env.local na raiz do projeto
+  c) Preencha todas as variáveis com os valores do Supabase
+
+PASSO 3 - RECRIAR A ESTRUTURA DO BANCO
+-----------------------------------------
+  a) Abra o Supabase Dashboard > SQL Editor
+  b) Abra e execute o arquivo: schema/schema_completo.sql
+  c) Se houver tabelas com erro, verifique: schema/colunas.json
+  d) Para recriar políticas RLS: schema/rls_policies.json
+  e) Para recriar índices: schema/indices.json
+
+PASSO 4 - RESTAURAR OS DADOS
+-----------------------------------------
+  Execute no terminal (dentro da pasta do projeto):
+  
+  node scripts/restore-backup.js backup_18_02_26_2119
+
+  Ou se preferir importar tabela por tabela, os JSONs estão em: dados/
+
+PASSO 5 - RESTAURAR O STORAGE (IMAGENS DO SUPABASE)
+-----------------------------------------
+  Opção A - Manual:
+    1. Supabase Dashboard > Storage
+    2. Crie os buckets (veja: storage/_buckets.json)
+    3. Faça upload dos arquivos da pasta: storage/<nome-do-bucket>/
+  
+  Opção B - Supabase CLI:
+    supabase storage cp storage/<bucket>/ ss:///<bucket>/ --recursive
+
+PASSO 6 - RESTAURAR ARQUIVOS LOCAIS
+-----------------------------------------
+  a) Copie a pasta public/ deste backup para a raiz do projeto
+  b) Execute: npm install
+  c) Execute: npm run dev
+  d) Acesse: http://localhost:3000
+
+PASSO 7 - RESTAURAR USUÁRIOS
+-----------------------------------------
+  Veja: auth/AVISO_RESTORE.txt
+  Os usuários precisarão redefinir suas senhas.
+  Os emails estão em: auth/usuarios_auth.json
+
+================================================================================
+CONTEÚDO DESTE BACKUP:
+================================================================================
+  dados/              → Dados completos das tabelas (JSON)
+  schema/             → Estrutura do banco: tabelas, índices, RLS, funções, triggers
+  storage/            → Arquivos do Supabase Storage (buckets)
+  auth/               → Usuários de autenticação
+  config/             → Variáveis de ambiente e referências do projeto
+  public/             → Arquivos locais da pasta public/
+  GUIA_RESTAURACAO.txt → Este arquivo
+
+================================================================================
+TABELAS INCLUÍDAS:
+================================================================================
+  ✅ categorias                     8 registros
+  ✅ clientes                       49 registros
+  ✅ configuracoes                  9 registros
+  ✅ cores                          9 registros
+  ✅ empresa                        1 registros
+  ✅ estampas                       129 registros
+  ✅ gastos_receitas                975 registros
+  ✅ itens_orcamento                279 registros
+  ✅ orcamentos                     156 registros
+  ✅ produtos                       33 registros
+  ✅ tecidos                        39 registros
+  ✅ tecidos_base                   15 registros
+  ✅ timeline_pedidos               0 registros
+  ✅ tipos_tamanho                  3 registros
+  ✅ tarefas_planejamento           14 registros
+
+✅ Todas as tabelas foram salvas com sucesso!
+
+================================================================================
+REFERÊNCIA:
+================================================================================
+  Supabase URL     : https://fpejkwmapomxfyxmxqrd.supabase.co
+  Project Ref      : fpejkwmapomxfyxmxqrd
+  Dashboard        : https://supabase.com/dashboard
+================================================================================

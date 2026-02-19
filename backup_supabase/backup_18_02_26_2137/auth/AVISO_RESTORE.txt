@@ -1,0 +1,19 @@
+AVISO IMPORTANTE - RESTAURAÇÃO DE USUÁRIOS
+==========================================
+
+Os usuários em usuarios_auth.json têm emails e metadados exportados.
+As SENHAS não podem ser exportadas (são hashes irreversíveis).
+
+PARA RESTAURAR USUÁRIOS:
+  1. No painel Supabase > Authentication > Users > "Invite user"
+     OU api admin para recriar com senha temporária
+  2. Os usuários recebem email para redefinir a senha
+
+EMAILS DOS USUÁRIOS (7 total):
+  1. teste.cascade@exemplo.com (criado em 2025-11-29T18:24:10.756311Z)
+  2. teste.saas.novo@exemplo.com (criado em 2025-11-29T18:19:42.720487Z)
+  3. maria.teste@onebase.com (criado em 2025-11-29T17:34:22.928918Z)
+  4. jordysilva733@gmail.com (criado em 2025-11-29T17:16:44.588331Z)
+  5. teste@exemplo.com (criado em 2025-11-29T15:50:28.573622Z)
+  6. teste.saas@exemplo.com (criado em 2025-11-29T01:38:56.984411Z)
+  7. adw733@gmail.com (criado em 2025-05-01T20:03:50.329707Z)

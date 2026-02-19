@@ -1,0 +1,173 @@
+[
+  {
+    "id": "e12026cf-d5c8-4f09-984e-2e2ca079e439",
+    "email": "teste.cascade@exemplo.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-11-29T18:24:10.756311Z",
+    "updated_at": "2025-11-29T18:24:12.666845Z",
+    "user_metadata": {
+      "email": "teste.cascade@exemplo.com",
+      "email_verified": false,
+      "full_name": "Teste Cascade",
+      "phone_verified": false,
+      "sub": "e12026cf-d5c8-4f09-984e-2e2ca079e439"
+    },
+    "app_metadata": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    }
+  },
+  {
+    "id": "aeeeb919-49b6-4129-a942-a713a95e0c48",
+    "email": "teste.saas.novo@exemplo.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-11-29T18:19:42.720487Z",
+    "updated_at": "2025-11-29T18:19:45.017067Z",
+    "user_metadata": {
+      "email": "teste.saas.novo@exemplo.com",
+      "email_verified": false,
+      "full_name": "Teste SaaS",
+      "phone_verified": false,
+      "sub": "aeeeb919-49b6-4129-a942-a713a95e0c48"
+    },
+    "app_metadata": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    }
+  },
+  {
+    "id": "0f945fcd-1f43-4575-9874-abfc6aae26e6",
+    "email": "maria.teste@onebase.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-11-29T17:34:22.928918Z",
+    "updated_at": "2025-11-29T17:34:22.987471Z",
+    "confirmed_at": "2025-11-29T17:34:22.985076Z",
+    "email_confirmed_at": "2025-11-29T17:34:22.985076Z",
+    "user_metadata": {
+      "cargo": "Gerente Comercial",
+      "email_verified": true,
+      "nome": "Maria Teste"
+    },
+    "app_metadata": {
+      "company_name": "ONEBASE Principal",
+      "provider": "email",
+      "providers": [
+        "email"
+      ],
+      "role": "user",
+      "tenant_id": "218cefab-7696-4a08-bc1e-d41f19e0aeb3"
+    }
+  },
+  {
+    "id": "b6ff5062-a7f8-437a-a620-8b4aa1fcd775",
+    "email": "jordysilva733@gmail.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-11-29T17:16:44.588331Z",
+    "updated_at": "2026-02-18T23:54:54.35594Z",
+    "last_sign_in_at": "2026-02-13T15:29:11.677424Z",
+    "confirmed_at": "2025-11-29T17:16:44.642424Z",
+    "email_confirmed_at": "2025-11-29T17:16:44.642424Z",
+    "user_metadata": {
+      "cargo": "Diretor Operacional",
+      "email_verified": true,
+      "full_name": "Jordy Silva",
+      "nome": "Jordy Silva"
+    },
+    "app_metadata": {
+      "company_name": "ONEBASE Principal",
+      "provider": "email",
+      "providers": [
+        "email"
+      ],
+      "role": "user",
+      "tenant_id": "218cefab-7696-4a08-bc1e-d41f19e0aeb3"
+    }
+  },
+  {
+    "id": "b31d9798-e79a-4075-9f76-1c45697b0d29",
+    "email": "teste@exemplo.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-11-29T15:50:28.573622Z",
+    "updated_at": "2025-11-29T17:04:09.865493Z",
+    "last_sign_in_at": "2025-11-29T17:04:09.860127Z",
+    "confirmed_at": "2025-11-29T15:50:36.562158Z",
+    "email_confirmed_at": "2025-11-29T15:50:36.562158Z",
+    "user_metadata": {
+      "email": "teste@exemplo.com",
+      "email_verified": false,
+      "full_name": "Usuario Teste",
+      "phone_verified": false,
+      "sub": "b31d9798-e79a-4075-9f76-1c45697b0d29"
+    },
+    "app_metadata": {
+      "company_name": "Empresa Teste ABC",
+      "provider": "email",
+      "providers": [
+        "email"
+      ],
+      "tenant_id": "e4c809ad-2a46-4bc3-9099-08325dae86e0"
+    }
+  },
+  {
+    "id": "9bc9b5bc-70f9-406b-8191-5d763fdf20c4",
+    "email": "teste.saas@exemplo.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-11-29T01:38:56.984411Z",
+    "updated_at": "2025-11-29T01:38:59.344076Z",
+    "confirmed_at": "2025-11-29T15:16:56.594567Z",
+    "email_confirmed_at": "2025-11-29T15:16:56.594567Z",
+    "user_metadata": {
+      "email": "teste.saas@exemplo.com",
+      "email_verified": false,
+      "full_name": "Teste SaaS",
+      "phone_verified": false,
+      "sub": "9bc9b5bc-70f9-406b-8191-5d763fdf20c4"
+    },
+    "app_metadata": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    }
+  },
+  {
+    "id": "b6cf10a5-8cf4-477b-82c5-6dc4499b8905",
+    "email": "adw733@gmail.com",
+    "phone": "",
+    "role": "authenticated",
+    "created_at": "2025-05-01T20:03:50.329707Z",
+    "updated_at": "2026-02-18T23:49:58.478851Z",
+    "last_sign_in_at": "2026-02-15T17:51:00.678152Z",
+    "confirmed_at": "2025-05-02T15:21:38.842Z",
+    "email_confirmed_at": "2025-05-02T15:21:38.842Z",
+    "user_metadata": {
+      "cargo": "Diretor",
+      "company": "42072294851",
+      "email": "adw733@gmail.com",
+      "email_verified": true,
+      "full_name": "Andrew Guimarães Silva",
+      "nome": "Andrew Guimarães Silva",
+      "phone_verified": false,
+      "sub": "b6cf10a5-8cf4-477b-82c5-6dc4499b8905"
+    },
+    "app_metadata": {
+      "company_name": "ONEBASE Principal",
+      "provider": "email",
+      "providers": [
+        "email"
+      ],
+      "role": "admin",
+      "tenant_id": "218cefab-7696-4a08-bc1e-d41f19e0aeb3"
+    }
+  }
+]
