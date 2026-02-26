@@ -696,19 +696,7 @@ export default function ListaOrcamentos({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1">
                             <span className="font-medium text-primary text-sm">
-                              {extrairNumeroOrcamento(orcamento.numero)} -{" "}
-                              <span className="hidden sm:inline">
-                                {orcamento.cliente?.nome?.toUpperCase() || "SEM EMPRESA"}
-                              </span>
-                              <span className="sm:hidden">
-                                {(orcamento.cliente?.nome?.toUpperCase() || "SEM EMPRESA").substring(0, 20)}...
-                              </span>
-                              {orcamento.nomeContato && (
-                                <>
-                                  <span className="hidden lg:inline"> - {orcamento.nomeContato.toUpperCase()}</span>
-                                  <span className="lg:hidden"> - {orcamento.nomeContato.toUpperCase().substring(0, 10)}</span>
-                                </>
-                              )}
+                              {`${extrairNumeroOrcamento(orcamento.numero)} - ${orcamento.cliente?.nome?.toUpperCase() || "SEM EMPRESA"}${orcamento.nomeContato ? ` - ${orcamento.nomeContato.toUpperCase()}` : ""}`}
                             </span>
 
                             {verificarImagensFaltantes(orcamento) && (

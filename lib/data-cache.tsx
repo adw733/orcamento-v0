@@ -66,6 +66,17 @@ const DataCacheContext = createContext<DataCacheContextType | undefined>(undefin
 // Tempo de cache em ms (5 minutos)
 const CACHE_TTL = 5 * 60 * 1000
 
+const extrairContatoDoNumero = (numero?: string): string => {
+  if (!numero) return ""
+  const partes = numero
+    .split(" - ")
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (partes.length < 4) return ""
+  return partes[partes.length - 1] || ""
+}
+
 // Cache em memória para orçamentos completos
 const orcamentosCache = new Map<string, { data: Orcamento; timestamp: number }>()
 
@@ -251,7 +262,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
           valor_total: Number(orc.valor_total) || 0,
           valorFrete: Number(orc.valor_frete) || 0,
           temImagemFaltante: Boolean(orc.tem_imagem_faltante),
-          nomeContato: orc.contato_nome || "",
+          nomeContato: orc.contato_nome || extrairContatoDoNumero(orc.numero),
           telefoneContato: orc.contato_telefone || "",
           created_at: orc.created_at,
           updated_at: orc.updated_at || undefined,
@@ -330,7 +341,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
             valor_total: totais.total + valorFrete,
             valorFrete,
             temImagemFaltante: totais.temImagemFaltante,
-            nomeContato: orc.contato_nome || "",
+            nomeContato: orc.contato_nome || extrairContatoDoNumero(orc.numero),
             telefoneContato: orc.contato_telefone || "",
             created_at: orc.created_at,
             updated_at: orc.updated_at,
@@ -351,6 +362,9 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
           cliente_id,
           status,
           prazo_entrega,
+          contato_nome,
+          contato_telefone,
+          valor_frete,
           itens,
           created_at,
           updated_at,
@@ -365,7 +379,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
       // Processar orçamentos com dados completos
       const orcamentosProcessados = (data || []).map((orc: any) => {
         let valorTotal = 0
-        let valorFrete = 0
+        let valorFrete = Number(orc.valor_frete) || 0
         let nomeContato = ""
         let telefoneContato = ""
         let itensParseados: any[] = []
@@ -402,8 +416,8 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
           itens: itensParseados,
           valor_total: valorTotal + valorFrete,
           valorFrete,
-          nomeContato,
-          telefoneContato,
+          nomeContato: orc.contato_nome || nomeContato || extrairContatoDoNumero(orc.numero),
+          telefoneContato: orc.contato_telefone || telefoneContato || "",
           created_at: orc.created_at,
           updated_at: orc.updated_at
         }
@@ -604,9 +618,9 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
         prazoEntrega: orcamentoDb.prazo_entrega,
         validadeOrcamento: orcamentoDb.validade_orcamento,
         observacoes: orcamentoDb.observacoes || "",
-        valorFrete: metadados.valorFrete,
-        nomeContato: metadados.nomeContato,
-        telefoneContato: metadados.telefoneContato,
+        valorFrete: Number(orcamentoDb.valor_frete) || metadados.valorFrete,
+        nomeContato: orcamentoDb.contato_nome || metadados.nomeContato || extrairContatoDoNumero(orcamentoDb.numero) || "",
+        telefoneContato: orcamentoDb.contato_telefone || metadados.telefoneContato || "",
         valorDesconto: metadados.valorDesconto,
         tipoDesconto: metadados.tipoDesconto,
         status: orcamentoDb.status,
@@ -719,3 +733,4 @@ export function useDataCache() {
   }
   return context
 }
+

@@ -52,10 +52,20 @@ AS $$
     END AS cliente,
     o.status,
     o.prazo_entrega,
-    o.contato_nome,
-    o.contato_telefone,
-    COALESCE(o.valor_frete, 0) AS valor_frete,
-    (COALESCE(ia.total_itens, 0) + COALESCE(o.valor_frete, 0))::numeric AS valor_total,
+    COALESCE(
+      NULLIF(BTRIM(o.contato_nome), ''),
+      NULLIF(BTRIM(o.itens->'metadados'->>'nomeContato'), ''),
+      CASE
+        WHEN o.numero LIKE '% - % - % - %' THEN NULLIF(BTRIM(regexp_replace(o.numero, '^.* - ', '')), '')
+        ELSE NULL
+      END
+    ) AS contato_nome,
+    COALESCE(NULLIF(BTRIM(o.contato_telefone), ''), NULLIF(BTRIM(o.itens->'metadados'->>'telefoneContato'), '')) AS contato_telefone,
+    COALESCE(o.valor_frete, NULLIF(o.itens->'metadados'->>'valorFrete', '')::numeric, 0) AS valor_frete,
+    (
+      COALESCE(ia.total_itens, 0)
+      + COALESCE(o.valor_frete, NULLIF(o.itens->'metadados'->>'valorFrete', '')::numeric, 0)
+    )::numeric AS valor_total,
     COALESCE(ia.tem_imagem_faltante, false) AS tem_imagem_faltante,
     o.created_at,
     o.updated_at
