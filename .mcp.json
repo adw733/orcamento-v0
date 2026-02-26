@@ -1,0 +1,16 @@
+{
+  "vercel": {
+    "type": "http",
+    "url": "https://mcp.vercel.com"
+  },
+  "arduino": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": [
+      "arduino-mcp"
+    ],
+    "env": {
+      "ARDUINO_CLI_PATH": "C:\\Program Files\\Arduino CLI\\arduino-cli.exe"
+    }
+  }
+}

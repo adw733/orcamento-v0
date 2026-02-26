@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import type { Produto } from "@/types/types"
 import { supabase } from "@/lib/supabase"
+import { useCurrentUser } from "@/hooks/use-current-user"
 
 import { type Cor, type TecidoBase, corService, tecidoBaseService } from "@/lib/services-materiais"
 
@@ -94,6 +95,8 @@ const CATEGORIAS_PADRAO: Categoria[] = [
 ]
 
 export default function GerenciadorProdutos({ produtos, adicionarProduto, setProdutos }: GerenciadorProdutosProps) {
+  const { tenantId } = useCurrentUser()
+
   // Modificar o estado do novo produto para incluir o código e categoria
   const [novoProduto, setNovoProduto] = useState<Partial<Produto>>({
     codigo: "",
@@ -203,13 +206,23 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
         }
 
         // Preparar dados para inserção com valores em maiúsculas
-        const insertData = {
+        const insertData: {
+          id: string
+          codigo: string
+          nome: string
+          valor_base: number
+          cores: string[]
+          tamanhos_disponiveis: string[]
+          categoria?: string
+          tenant_id?: string
+        } = {
           id: produtoId,
           codigo,
           nome: novoProduto.nome.toUpperCase(),
           valor_base: novoProduto.valorBase,
           cores: novoProduto.cores ? novoProduto.cores.map((cor) => cor.toUpperCase()) : [],
           tamanhos_disponiveis: [], // Array vazio - tamanhos não são mais cadastrados no produto
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         }
 
         // Adicionar categoria apenas se a coluna existir
@@ -229,6 +242,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
               nome: tecido.nome.toUpperCase(),
               composicao: tecido.composicao.toUpperCase(),
               produto_id: insertedData[0].id,
+              ...(tenantId ? { tenant_id: tenantId } : {}),
             }))
 
             const { error: tecidosError } = await supabase.from("tecidos").insert(tecidosParaInserir)
@@ -269,8 +283,13 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
           setMostrarFormulario(false)
         }
       } catch (error) {
-        console.error("Erro ao adicionar produto:", error)
-        setError(`Erro ao adicionar produto: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+        const supabaseError = error as { message?: string; details?: string; hint?: string; code?: string }
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : supabaseError?.message || supabaseError?.details || JSON.stringify(error) || "Erro desconhecido"
+        console.error("Erro ao adicionar produto:", JSON.stringify(error, null, 2))
+        setError(`Erro ao adicionar produto: ${errorMessage}`)
       } finally {
         setIsLoading(false)
       }
@@ -397,6 +416,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
             nome: tecido.nome.toUpperCase(),
             composicao: tecido.composicao.toUpperCase(),
             produto_id: produtoEditando.id,
+            ...(tenantId ? { tenant_id: tenantId } : {}),
           }))
 
           const { error: tecidosError } = await supabase.from("tecidos").insert(tecidosParaInserir)
