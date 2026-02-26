@@ -627,6 +627,22 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
     }
   }
 
+  // Extrai apenas o número (ex: "0216") do campo numero completo
+  const extrairNumeroOrcamento = (numeroCompleto?: string) => {
+    if (!numeroCompleto) return ""
+    const match = numeroCompleto.match(/^\d+/)
+    return match ? match[0] : numeroCompleto
+  }
+
+  // Verifica se um termo bate no conteúdo (com tolerância de 1 caractere no final)
+  const termMatches = (term: string, content: string) => {
+    if (content.includes(term)) return true
+    // Tolerância: também testa o termo sem o último caractere (mínimo 4 chars)
+    // para cobrir diferenças como WILLIAM vs WILLIAN
+    if (term.length >= 5 && content.includes(term.slice(0, -1))) return true
+    return false
+  }
+
   // Lista de orçamentos filtrada pelo campo de busca do popup
   const orcamentosListaFiltrada = buscaOrcamento
     ? orcamentosLista.filter(o => {
@@ -641,7 +657,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
           .replace(/[\u0300-\u036f]/g, "")
           .split(' ')
           .filter(t => t.trim() !== '')
-        return terms.every(term => searchableContent.includes(term))
+        return terms.every(term => termMatches(term, searchableContent))
       })
     : orcamentosLista
 
@@ -944,18 +960,34 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
                     }
                     carregarOrcamentoPorId(o.id!)
                   }} 
-                  className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
+                  className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors gap-3"
                 >
-                  <div>
-                    <div className="font-bold text-primary">{o.numero}</div>
-                    <div className="text-sm text-gray-600">{o.cliente?.nome || "Sem cliente"}</div>
-                    <div className="text-xs text-gray-400">{new Date(o.data).toLocaleDateString()}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg">
-                      R$ {(o.valor_total || 0).toFixed(2)}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-primary text-sm truncate">
+                      {extrairNumeroOrcamento(o.numero)} – {o.cliente?.nome?.toUpperCase() || "SEM EMPRESA"}{o.nomeContato ? ` – ${o.nomeContato.toUpperCase()}` : ""}
                     </div>
-                    <Badge variant="outline">{o.status}</Badge>
+                    <div className="text-xs text-gray-400 mt-0.5">{new Date(o.data).toLocaleDateString("pt-BR")}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-semibold text-sm text-gray-800">
+                      R$ {(o.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </div>
+                    {(() => {
+                      const s = (o.status || "").toString()
+                      const label = s.startsWith("6") ? "6 - Recusada" :
+                        s.startsWith("5") ? "5 - Proposta" :
+                        s.startsWith("4") ? "4 - Execução" :
+                        s.startsWith("3") ? "3 - Cobrança" :
+                        s.startsWith("2") ? "2 - Entregue" :
+                        s.startsWith("1") ? "1 - Finalizada" : s
+                      const cls = s.startsWith("6") ? "bg-red-100 text-red-700 border-red-200" :
+                        s.startsWith("5") ? "bg-blue-100 text-blue-700 border-blue-200" :
+                        s.startsWith("4") ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                        s.startsWith("3") ? "bg-orange-100 text-orange-700 border-orange-200" :
+                        s.startsWith("2") ? "bg-purple-100 text-purple-700 border-purple-200" :
+                        "bg-green-100 text-green-700 border-green-200"
+                      return <Badge className={`text-xs mt-1 ${cls}`} variant="outline">{label}</Badge>
+                    })()}
                   </div>
                 </div>
               ))

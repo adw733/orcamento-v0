@@ -280,6 +280,14 @@ export default function ListaOrcamentos({
         .replace(/[\u0300-\u036f]/g, "");
       const terms = normalizedSearchTerm.split(' ').filter(term => term.trim() !== '');
 
+      // Verifica se um termo bate no conteúdo (com tolerância de 1 caractere no final)
+      // Cobre casos como WILLIAM vs WILLIAN (diferem apenas no último char)
+      const termMatches = (term: string, content: string) => {
+        if (content.includes(term)) return true
+        if (term.length >= 5 && content.includes(term.slice(0, -1))) return true
+        return false
+      }
+
       resultado = resultado.filter((orcamento) => {
         const searchableContent = [
           orcamento.numero,
@@ -291,7 +299,7 @@ export default function ListaOrcamentos({
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "");
 
-        return terms.every(term => searchableContent.includes(term));
+        return terms.every(term => termMatches(term, searchableContent));
       });
     }
 
