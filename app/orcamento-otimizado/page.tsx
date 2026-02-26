@@ -85,6 +85,7 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
 
   // Estados para carregar orçamentos (Lista)
   const [mostrarListaOrcamentos, setMostrarListaOrcamentos] = useState(false)
+  const [buscaOrcamento, setBuscaOrcamento] = useState("")
   const [exportandoPDF, setExportandoPDF] = useState(false)
 
   // Estados para edição do número do orçamento
@@ -626,8 +627,27 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
     }
   }
 
+  // Lista de orçamentos filtrada pelo campo de busca do popup
+  const orcamentosListaFiltrada = buscaOrcamento
+    ? orcamentosLista.filter(o => {
+        const searchableContent = [o.numero, o.cliente?.nome, o.nomeContato]
+          .join(' ')
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+        const terms = buscaOrcamento
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .split(' ')
+          .filter(t => t.trim() !== '')
+        return terms.every(term => searchableContent.includes(term))
+      })
+    : orcamentosLista
+
   // Usar lista de orçamentos do cache global
   const abrirListaOrcamentos = () => {
+    setBuscaOrcamento("")
     setMostrarListaOrcamentos(true)
   }
 
@@ -885,26 +905,38 @@ function OrcamentoOtimizadoInner({ id, onOrcamentoChange }: { id?: string, onOrc
       />
 
       {/* Dialog Lista - usando cache global */}
-      <Dialog open={mostrarListaOrcamentos} onOpenChange={setMostrarListaOrcamentos}>
+      <Dialog open={mostrarListaOrcamentos} onOpenChange={(open) => { setMostrarListaOrcamentos(open); if (!open) setBuscaOrcamento("") }}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Carregar Orçamento</DialogTitle>
           </DialogHeader>
+          {/* Campo de pesquisa */}
+          <div className="relative px-1 pb-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nº, empresa ou contato..."
+              value={buscaOrcamento}
+              onChange={(e) => setBuscaOrcamento(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full"
+              autoFocus
+            />
+          </div>
           <div className="flex-1 overflow-y-auto p-1 space-y-2">
             {orcamentosLoading && orcamentosLista.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            ) : orcamentosLista.length === 0 ? (
+            ) : orcamentosListaFiltrada.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                Nenhum orçamento encontrado
+                {buscaOrcamento ? "Nenhum orçamento encontrado para esta pesquisa" : "Nenhum orçamento encontrado"}
               </div>
             ) : (
-              orcamentosLista.map(o => (
+              orcamentosListaFiltrada.map(o => (
                 <div 
                   key={o.id} 
                   onClick={() => {
                     setMostrarListaOrcamentos(false)
+                    setBuscaOrcamento("")
                     if (onOrcamentoChange && o.id) {
                       onOrcamentoChange(o.id)
                     } else {
