@@ -22,7 +22,7 @@ interface OrcamentoResumido {
   valor_total?: number
   valorFrete?: number
   prazo_entrega?: string
-  itens?: any[]
+  temImagemFaltante?: boolean
   nomeContato?: string
   telefoneContato?: string
   created_at: string
@@ -54,6 +54,7 @@ interface DataCacheContextType {
   getOrcamentoCompleto: (id: string) => Promise<Orcamento | null>
   invalidateOrcamento: (id: string) => void
   removeOrcamentoFromList: (id: string) => void
+  updateOrcamentoInList: (id: string, patch: Partial<OrcamentoResumido>) => void
   
   // Status geral
   isInitialized: boolean
@@ -218,6 +219,129 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     
     setOrcamentosLoading(true)
     try {
+      type OrcamentoResumoRpc = {
+        id: string
+        numero: string
+        data: string
+        cliente_id: string | null
+        cliente: { id: string; nome: string; cnpj?: string } | null
+        status: string | null
+        prazo_entrega: string | null
+        contato_nome: string | null
+        contato_telefone: string | null
+        valor_frete: number | string | null
+        valor_total: number | string | null
+        tem_imagem_faltante: boolean | null
+        created_at: string
+        updated_at: string | null
+      }
+
+      const { data: resumoData, error: resumoError } = await supabase
+        .rpc("get_orcamentos_lista_resumo" as any, { p_tenant_id: tenantId } as any)
+
+      if (!resumoError && Array.isArray(resumoData)) {
+        const orcamentosProcessados = (resumoData as OrcamentoResumoRpc[]).map((orc) => ({
+          id: orc.id,
+          numero: orc.numero,
+          data: orc.data,
+          cliente_id: orc.cliente_id,
+          cliente: orc.cliente,
+          status: orc.status || "5",
+          prazo_entrega: orc.prazo_entrega || "30 DIAS",
+          valor_total: Number(orc.valor_total) || 0,
+          valorFrete: Number(orc.valor_frete) || 0,
+          temImagemFaltante: Boolean(orc.tem_imagem_faltante),
+          nomeContato: orc.contato_nome || "",
+          telefoneContato: orc.contato_telefone || "",
+          created_at: orc.created_at,
+          updated_at: orc.updated_at || undefined,
+        }))
+
+        setOrcamentosLista(orcamentosProcessados)
+        setOrcamentosTimestamp(Date.now())
+        return
+      }
+
+      if (resumoError) {
+        console.warn("RPC get_orcamentos_lista_resumo indisponivel. Usando fallback local.", resumoError)
+      }
+
+      const { data: baseData, error: baseError } = await supabase
+        .from("orcamentos")
+        .select(`
+          id,
+          numero,
+          data,
+          cliente_id,
+          status,
+          prazo_entrega,
+          contato_nome,
+          contato_telefone,
+          valor_frete,
+          created_at,
+          updated_at,
+          cliente:clientes(id, nome, cnpj)
+        `)
+        .eq("tenant_id", tenantId)
+        .is("deleted_at", null)
+        .order("numero", { ascending: false })
+
+      if (!baseError && Array.isArray(baseData)) {
+        const orcamentoIds = baseData.map((orc: any) => orc.id).filter(Boolean)
+        const totaisPorOrcamento = new Map<string, { total: number; temImagemFaltante: boolean }>()
+
+        if (orcamentoIds.length > 0) {
+          const { data: itensData, error: itensError } = await supabase
+            .from("itens_orcamento")
+            .select("orcamento_id, quantidade, valor_unitario, desconto_unitario_percentual, imagem")
+            .in("orcamento_id", orcamentoIds)
+
+          if (!itensError && Array.isArray(itensData)) {
+            for (const item of itensData) {
+              const orcamentoId = item.orcamento_id
+              if (!orcamentoId) continue
+
+              const atual = totaisPorOrcamento.get(orcamentoId) || { total: 0, temImagemFaltante: false }
+              const desconto = Number(item.desconto_unitario_percentual) || 0
+              const valorUnitario = (Number(item.valor_unitario) || 0) * (1 - desconto / 100)
+              atual.total += (Number(item.quantidade) || 0) * valorUnitario
+
+              if (!item.imagem || String(item.imagem).trim() === "") {
+                atual.temImagemFaltante = true
+              }
+
+              totaisPorOrcamento.set(orcamentoId, atual)
+            }
+          }
+        }
+
+        const orcamentosProcessados = baseData.map((orc: any) => {
+          const totais = totaisPorOrcamento.get(orc.id) || { total: 0, temImagemFaltante: false }
+          const valorFrete = Number(orc.valor_frete) || 0
+
+          return {
+            id: orc.id,
+            numero: orc.numero,
+            data: orc.data,
+            cliente_id: orc.cliente_id,
+            cliente: orc.cliente,
+            status: orc.status || "5",
+            prazo_entrega: orc.prazo_entrega || "30 DIAS",
+            valor_total: totais.total + valorFrete,
+            valorFrete,
+            temImagemFaltante: totais.temImagemFaltante,
+            nomeContato: orc.contato_nome || "",
+            telefoneContato: orc.contato_telefone || "",
+            created_at: orc.created_at,
+            updated_at: orc.updated_at,
+          }
+        })
+
+        setOrcamentosLista(orcamentosProcessados)
+        setOrcamentosTimestamp(Date.now())
+        return
+      }
+
       const { data, error } = await supabase
         .from("orcamentos")
         .select(`
@@ -511,6 +635,11 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     setOrcamentosLista(prev => prev.filter(orc => orc.id !== id))
   }, [])
 
+  // Atualizar orcamento na lista local sem recarregar todos os dados
+  const updateOrcamentoInList = useCallback((id: string, patch: Partial<OrcamentoResumido>) => {
+    setOrcamentosLista((prev) => prev.map((orc) => (orc.id === id ? { ...orc, ...patch } : orc)))
+  }, [])
+
   // Inicializar todos os dados em paralelo
   const initializeAll = useCallback(async () => {
     if (isInitialized) return
@@ -570,6 +699,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     getOrcamentoCompleto,
     invalidateOrcamento,
     removeOrcamentoFromList,
+    updateOrcamentoInList,
     
     isInitialized,
     initializeAll

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -18,18 +18,10 @@ import {
   ChevronDown,
   FileDown,
   AlertCircle,
-  Edit3,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabase"
 import { useDataCache } from "@/lib/data-cache"
-import type { Orcamento } from "@/types/types"
 
 interface ListaOrcamentosProps {
   onSelectOrcamento: (orcamentoId: string) => void
@@ -53,7 +45,14 @@ export default function ListaOrcamentos({
   filtroStatus,
 }: ListaOrcamentosProps) {
   // Usar cache global para orçamentos
-  const { orcamentosLista, orcamentosLoading, reloadOrcamentos, invalidateOrcamento, removeOrcamentoFromList } = useDataCache()
+  const {
+    orcamentosLista,
+    orcamentosLoading,
+    reloadOrcamentos,
+    invalidateOrcamento,
+    removeOrcamentoFromList,
+    updateOrcamentoInList,
+  } = useDataCache()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>(filtroStatus || "4")
@@ -70,7 +69,7 @@ export default function ListaOrcamentos({
   const [paginaAtual, setPaginaAtual] = useState(1)
   const ITENS_POR_PAGINA = 15
 
-  // Converter dados do cache para formato esperado pelo componente
+  // Converter dados do cache para formato enxuto da tabela
   const orcamentos = useMemo(() => {
     return orcamentosLista.map(orc => ({
       id: orc.id,
@@ -82,13 +81,14 @@ export default function ListaOrcamentos({
         nome: orc.cliente.nome,
         cnpj: orc.cliente.cnpj || "",
       } : null,
-      itens: orc.itens || [],
       created_at: orc.created_at,
       updated_at: orc.updated_at,
       status: orc.status || "5",
-      valorFrete: orc.valorFrete || 0,
+      valor_total: Number(orc.valor_total) || 0,
+      valorFrete: Number(orc.valorFrete) || 0,
       nomeContato: orc.nomeContato || "",
       telefoneContato: orc.telefoneContato || "",
+      temImagemFaltante: Boolean(orc.temImagemFaltante),
     }))
   }, [orcamentosLista])
 
@@ -108,11 +108,8 @@ export default function ListaOrcamentos({
 
   // Adicionar uma função para verificar se todos os itens têm imagens
   // Adicionar esta função antes da função calcularTotal
-  const verificarImagensFaltantes = (orcamento: Partial<Orcamento>) => {
-    if (!orcamento.itens || !Array.isArray(orcamento.itens)) return false
-
-    // Verificar se algum item não tem imagem
-    return orcamento.itens.some((item) => !item.imagem)
+  const verificarImagensFaltantes = (orcamento: { temImagemFaltante?: boolean }) => {
+    return Boolean(orcamento.temImagemFaltante)
   }
 
   // Modificar a função calcularDataEntrega para incluir a classe de cor
@@ -169,41 +166,40 @@ export default function ListaOrcamentos({
 
   // Função carregarOrcamentos removida - agora usa cache global via useDataCache
 
-  const calcularTotal = (orcamento: Partial<Orcamento>) => {
-    if (!orcamento.itens || !Array.isArray(orcamento.itens)) return 0
-
-    // Calcular o total dos itens com desconto unitário
-    const totalItens = orcamento.itens.reduce((total, item) => {
-      const descontoPercentual = item.descontoUnitarioPercentual || 0
-      const valorUnitario = (item.valorUnitario || 0) * (1 - descontoPercentual / 100)
-      return total + (item.quantidade || 0) * valorUnitario
-    }, 0)
-
-    // Adicionar o valor do frete, se existir
-    const valorFrete = orcamento.valorFrete || 0
-
-    // Retornar o total (itens + frete)
-    return totalItens + valorFrete
+  const calcularTotal = (orcamento: { valor_total?: number }) => {
+    return Number(orcamento.valor_total) || 0
   }
 
   const atualizarStatusOrcamento = async (orcamentoId: string, novoStatus: string) => {
+    const statusAnterior = orcamentos.find((o) => o.id === orcamentoId)?.status || "5"
+
+    // Atualização otimista: a lista inteira responde instantaneamente
+    updateOrcamentoInList(orcamentoId, {
+      status: novoStatus,
+      updated_at: new Date().toISOString(),
+    })
+
     try {
-      const { error } = await supabase.from("orcamentos").update({ status: novoStatus }).eq("id", orcamentoId)
+      const { error } = await supabase
+        .from("orcamentos")
+        .update({ status: novoStatus, updated_at: new Date().toISOString() })
+        .eq("id", orcamentoId)
 
-      if (error) {
-        console.error("Erro ao atualizar status:", error)
-        return
-      }
+      if (error) throw error
 
-      // Invalidar cache e recarregar para refletir a mudança
+      // Invalida cache do orçamento aberto para garantir consistência ao reabrir
       invalidateOrcamento(orcamentoId)
-      await reloadOrcamentos()
 
       // Chamar a função de callback se existir
       if (onUpdateStatus) {
         await onUpdateStatus(orcamentoId, novoStatus)
       }
     } catch (error) {
+      // Rollback rápido se a persistência falhar
+      updateOrcamentoInList(orcamentoId, {
+        status: statusAnterior,
+        updated_at: new Date().toISOString(),
+      })
       console.error("Erro ao atualizar status:", error)
     }
   }
@@ -270,7 +266,7 @@ export default function ListaOrcamentos({
   }
 
   const filtrarOrcamentos = () => {
-    let resultado = orcamentos
+    let resultado = [...orcamentos]
 
     // Filtrar por termo de busca
     if (searchTerm) {
@@ -349,6 +345,7 @@ export default function ListaOrcamentos({
         default:
           valorA = a.created_at || ""
           valorB = b.created_at || ""
+          break
         case "prazoDias":
           valorA = extrairNumeroDiasPrazo(a.prazoEntrega)
           valorB = extrairNumeroDiasPrazo(b.prazoEntrega)
@@ -425,111 +422,11 @@ export default function ListaOrcamentos({
     }
   }
 
-  const formatarDescricaoPedido = (numeroCompleto: string, nomeContato?: string) => {
-    // Extrair as partes do formato "0129 - CAMISA SOCIAL MASCULINA MANGA LONGA MIZU CIMENTOS - WILLIAN"
-    const partes = numeroCompleto.split(" - ")
-    if (partes.length >= 2) {
-      const numero = partes[0] // "0129"
-
-      // Extrair a empresa do nome do produto (assumindo que são as últimas 2-3 palavras)
-      const produtoParts = partes[1].split(" ")
-      let empresa = ""
-
-      // Se o produto tem pelo menos 3 palavras, pegamos as últimas 2-3 como empresa
-      if (produtoParts.length >= 3) {
-        // Pegar as últimas 2 ou 3 palavras como empresa
-        const palavrasEmpresa = produtoParts.slice(-Math.min(3, Math.floor(produtoParts.length / 2)))
-        empresa = palavrasEmpresa.join(" ")
-      } else {
-        empresa = partes[1] // Se for curto, usar todo o texto
-      }
-
-      // Adicionar o nome do contato se disponível
-      return nomeContato ? `${numero} - ${empresa} - ${nomeContato}` : `${numero} - ${empresa}`
-    }
-    return numeroCompleto
-  }
-
-  // Função simplificada para resumir produtos sem pluralização e sem quantidades
-  const resumirProdutosDoOrcamento = (orcamento: Partial<Orcamento>): string => {
-    if (!orcamento.itens || !Array.isArray(orcamento.itens) || orcamento.itens.length === 0) return ""
-
-    // Extrair apenas as categorias principais dos produtos
-    const categoriasProdutos = new Set<string>()
-
-    orcamento.itens.forEach((item) => {
-      // Obter o nome do produto de qualquer fonte disponível
-      let nomeProduto = ""
-      if (item.produtoNome) {
-        nomeProduto = item.produtoNome
-      } else if (item.descricao) {
-        const partes = item.descricao.split(" - ")
-        if (partes.length >= 2) {
-          nomeProduto = partes[1]
-        } else {
-          nomeProduto = item.descricao
-        }
-      } else if (item.produto && typeof item.produto === "object" && item.produto.nome) {
-        nomeProduto = item.produto.nome
-      }
-
-      if (!nomeProduto) return
-
-      // Extrair apenas a categoria principal (primeira ou duas primeiras palavras)
-      const palavras = nomeProduto.split(" ")
-      let categoria = ""
-
-      // Lista de tipos de vestuário comuns
-      const tiposVestuario = [
-        "CAMISA",
-        "CAMISETA",
-        "CALÇA",
-        "JAQUETA",
-        "COLETE",
-        "JALECO",
-        "MACACÃO",
-        "UNIFORME",
-        "BONÉ",
-        "CHAPÉU",
-        "AVENTAL",
-      ]
-
-      // Se a primeira palavra for um tipo de vestuário conhecido
-      if (palavras.length > 0 && tiposVestuario.includes(palavras[0])) {
-        // Qualificadores comuns que podem ser incluídos
-        const qualificadores = ["SOCIAL", "POLO", "OPERACIONAL", "EXECUTIVA"]
-
-        if (palavras.length > 1 && qualificadores.includes(palavras[1])) {
-          // Se a segunda palavra for um qualificador importante, incluí-la
-          categoria = `${palavras[0]} ${palavras[1]}`
-        } else {
-          // Caso contrário, usar apenas o tipo de vestuário
-          categoria = palavras[0]
-        }
-      } else if (palavras.length > 0) {
-        // Para outros tipos de produtos, usar apenas a primeira palavra
-        categoria = palavras[0]
-      }
-
-      // Adicionar a categoria ao conjunto (sem pluralização)
-      if (categoria) {
-        categoriasProdutos.add(categoria)
-      }
-    })
-
-    // Se não encontrou categorias
-    if (categoriasProdutos.size === 0) return ""
-
-    // Converter o conjunto em array e limitar a 5 categorias para não ficar muito longo
-    const categoriasArray = Array.from(categoriasProdutos).slice(0, 5)
-
-    // Se houver mais categorias além das 5 principais
-    if (categoriasProdutos.size > 5) {
-      categoriasArray.push("OUTROS")
-    }
-
-    // Juntar as categorias com " / "
-    return categoriasArray.join(" / ")
+  // Resumo leve sem depender dos itens completos da lista
+  const resumirProdutosDoOrcamento = (orcamento: { numero?: string }): string => {
+    if (!orcamento.numero) return ""
+    const partes = orcamento.numero.split(" - ")
+    return partes.length >= 2 ? partes[1].trim() : ""
   }
 
   const exportarOrcamento = async (orcamentoId: string, tipoExportacao: string) => {
@@ -772,7 +669,7 @@ export default function ListaOrcamentos({
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : filtrarOrcamentos().length === 0 ? (
+                ) : totalItens === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="px-4 py-4 text-center text-muted-foreground">
                       <div className="text-center py-8 bg-accent/30 rounded-lg">
