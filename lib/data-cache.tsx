@@ -125,7 +125,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
     }
   }, [clientesLoading, clientes.length, clientesTimestamp, tenantId])
 
-  // Carregar produtos com tecidos
+  // Carregar produtos com materiais globais (cores e tecidos compartilhados entre todos os produtos)
   const reloadProdutos = useCallback(async (force = false) => {
     if (produtosLoading) return
     if (!force && produtos.length > 0 && Date.now() - produtosTimestamp < CACHE_TTL) return
@@ -141,7 +141,7 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
       
       if (error) throw error
       
-      // Carregar tecidos base (globais) - disponíveis para todos os produtos
+      // Carregar tecidos globais (tecidos_base) - compartilhados entre todos os produtos
       const { data: tecidosBase } = await supabase
         .from("tecidos_base")
         .select("*")
@@ -152,30 +152,25 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
         composicao: t.composicao || "",
       }))
       
-      // Carregar tecidos específicos para cada produto em paralelo
-      const produtosCompletos = await Promise.all(
-        (produtosData || []).map(async (produto) => {
-          const { data: tecidosData } = await supabase
-            .from("tecidos")
-            .select("*")
-            .eq("produto_id", produto.id)
-          
-          // Se o produto tem tecidos específicos, usar esses. Senão, usar tecidos globais.
-          const tecidosProduto = (tecidosData && tecidosData.length > 0)
-            ? tecidosData.map((t) => ({ nome: t.nome, composicao: t.composicao || "" }))
-            : tecidosGlobais
-          
-          return {
-            id: produto.id,
-            codigo: produto.codigo || "",
-            nome: produto.nome,
-            valorBase: Number(produto.valor_base) || 0,
-            tecidos: tecidosProduto,
-            cores: produto.cores || [],
-            tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
-          }
-        })
-      )
+      // Carregar cores globais - compartilhadas entre todos os produtos
+      const { data: coresGlobais } = await supabase
+        .from("cores")
+        .select("nome")
+        .order("nome")
+      
+      const coresGlobaisNomes = (coresGlobais || []).map((c) => c.nome)
+      
+      // Todos os produtos usam materiais globais
+      const produtosCompletos = (produtosData || []).map((produto) => ({
+        id: produto.id,
+        codigo: produto.codigo || "",
+        nome: produto.nome,
+        valorBase: Number(produto.valor_base) || 0,
+        tecidos: tecidosGlobais,
+        cores: coresGlobaisNomes,
+        tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
+        categoria: produto.categoria || "",
+      }))
       
       setProdutos(produtosCompletos)
       setProdutosTimestamp(Date.now())
@@ -478,52 +473,29 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {}
       
+      // Carregar materiais globais (compartilhados entre todos os produtos)
+      const { data: tecidosBaseData } = await supabase.from("tecidos_base").select("*").order("nome")
+      const tecidosGlobais = (tecidosBaseData || []).map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
+      
+      const { data: coresGlobaisData } = await supabase.from("cores").select("nome").order("nome")
+      const coresGlobais = (coresGlobaisData || []).map((c: any) => c.nome)
+      
       // Usar produtos do cache se disponível
       let produtosAtuais = produtos
       if (produtosAtuais.length === 0) {
         const { data: pData } = await supabase.from("produtos").select("*")
         
-        // Carregar tecidos base (globais)
-        const { data: tecidosBase } = await supabase
-          .from("tecidos_base")
-          .select("*")
-          .order("nome")
-        
-        const tecidosGlobais = (tecidosBase || []).map((t: any) => ({
-          nome: t.nome,
-          composicao: t.composicao || "",
+        // Todos os produtos usam materiais globais
+        produtosAtuais = (pData || []).map((p: any) => ({ 
+          id: p.id,
+          codigo: p.codigo || "",
+          nome: p.nome,
+          valorBase: Number(p.valor_base) || 0,
+          tecidos: tecidosGlobais,
+          cores: coresGlobais, 
+          tamanhosDisponiveis: p.tamanhos_disponiveis || [] 
         }))
-        
-        // Carregar tecidos para cada produto
-        produtosAtuais = await Promise.all(
-          (pData || []).map(async (p: any) => {
-            const { data: tecidosData } = await supabase
-              .from("tecidos")
-              .select("*")
-              .eq("produto_id", p.id)
-            
-            // Se o produto tem tecidos específicos, usar esses. Senão, usar tecidos globais.
-            const tecidosProduto = (tecidosData && tecidosData.length > 0)
-              ? tecidosData.map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
-              : tecidosGlobais
-            
-            return { 
-              id: p.id,
-              codigo: p.codigo || "",
-              nome: p.nome,
-              valorBase: Number(p.valor_base) || 0,
-              tecidos: tecidosProduto,
-              cores: p.cores || [], 
-              tamanhosDisponiveis: p.tamanhos_disponiveis || [] 
-            }
-          })
-        )
       }
-      
-      // Carregar tecidos base para fallback
-      let tecidosGlobaisFallback: { nome: string; composicao: string }[] = []
-      const { data: tecidosBaseFallback } = await supabase.from("tecidos_base").select("*").order("nome")
-      tecidosGlobaisFallback = (tecidosBaseFallback || []).map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
       
       // Processar itens completos
       const itensCompletos = await Promise.all(
@@ -539,49 +511,21 @@ export function DataCacheProvider({ children }: { children: ReactNode }) {
               .single()
             
             if (pData) {
-              const { data: tecidosData } = await supabase
-                .from("tecidos")
-                .select("*")
-                .eq("produto_id", pData.id)
-              
-              const tecidosProduto = (tecidosData && tecidosData.length > 0)
-                ? tecidosData.map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
-                : tecidosGlobaisFallback
-              
               produto = {
                 id: pData.id,
                 codigo: pData.codigo || "",
                 nome: pData.nome,
                 valorBase: Number(pData.valor_base) || 0,
-                tecidos: tecidosProduto,
-                cores: pData.cores || [],
+                tecidos: tecidosGlobais,
+                cores: coresGlobais,
                 tamanhosDisponiveis: pData.tamanhos_disponiveis || []
               }
             }
           }
           
-          let tecidos = produto?.tecidos || []
-          if (tecidos.length === 0) {
-            // Primeiro tentar tecidos específicos do produto
-            if (produto) {
-              const { data: tData } = await supabase.from("tecidos").select("*").eq("produto_id", produto.id)
-              if (tData && tData.length > 0) {
-                tecidos = tData.map((t: any) => ({ nome: t.nome, composicao: t.composicao || "" }))
-              }
-            }
-            // Se ainda não tem, usar tecidos base globais
-            if (tecidos.length === 0) {
-              tecidos = tecidosGlobaisFallback
-            }
-          }
-          
-          // Garantir que cores também esteja disponível - usar cores do produto ou fallback
-          let cores = produto?.cores || []
-          if (cores.length === 0) {
-            // Buscar cores base como fallback
-            const { data: coresBase } = await supabase.from("cores").select("nome").order("nome")
-            cores = (coresBase || []).map((c: any) => c.nome)
-          }
+          // Usar materiais globais
+          const tecidos = tecidosGlobais
+          const cores = coresGlobais
           
           let jsonItem = itensJSON.find((j: any) => j.id === item.id)
           if (!jsonItem) {

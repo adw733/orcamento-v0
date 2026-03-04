@@ -31,7 +31,7 @@ import type { Produto } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { useCurrentUser } from "@/hooks/use-current-user"
 
-import { type Cor, type TecidoBase, corService, tecidoBaseService } from "@/lib/services-materiais"
+// Materiais (cores, tecidos, tamanhos) são gerenciados globalmente via aba Materiais
 
 import { type Categoria, CORES_CATEGORIAS } from "./gerenciador-categorias"
 import GerenciadorCategorias from "./gerenciador-categorias"
@@ -114,9 +114,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
   const [error, setError] = useState<string | null>(null)
 
 
-  // Estados para cores e tecidos pré-cadastrados
-  const [coresCadastradas, setCoresCadastradas] = useState<Cor[]>([])
-  const [tecidosCadastrados, setTecidosCadastrados] = useState<TecidoBase[]>([])
+  // Materiais agora são globais - não precisam ser gerenciados por produto
 
   // Adicione um estado para controlar a visibilidade do formulário de novo produto:
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
@@ -157,16 +155,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
         )
         setCategoriasExpandidas(estadoInicial)
 
-        // Carregar cores e tecidos pré-cadastrados
-        try {
-          const coresData = await corService.listarTodas()
-          setCoresCadastradas(coresData)
-
-          const tecidosData = await tecidoBaseService.listarTodos()
-          setTecidosCadastrados(tecidosData)
-        } catch (error) {
-          console.error("Erro ao carregar cores e tecidos:", error)
-        }
+        // Materiais (cores, tecidos, tamanhos) são gerenciados globalmente na aba Materiais
       } catch (error) {
         console.error("Erro ao carregar produtos:", error)
       } finally {
@@ -220,8 +209,8 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
           codigo,
           nome: novoProduto.nome.toUpperCase(),
           valor_base: novoProduto.valorBase,
-          cores: novoProduto.cores ? novoProduto.cores.map((cor) => cor.toUpperCase()) : [],
-          tamanhos_disponiveis: [], // Array vazio - tamanhos não são mais cadastrados no produto
+          cores: [], // Cores agora são globais - gerenciadas na aba Materiais
+          tamanhos_disponiveis: [], // Tamanhos agora são globais - gerenciados na aba Materiais
           ...(tenantId ? { tenant_id: tenantId } : {}),
         }
 
@@ -236,19 +225,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
         if (produtoError) throw produtoError
 
         if (insertedData && insertedData[0]) {
-          // Inserir tecidos do produto com valores em maiúsculas
-          if (novoProduto.tecidos && novoProduto.tecidos.length > 0) {
-            const tecidosParaInserir = novoProduto.tecidos.map((tecido) => ({
-              nome: tecido.nome.toUpperCase(),
-              composicao: tecido.composicao.toUpperCase(),
-              produto_id: insertedData[0].id,
-              ...(tenantId ? { tenant_id: tenantId } : {}),
-            }))
-
-            const { error: tecidosError } = await supabase.from("tecidos").insert(tecidosParaInserir)
-
-            if (tecidosError) throw tecidosError
-          }
+          // Tecidos são globais - não inserir mais por produto
 
           // Converter para o formato da aplicação
           const novoProdutoFormatado: Produto = {
@@ -256,13 +233,8 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
             codigo: insertedData[0].codigo || codigo,
             nome: insertedData[0].nome,
             valorBase: Number(insertedData[0].valor_base),
-            tecidos: novoProduto.tecidos
-              ? novoProduto.tecidos.map((tecido) => ({
-                  nome: tecido.nome.toUpperCase(),
-                  composicao: tecido.composicao.toUpperCase(),
-                }))
-              : [],
-            cores: insertedData[0].cores || [],
+            tecidos: [], // Tecidos são globais
+            cores: [], // Cores são globais
             tamanhosDisponiveis: insertedData[0].tamanhos_disponiveis || [],
             categoria: insertedData[0].categoria || novoProduto.categoria?.toUpperCase() || "OUTROS",
           }
@@ -388,8 +360,8 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
           codigo: produtoEditando.codigo,
           nome: produtoEditando.nome.toUpperCase(),
           valor_base: produtoEditando.valorBase,
-          cores: produtoEditando.cores.map((cor) => cor.toUpperCase()),
-          tamanhos_disponiveis: [], // Array vazio - tamanhos não são mais cadastrados no produto
+          cores: [], // Cores agora são globais
+          tamanhos_disponiveis: [], // Tamanhos agora são globais
           updated_at: new Date().toISOString(),
         }
 
@@ -402,27 +374,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
 
         if (produtoError) throw produtoError
 
-        // Remover tecidos antigos
-        const { error: deleteTecidosError } = await supabase
-          .from("tecidos")
-          .delete()
-          .eq("produto_id", produtoEditando.id)
-
-        if (deleteTecidosError) throw deleteTecidosError
-
-        // Inserir novos tecidos com valores em maiúsculas
-        if (produtoEditando.tecidos && produtoEditando.tecidos.length > 0) {
-          const tecidosParaInserir = produtoEditando.tecidos.map((tecido) => ({
-            nome: tecido.nome.toUpperCase(),
-            composicao: tecido.composicao.toUpperCase(),
-            produto_id: produtoEditando.id,
-            ...(tenantId ? { tenant_id: tenantId } : {}),
-          }))
-
-          const { error: tecidosError } = await supabase.from("tecidos").insert(tecidosParaInserir)
-
-          if (tecidosError) throw tecidosError
-        }
+        // Tecidos são globais - não gerenciar mais por produto
 
         // Atualizar na lista local
         setProdutos(produtos.map((produto) => (produto.id === produtoEditando.id ? produtoEditando : produto)))
@@ -437,33 +389,7 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
     }
   }
 
-  const removerTecido = (index: number) => {
-    if (editandoId && produtoEditando) {
-      setProdutoEditando({
-        ...produtoEditando,
-        tecidos: produtoEditando.tecidos.filter((_, i) => i !== index),
-      })
-    } else {
-      setNovoProduto({
-        ...novoProduto,
-        tecidos: (novoProduto.tecidos || []).filter((_, i) => i !== index),
-      })
-    }
-  }
-
-  const removerCor = (index: number) => {
-    if (editandoId && produtoEditando) {
-      setProdutoEditando({
-        ...produtoEditando,
-        cores: produtoEditando.cores.filter((_, i) => i !== index),
-      })
-    } else {
-      setNovoProduto({
-        ...novoProduto,
-        cores: (novoProduto.cores || []).filter((c, i) => i !== index),
-      })
-    }
-  }
+  // Materiais são globais - funções de remoção não são mais necessárias
 
 
   // Função para alternar a ordenação
@@ -704,7 +630,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                       ))}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tecidos</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
@@ -843,160 +768,10 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                                   </div>
                                 </div>
 
-                                {/* Tecidos */}
-                                <div>
-                                  <Label className="text-primary flex items-center gap-2">
-                                    <Shirt className="h-4 w-4" />
-                                    Tecidos Disponíveis
-                                  </Label>
-                                  <div className="mt-2 space-y-2">
-                                    {tecidosCadastrados.length > 0 ? (
-                                      <div className="grid grid-cols-2 gap-2">
-                                        {tecidosCadastrados.map((tecido) => (
-                                          <div key={tecido.id} className="flex items-center">
-                                            <input
-                                              type="checkbox"
-                                              id={`edit-tecido-${tecido.id}`}
-                                              className="mr-2"
-                                              checked={produtoEditando.tecidos.some((t) => t.nome === tecido.nome)}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setProdutoEditando({
-                                                    ...produtoEditando,
-                                                    tecidos: [
-                                                      ...produtoEditando.tecidos,
-                                                      { nome: tecido.nome, composicao: tecido.composicao },
-                                                    ],
-                                                  })
-                                                } else {
-                                                  setProdutoEditando({
-                                                    ...produtoEditando,
-                                                    tecidos: produtoEditando.tecidos.filter(
-                                                      (t) => t.nome !== tecido.nome,
-                                                    ),
-                                                  })
-                                                }
-                                              }}
-                                            />
-                                            <Label
-                                              htmlFor={`edit-tecido-${tecido.id}`}
-                                              className="text-sm cursor-pointer"
-                                            >
-                                              {tecido.nome}{" "}
-                                              <span className="text-xs text-gray-500">({tecido.composicao})</span>
-                                            </Label>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-gray-500 italic p-2">
-                                        Nenhum tecido cadastrado. Adicione tecidos na aba Materiais.
-                                      </div>
-                                    )}
-                                    <div className="space-y-1 max-h-32 overflow-y-auto p-2 bg-white rounded-md">
-                                      {produtoEditando.tecidos.length === 0 && (
-                                        <p className="text-sm text-gray-500 italic p-2">Nenhum tecido selecionado</p>
-                                      )}
-                                      {produtoEditando.tecidos.map((tecido, index) => (
-                                        <div
-                                          key={index}
-                                          className="flex justify-between items-center p-2 bg-accent rounded-md"
-                                        >
-                                          <div>
-                                            <span className="font-medium">{tecido.nome}</span>
-                                            <span className="text-xs text-gray-500 ml-2">({tecido.composicao})</span>
-                                          </div>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => removerTecido(index)}
-                                            className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-red-50"
-                                          >
-                                            <X className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Cores */}
-                                <div>
-                                  <Label className="text-primary flex items-center gap-2">
-                                    <Palette className="h-4 w-4" />
-                                    Cores Disponíveis
-                                  </Label>
-                                  <div className="mt-2 space-y-2">
-                                    {coresCadastradas.length > 0 ? (
-                                      <div className="grid grid-cols-3 gap-2">
-                                        {coresCadastradas.map((cor) => (
-                                          <div key={cor.id} className="flex items-center">
-                                            <input
-                                              type="checkbox"
-                                              id={`edit-cor-${cor.id}`}
-                                              className="mr-2"
-                                              checked={produtoEditando.cores.includes(cor.nome)}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setProdutoEditando({
-                                                    ...produtoEditando,
-                                                    cores: [...produtoEditando.cores, cor.nome],
-                                                  })
-                                                } else {
-                                                  setProdutoEditando({
-                                                    ...produtoEditando,
-                                                    cores: produtoEditando.cores.filter((c) => c !== cor.nome),
-                                                  })
-                                                }
-                                              }}
-                                            />
-                                            <Label
-                                              htmlFor={`edit-cor-${cor.id}`}
-                                              className="text-sm cursor-pointer flex items-center gap-1"
-                                            >
-                                              <div
-                                                className="w-4 h-4 rounded-full border border-gray-300"
-                                                style={{ backgroundColor: cor.codigo_hex || "#000000" }}
-                                              ></div>
-                                              {cor.nome}
-                                            </Label>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-gray-500 italic p-2">
-                                        Nenhuma cor cadastrada. Adicione cores na aba Materiais.
-                                      </div>
-                                    )}
-                                    <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-white rounded-md">
-                                      {produtoEditando.cores.length === 0 && (
-                                        <p className="text-sm text-gray-500 italic p-2">Nenhuma cor selecionada</p>
-                                      )}
-                                      {produtoEditando.cores.map((cor, index) => (
-                                        <div
-                                          key={index}
-                                          className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full"
-                                        >
-                                          <div
-                                            className="w-3 h-3 rounded-full border border-gray-300"
-                                            style={{
-                                              backgroundColor:
-                                                coresCadastradas.find((c) => c.nome === cor)?.codigo_hex || "#000000",
-                                            }}
-                                          ></div>
-                                          <span className="text-sm">{cor}</span>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => removerCor(index)}
-                                            className="h-5 w-5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full p-0"
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
+                                {/* Materiais globais - Aviso */}
+                                <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-md text-sm flex items-center gap-2">
+                                  <Palette className="h-4 w-4" />
+                                  <span>Cores, tecidos e tamanhos são gerenciados globalmente na aba <strong>Materiais</strong>. Todos os produtos compartilham os mesmos materiais.</span>
                                 </div>
 
 
@@ -1041,15 +816,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                               </td>
                               <td className="px-4 py-3 align-middle">
                                 <span className="font-medium">R$ {produto.valorBase.toFixed(2)}</span>
-                              </td>
-                              <td className="px-4 py-3 align-middle">
-                                <div className="max-w-[200px] truncate">
-                                  {produto.tecidos.length > 0 ? (
-                                    produto.tecidos.map((t) => t.nome).join(", ")
-                                  ) : (
-                                    <span className="text-gray-400 italic">Nenhum</span>
-                                  )}
-                                </div>
                               </td>
                               <td className="px-4 py-3 align-middle">
                                 <div className="flex justify-center gap-2">
@@ -1172,144 +938,10 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
                 </div>
               </div>
 
-              {/* Tecidos */}
-              <div>
-                <Label className="text-primary flex items-center gap-2">
-                  <Shirt className="h-4 w-4" />
-                  Tecidos Disponíveis
-                </Label>
-                <div className="mt-2 space-y-2">
-                  {tecidosCadastrados.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      {tecidosCadastrados.map((tecido) => (
-                        <div key={tecido.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`tecido-${tecido.id}`}
-                            className="mr-2"
-                            checked={(novoProduto.tecidos || []).some((t) => t.nome === tecido.nome)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNovoProduto({
-                                  ...novoProduto,
-                                  tecidos: [
-                                    ...(novoProduto.tecidos || []),
-                                    { nome: tecido.nome, composicao: tecido.composicao },
-                                  ],
-                                })
-                              } else {
-                                setNovoProduto({
-                                  ...novoProduto,
-                                  tecidos: (novoProduto.tecidos || []).filter((t) => t.nome !== tecido.nome),
-                                })
-                              }
-                            }}
-                          />
-                          <Label htmlFor={`tecido-${tecido.id}`} className="text-sm cursor-pointer">
-                            {tecido.nome} <span className="text-xs text-gray-500">({tecido.composicao})</span>
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 italic p-2">
-                      Nenhum tecido cadastrado. Adicione tecidos na aba Materiais.
-                    </div>
-                  )}
-                  <div className="space-y-1 max-h-32 overflow-y-auto p-2 bg-white rounded-md">
-                    {(novoProduto.tecidos || []).length === 0 && (
-                      <p className="text-sm text-gray-500 italic p-2">Nenhum tecido selecionado</p>
-                    )}
-                    {(novoProduto.tecidos || []).map((tecido, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-accent rounded-md">
-                        <div>
-                          <span className="font-medium">{tecido.nome}</span>
-                          <span className="text-xs text-gray-500 ml-2">({tecido.composicao})</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removerTecido(index)}
-                          className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Cores */}
-              <div>
-                <Label className="text-primary flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  Cores Disponíveis
-                </Label>
-                <div className="mt-2 space-y-2">
-                  {coresCadastradas.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {coresCadastradas.map((cor) => (
-                        <div key={cor.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`cor-${cor.id}`}
-                            className="mr-2"
-                            checked={(novoProduto.cores || []).includes(cor.nome)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNovoProduto({
-                                  ...novoProduto,
-                                  cores: [...(novoProduto.cores || []), cor.nome],
-                                })
-                              } else {
-                                setNovoProduto({
-                                  ...novoProduto,
-                                  cores: (novoProduto.cores || []).filter((c) => c !== cor.nome),
-                                })
-                              }
-                            }}
-                          />
-                          <Label htmlFor={`cor-${cor.id}`} className="text-sm cursor-pointer flex items-center gap-1">
-                            <div
-                              className="w-4 h-4 rounded-full border border-gray-300"
-                              style={{ backgroundColor: cor.codigo_hex || "#000000" }}
-                            ></div>
-                            {cor.nome}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 italic p-2">
-                      Nenhuma cor cadastrada. Adicione cores na aba Materiais.
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-white rounded-md">
-                    {(novoProduto.cores || []).length === 0 && (
-                      <p className="text-sm text-gray-500 italic p-2">Nenhuma cor selecionada</p>
-                    )}
-                    {(novoProduto.cores || []).map((cor, index) => (
-                      <div key={index} className="flex items-center gap-1 bg-accent px-2 py-1 rounded-full">
-                        <div
-                          className="w-3 h-3 rounded-full border border-gray-300"
-                          style={{
-                            backgroundColor: coresCadastradas.find((c) => c.nome === cor)?.codigo_hex || "#000000",
-                          }}
-                        ></div>
-                        <span className="text-sm">{cor}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removerCor(index)}
-                          className="h-5 w-5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {/* Materiais globais - Aviso */}
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-md text-sm flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                <span>Cores, tecidos e tamanhos são gerenciados globalmente na aba <strong>Materiais</strong>. Todos os produtos compartilham os mesmos materiais.</span>
               </div>
 
 

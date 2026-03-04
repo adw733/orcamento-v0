@@ -26,6 +26,7 @@ import {
 import type { Cliente } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { mockClientes } from "@/lib/mock-data"
+import { useCurrentUser } from "@/hooks/use-current-user"
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -151,6 +152,8 @@ interface GerenciadorClientesProps {
 }
 
 export default function GerenciadorClientes({ clientes, adicionarCliente, setClientes }: GerenciadorClientesProps) {
+  const { tenantId } = useCurrentUser()
+
   // Estado para novo cliente
   const [novoCliente, setNovoCliente] = useState<Partial<Cliente>>({
     codigo: "",
@@ -257,6 +260,7 @@ export default function GerenciadorClientes({ clientes, adicionarCliente, setCli
             endereco: novoCliente.endereco ? novoCliente.endereco.toUpperCase() : null,
             telefone: novoCliente.telefone ? novoCliente.telefone.toUpperCase() : null,
             email: novoCliente.email ? novoCliente.email.toUpperCase() : null,
+            ...(tenantId ? { tenant_id: tenantId } : {}),
           })
           .select()
 
@@ -290,8 +294,13 @@ export default function GerenciadorClientes({ clientes, adicionarCliente, setCli
           })
         }
       } catch (error) {
-        console.error("Erro ao adicionar cliente:", error)
-        setError(`Erro ao adicionar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+        const supabaseError = error as { message?: string; details?: string; hint?: string; code?: string }
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : supabaseError?.message || supabaseError?.details || JSON.stringify(error) || "Erro desconhecido"
+        console.error("Erro ao adicionar cliente:", JSON.stringify(error, null, 2))
+        setError(`Erro ao adicionar cliente: ${errorMessage}`)
       } finally {
         setIsLoading(false)
       }

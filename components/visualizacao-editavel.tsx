@@ -107,7 +107,7 @@ const TextareaTransparente = memo(({ className, onChange, value, ...props }: Rea
     // Transformar para maiúsculas
     const newValue = e.target.value.toUpperCase()
     e.target.value = newValue
-    
+
     // Ajustar altura com requestAnimationFrame para melhor performance
     if (resizeTimeoutRef.current !== null) {
       cancelAnimationFrame(resizeTimeoutRef.current)
@@ -115,7 +115,7 @@ const TextareaTransparente = memo(({ className, onChange, value, ...props }: Rea
     resizeTimeoutRef.current = requestAnimationFrame(() => {
       adjustHeight()
     })
-    
+
     // Chamar onChange original
     if (onChange) {
       onChange(e)
@@ -157,24 +157,24 @@ export default function VisualizacaoEditavel({
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const [progressoPDF, setProgressoPDF] = useState(0)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
-  
+
   // Estados para controle de visualização
   const [orientacao, setOrientacao] = useState<'vertical' | 'grade'>('vertical')
   const [zoom, setZoom] = useState(100)
-  
+
   // Refs para manter referências estáveis
   const orcamentoRef = useRef(orcamento)
   const produtosRef = useRef(produtos)
   const setOrcamentoRef = useRef(setOrcamento)
-  
+
   useEffect(() => {
     orcamentoRef.current = orcamento
   }, [orcamento])
-  
+
   useEffect(() => {
     produtosRef.current = produtos
   }, [produtos])
-  
+
   useEffect(() => {
     setOrcamentoRef.current = setOrcamento
   }, [setOrcamento])
@@ -198,10 +198,10 @@ export default function VisualizacaoEditavel({
   const [openProduto, setOpenProduto] = useState<string | null>(null) // ID do item sendo editado
   const [swapPendente, setSwapPendente] = useState<{ itemId: string; novoProduto: Produto } | null>(null)
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
-  
+
   // Estados para tipos de tamanho
   const [tiposTamanho, setTiposTamanho] = useState<TipoTamanho[]>([])
-  
+
   // Carregar tipos de tamanho ao montar o componente
   useEffect(() => {
     const carregarTiposTamanho = async () => {
@@ -291,11 +291,11 @@ export default function VisualizacaoEditavel({
       id: crypto.randomUUID(),
       produto: itemOriginal.produto
         ? {
-            ...itemOriginal.produto,
-            tecidos: itemOriginal.produto.tecidos.map((tecido) => ({ ...tecido })),
-            cores: [...itemOriginal.produto.cores],
-            tamanhosDisponiveis: [...itemOriginal.produto.tamanhosDisponiveis],
-          }
+          ...itemOriginal.produto,
+          tecidos: itemOriginal.produto.tecidos.map((tecido) => ({ ...tecido })),
+          cores: [...itemOriginal.produto.cores],
+          tamanhosDisponiveis: [...itemOriginal.produto.tamanhosDisponiveis],
+        }
         : undefined,
       tecidoSelecionado: itemOriginal.tecidoSelecionado ? { ...itemOriginal.tecidoSelecionado } : undefined,
       tamanhos: { ...(itemOriginal.tamanhos || {}) },
@@ -337,28 +337,268 @@ export default function VisualizacaoEditavel({
   }
 
   const handleImagePaste = (e: React.ClipboardEvent, itemId: string) => {
-    const items = e.clipboardData?.items
-    if (!items) return
+    const clipboardData = e.clipboardData
+    if (!clipboardData) return
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      
-      // Verificar se é uma imagem
-      if (item.type.indexOf('image') !== -1) {
+    const items = clipboardData.items
+
+    // Debug: logar tudo que tem no clipboard
+    console.log('📋 Paste event - tipos disponíveis:', clipboardData.types)
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        console.log(`  Item ${i}: kind=${items[i].kind}, type=${items[i].type}`)
+      }
+    }
+
+    // 1. Tentar extrair imagem do HTML (Illustrator, Photoshop, CorelDRAW colam como HTML)
+    const htmlContent = clipboardData.getData('text/html')
+    if (htmlContent) {
+      console.log('📋 HTML no clipboard (primeiros 500 chars):', htmlContent.substring(0, 500))
+
+      // 1a. Verificar se o HTML contém imagens com base64 embutido
+      const imgMatch = htmlContent.match(/<img[^>]+src=["'](data:image\/[^"']+)["']/i)
+      if (imgMatch && imgMatch[1]) {
         e.preventDefault()
-        const blob = item.getAsFile()
-        if (blob) {
+        console.log('✅ Encontrou img com base64 no HTML')
+        updateItem(itemId, 'imagem', imgMatch[1])
+        return
+      }
+
+      // 1b. Verificar se o HTML contém imagem com URL (http/https)
+      const imgUrlMatch = htmlContent.match(/<img[^>]+src=["'](https?:\/\/[^"']+)["']/i)
+      if (imgUrlMatch && imgUrlMatch[1]) {
+        e.preventDefault()
+        console.log('✅ Encontrou img com URL no HTML:', imgUrlMatch[1])
+        fetch(imgUrlMatch[1])
+          .then(res => res.blob())
+          .then(blob => {
+            const reader = new FileReader()
+            reader.onload = (ev) => {
+              if (ev.target?.result) {
+                updateItem(itemId, 'imagem', ev.target.result as string)
+              }
+            }
+            reader.readAsDataURL(blob)
+          })
+          .catch(err => console.error('Erro ao baixar imagem colada:', err))
+        return
+      }
+
+      // 1c. Verificar se o HTML contém SVG inline (Illustrator frequentemente cola assim)
+      const svgMatch = htmlContent.match(/<svg[\s\S]*?<\/svg>/i)
+      if (svgMatch) {
+        e.preventDefault()
+        console.log('✅ Encontrou SVG inline no HTML')
+        renderSvgToHighResImage(svgMatch[0], itemId, htmlContent)
+        return
+      }
+    }
+
+    // 2. Tentar SVG ou Data URL como texto puro
+    const textContent = clipboardData.getData('text/plain')
+    if (textContent) {
+      const trimmed = textContent.trim()
+      if (trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')) {
+        const svgContent = trimmed.startsWith('<?xml')
+          ? trimmed.substring(trimmed.indexOf('<svg'))
+          : trimmed
+        if (svgContent.includes('<svg') && svgContent.includes('</svg>')) {
+          e.preventDefault()
+          console.log('✅ Encontrou SVG como texto puro')
+          renderSvgToHighResImage(svgContent, itemId)
+          return
+        }
+      }
+
+      if (trimmed.startsWith('data:image/')) {
+        e.preventDefault()
+        console.log('✅ Encontrou Data URL como texto puro')
+        updateItem(itemId, 'imagem', trimmed)
+        return
+      }
+    }
+
+    // 3. Tentar imagem direta no clipboard (screenshots, copiar imagem)
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.indexOf('image') !== -1) {
+          e.preventDefault()
+          const blob = item.getAsFile()
+          if (blob) {
+            console.log('✅ Encontrou imagem direta no clipboard:', item.type)
+            const reader = new FileReader()
+            reader.onload = (ev) => {
+              if (ev.target?.result) {
+                updateItem(itemId, 'imagem', ev.target.result as string)
+              }
+            }
+            reader.readAsDataURL(blob)
+          }
+          return
+        }
+      }
+    }
+
+    // 4. Arquivos do clipboard
+    const files = clipboardData.files
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        if (file.type.startsWith('image/')) {
+          e.preventDefault()
+          console.log('✅ Encontrou arquivo de imagem no clipboard:', file.type)
           const reader = new FileReader()
           reader.onload = (ev) => {
             if (ev.target?.result) {
               updateItem(itemId, 'imagem', ev.target.result as string)
             }
           }
-          reader.readAsDataURL(blob)
+          reader.readAsDataURL(file)
+          return
         }
-        break
       }
     }
+
+    // 5. Nenhum formato reconhecido - tentar a Clipboard API assíncrona
+    console.log('⚠️ Nenhum formato de imagem encontrado no paste event, tentando Clipboard API assíncrona...')
+    handleClipboardRead(itemId)
+  }
+
+  // Função que usa a Clipboard API assíncrona (navigator.clipboard.read)
+  // Esta API consegue ler formatos que o evento paste não expõe (ex: imagem copiada do Illustrator)
+  const handleClipboardRead = async (itemId: string) => {
+    try {
+      // Verificar se a API está disponível
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        console.error('❌ Clipboard API não disponível. Necessário HTTPS ou localhost.')
+        alert('A leitura da área de transferência não está disponível.\nUse o botão "Colar da Área de Transferência" ou arraste a imagem.')
+        return
+      }
+
+      console.log('📋 Lendo clipboard via navigator.clipboard.read()...')
+      const clipboardItems = await navigator.clipboard.read()
+      console.log('📋 ClipboardItems encontrados:', clipboardItems.length)
+
+      for (const clipItem of clipboardItems) {
+        console.log('📋 Tipos do ClipboardItem:', clipItem.types)
+
+        // PRIORIDADE 1: Tentar image/svg+xml diretamente (melhor qualidade - vetor)
+        if (clipItem.types.includes('image/svg+xml')) {
+          try {
+            const svgBlob = await clipItem.getType('image/svg+xml')
+            const svgText = await svgBlob.text()
+            console.log('✅ Encontrou SVG direto no clipboard (vetor - qualidade perfeita)')
+            storeSvgDirectly(svgText, itemId)
+            return
+          } catch (e) {
+            console.warn('⚠️ Falha ao ler image/svg+xml:', e)
+          }
+        }
+
+        // PRIORIDADE 2: Tentar text/html para SVG (vetor - melhor qualidade)
+        if (clipItem.types.includes('text/html')) {
+          const htmlBlob = await clipItem.getType('text/html')
+          const htmlText = await htmlBlob.text()
+
+          // SVG inline no HTML
+          const svgMatch = htmlText.match(/<svg[\s\S]*?<\/svg>/i)
+          if (svgMatch) {
+            console.log('✅ Encontrou SVG no HTML via Clipboard API (vetor - qualidade perfeita)')
+            storeSvgDirectly(svgMatch[0], itemId, htmlText)
+            return
+          }
+
+          // Imagem com base64 no HTML
+          const imgMatch = htmlText.match(/<img[^>]+src=["'](data:image\/[^"']+)["']/i)
+          if (imgMatch && imgMatch[1]) {
+            console.log('✅ Encontrou img com base64 no HTML via Clipboard API')
+            updateItem(itemId, 'imagem', imgMatch[1])
+            return
+          }
+        }
+
+        // PRIORIDADE 3: Tentar text/plain para SVG
+        if (clipItem.types.includes('text/plain')) {
+          const textBlob = await clipItem.getType('text/plain')
+          const textContent = await textBlob.text()
+          const trimmed = textContent.trim()
+          if ((trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')) && trimmed.includes('</svg>')) {
+            const svgContent = trimmed.startsWith('<?xml')
+              ? trimmed.substring(trimmed.indexOf('<svg'))
+              : trimmed
+            console.log('✅ Encontrou SVG como texto puro via Clipboard API')
+            storeSvgDirectly(svgContent, itemId)
+            return
+          }
+        }
+
+        // PRIORIDADE 4: Imagem bitmap - upscale para alta qualidade
+        const imageTypes = clipItem.types.filter(t => t.startsWith('image/'))
+        if (imageTypes.length > 0) {
+          const preferredType = imageTypes.find(t => t === 'image/png') || imageTypes[0]
+          console.log('📋 Lendo imagem bitmap do clipboard:', preferredType)
+          const blob = await clipItem.getType(preferredType)
+          upscaleBitmapImage(blob, itemId)
+          return
+        }
+      }
+
+      console.log('❌ Nenhuma imagem encontrada na área de transferência')
+      alert('Nenhuma imagem encontrada na área de transferência.\nCertifique-se de copiar a arte no Illustrator antes de colar.')
+    } catch (err: any) {
+      console.error('❌ Erro ao ler clipboard:', err)
+      if (err.name === 'NotAllowedError') {
+        alert('Permissão para acessar a área de transferência foi negada.\nPermita o acesso quando o navegador solicitar.')
+      } else {
+        alert('Erro ao ler a área de transferência: ' + err.message)
+      }
+    }
+  }
+
+  // Armazena SVG diretamente como data URL - mantém qualidade vetorial perfeita
+  const storeSvgDirectly = (svgString: string, itemId: string, fullHtml?: string) => {
+    // Garantir que o SVG tem xmlns para renderização correta como data URL
+    let finalSvg = svgString
+    if (!finalSvg.includes('xmlns=')) {
+      finalSvg = finalSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
+    }
+
+    // O Illustrator coloca as classes de cor (CSS) numa tag <style> no <head> do HTML, fora do <svg>.
+    // Precisamos capturar esse <style> e injetá-lo dentro do SVG para não ficar tudo preto.
+    if (fullHtml) {
+      const styleMatch = fullHtml.match(/<style[^>]*>[\s\S]*?<\/style>/i)
+      if (styleMatch && !finalSvg.includes('<style')) {
+        finalSvg = finalSvg.replace(/(<svg[^>]*>)/i, `$1\n${styleMatch[0]}\n`)
+        console.log('✨ Tag <style> externa injetada no SVG para preservar as cores originais')
+      }
+    }
+
+    // Converter para data URL SVG (mantém qualidade vetorial - sem pixelização)
+    const svgBase64 = btoa(unescape(encodeURIComponent(finalSvg)))
+    const dataUrl = `data:image/svg+xml;base64,${svgBase64}`
+    console.log(`✅ SVG armazenado como vetor (${finalSvg.length} chars) - qualidade perfeita em qualquer zoom`)
+    updateItem(itemId, 'imagem', dataUrl)
+  }
+
+  // Usa bitmap direto do clipboard sem processamento (preserva cores originais)
+  const upscaleBitmapImage = (blob: Blob, itemId: string) => {
+    console.log(`📋 Usando bitmap direto: ${blob.size} bytes, tipo: ${blob.type}`)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      if (ev.target?.result) {
+        const dataUrl = ev.target.result as string
+        console.log(`✅ Bitmap carregado: ${dataUrl.substring(0, 50)}...`)
+        updateItem(itemId, 'imagem', dataUrl)
+      }
+    }
+    reader.readAsDataURL(blob)
+  }
+
+  // Renderiza SVG em alta resolução (fallback quando storeSvgDirectly não é possível)
+  const renderSvgToHighResImage = (svgString: string, itemId: string, fullHtml?: string) => {
+    // Usar SVG direto como data URL - qualidade vetorial perfeita
+    storeSvgDirectly(svgString, itemId, fullHtml)
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,16 +656,16 @@ export default function VisualizacaoEditavel({
       console.log('📄 Criando documento PDF...', { orcamento, dadosEmpresa })
       const doc = <PDFOrcamento orcamento={orcamento} dadosEmpresa={dadosEmpresa} calcularTotal={calcularTotal} />
       setProgressoPDF(60)
-      
+
       console.log('🔄 Convertendo para PDF...')
       const asPdf = pdf(doc)
       setProgressoPDF(80)
-      
+
       console.log('💾 Gerando blob...')
       const blob = await asPdf.toBlob()
       console.log('✅ Blob gerado:', blob.size, 'bytes')
       setProgressoPDF(90)
-      
+
       // Criar link de download e forçar download do arquivo
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -440,7 +680,7 @@ export default function VisualizacaoEditavel({
       URL.revokeObjectURL(url)
       setProgressoPDF(100)
       console.log('✅ PDF GERADO COM SUCESSO!')
-      
+
       // Feedback de sucesso
       setTimeout(() => {
         alert('✅ PDF do orçamento gerado com sucesso! Verifique sua pasta de Downloads.')
@@ -466,16 +706,16 @@ export default function VisualizacaoEditavel({
       console.log('📄 Criando documento PDF das fichas...', { orcamento, dadosEmpresa })
       const doc = <PDFTodasFichasTecnicas orcamento={orcamento} dadosEmpresa={dadosEmpresa} />
       setProgressoPDF(60)
-      
+
       console.log('🔄 Convertendo para PDF...')
       const asPdf = pdf(doc)
       setProgressoPDF(80)
-      
+
       console.log('💾 Gerando blob...')
       const blob = await asPdf.toBlob()
       console.log('✅ Blob gerado:', blob.size, 'bytes')
       setProgressoPDF(90)
-      
+
       // Criar link de download e forçar download do arquivo
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -490,7 +730,7 @@ export default function VisualizacaoEditavel({
       URL.revokeObjectURL(url)
       setProgressoPDF(100)
       console.log('✅ PDF DAS FICHAS GERADO COM SUCESSO!')
-      
+
       // Feedback de sucesso
       setTimeout(() => {
         alert('✅ PDF das fichas técnicas gerado com sucesso! Verifique sua pasta de Downloads.')
@@ -535,8 +775,8 @@ export default function VisualizacaoEditavel({
                 onClick={() => setOrientacao('vertical')}
                 className={cn(
                   "rounded-none px-3 h-8 transition-all",
-                  orientacao === 'vertical' 
-                    ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                  orientacao === 'vertical'
+                    ? "bg-primary text-white hover:bg-primary hover:text-white"
                     : "text-gray-600 hover:bg-gray-100"
                 )}
                 title="Modo Vertical (A4 Portrait)"
@@ -550,8 +790,8 @@ export default function VisualizacaoEditavel({
                 onClick={() => setOrientacao('grade')}
                 className={cn(
                   "rounded-none border-l border-primary/30 px-3 h-8 transition-all",
-                  orientacao === 'grade' 
-                    ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                  orientacao === 'grade'
+                    ? "bg-primary text-white hover:bg-primary hover:text-white"
                     : "text-gray-600 hover:bg-gray-100"
                 )}
                 title="Modo Grade (Matriz Responsiva)"
@@ -620,8 +860,8 @@ export default function VisualizacaoEditavel({
                   onClick={() => setModoExportacao("completo")}
                   className={cn(
                     "rounded-none px-3 h-8 transition-all text-xs",
-                    modoExportacao === "completo" 
-                      ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                    modoExportacao === "completo"
+                      ? "bg-primary text-white hover:bg-primary hover:text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
@@ -633,8 +873,8 @@ export default function VisualizacaoEditavel({
                   onClick={() => setModoExportacao("orcamento")}
                   className={cn(
                     "rounded-none border-x border-primary/30 px-3 h-8 transition-all text-xs",
-                    modoExportacao === "orcamento" 
-                      ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                    modoExportacao === "orcamento"
+                      ? "bg-primary text-white hover:bg-primary hover:text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
@@ -646,8 +886,8 @@ export default function VisualizacaoEditavel({
                   onClick={() => setModoExportacao("ficha")}
                   className={cn(
                     "rounded-none px-3 h-8 transition-all text-xs",
-                    modoExportacao === "ficha" 
-                      ? "bg-primary text-white hover:bg-primary hover:text-white" 
+                    modoExportacao === "ficha"
+                      ? "bg-primary text-white hover:bg-primary hover:text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   )}
                 >
@@ -701,7 +941,7 @@ export default function VisualizacaoEditavel({
           "justify-center"
         )}
       >
-        <div 
+        <div
           className="flex font-sans text-gray-800"
           style={{
             flexDirection: orientacao === 'vertical' ? 'column' : 'row',
@@ -717,941 +957,983 @@ export default function VisualizacaoEditavel({
           ref={pdfContainerRef}
         >
 
-        {/* 1. ORÇAMENTO PRINCIPAL */}
-        {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
-          <div 
-            className="border border-gray-300 rounded-md shadow-sm orcamento-principal bg-white pdf-section"
-            style={{
-              // Largura base ~800px para manter proporção A4 (210x297)
-              width: '210mm',
-              minHeight: '297mm',
-              flexShrink: 0,
-              zoom: (zoom / 100) as any,
-            }}
-          >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center" style={{ width: '50px', height: '50px' }}>
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5"/>
-                      <path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5"/>
-                      <path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5"/>
-                    </svg>
-                  </div>
-                  <div>
+          {/* 1. ORÇAMENTO PRINCIPAL */}
+          {(modoExportacao === "completo" || modoExportacao === "orcamento") && (
+            <div
+              className="border border-gray-300 rounded-md shadow-sm orcamento-principal bg-white pdf-section"
+              style={{
+                // Largura base ~800px para manter proporção A4 (210x297)
+                width: '210mm',
+                minHeight: '297mm',
+                flexShrink: 0,
+                zoom: (zoom / 100) as any,
+              }}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center" style={{ width: '50px', height: '50px' }}>
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5" />
+                        <path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5" />
+                        <path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5" />
+                      </svg>
+                    </div>
                     <div>
-                      <h1 className="text-xl font-bold text-white font-sans tracking-tight uppercase">
-                        ORÇAMENTO - {orcamento.numero.split(" - ")[0]}
-                      </h1>
-                      <p className="text-white/90 text-sm uppercase">
-                        {orcamento.cliente?.nome || "CLIENTE"} - {orcamento.nomeContato || "CONTATO"}
-                      </p>
+                      <div>
+                        <h1 className="text-xl font-bold text-white font-sans tracking-tight uppercase">
+                          ORÇAMENTO - {orcamento.numero.split(" - ")[0]}
+                        </h1>
+                        <p className="text-white/90 text-sm uppercase">
+                          {orcamento.cliente?.nome || "CLIENTE"} - {orcamento.nomeContato || "CONTATO"}
+                        </p>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Dados Empresa (Direita) */}
+                  <div className="text-right bg-white/10 p-2 rounded-md backdrop-blur-sm">
+                    <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome || "OneBase Uniformes"}</h2>
+                    <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj || "57.855.073/0001-82"}</p>
+                    <p className="text-white/80 text-xs">{dadosEmpresa?.email || "onebase.store@gmail.com"}</p>
+                    <p className="text-white/80 text-xs">{dadosEmpresa?.telefone || "(11) 99541-6072"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 space-y-3">
+                {/* Dados Cliente */}
+                <div className="border-b pb-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-bold text-primary text-base">DADOS DO CLIENTE</h3>
+                    {modoEdicao && (
+                      <Popover open={openCliente} onOpenChange={setOpenCliente}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-400 hover:text-primary"><Search className="w-3 h-3 mr-1" /> Buscar Cliente</Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0" align="end">
+                          <Command>
+                            <CommandInput placeholder="Buscar por nome ou CNPJ..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {clientes.map(cliente => (
+                                  <CommandItem key={cliente.id} value={`${cliente.nome} ${cliente.cnpj || ""}`} onSelect={() => {
+                                    setOrcamentoRef.current({ ...orcamentoRef.current, cliente: cliente, nomeContato: cliente.contato || "", telefoneContato: cliente.telefone || "" })
+                                    setOpenCliente(false)
+                                  }}>
+                                    <div className="flex flex-col">
+                                      <span>{cliente.nome}</span>
+                                      {cliente.cnpj && <span className="text-[10px] text-muted-foreground">{cliente.cnpj}</span>}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+
+                  {modoEdicao ? (
+                    <div className="bg-accent p-2 rounded-md text-xs grid grid-cols-2 gap-x-4 gap-y-1">
+                      {/* Nome - apenas visualização */}
+                      <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                        <span className="font-medium whitespace-nowrap">Nome:</span>
+                        <span className="font-bold w-full">{orcamento.cliente?.nome || "-"}</span>
+                      </div>
+                      {/* CNPJ - apenas visualização */}
+                      <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                        <span className="font-medium whitespace-nowrap">CNPJ:</span>
+                        <span className="w-full">{orcamento.cliente?.cnpj || "-"}</span>
+                      </div>
+                      {/* Endereço - apenas visualização com quebra de linha */}
+                      <div className="flex items-start gap-1 col-span-2">
+                        <span className="font-medium whitespace-nowrap">Endereço:</span>
+                        <span className="w-full break-words whitespace-normal">{orcamento.cliente?.endereco || "-"}</span>
+                      </div>
+                      {/* Email - apenas visualização */}
+                      <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                        <span className="font-medium whitespace-nowrap">Email:</span>
+                        <span className="w-full">{orcamento.cliente?.email || "-"}</span>
+                      </div>
+                      {/* Telefone - apenas visualização */}
+                      <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                        <span className="font-medium whitespace-nowrap">Telefone:</span>
+                        <span className="w-full">{orcamento.cliente?.telefone || "-"}</span>
+                      </div>
+                      {/* Contato - editável */}
+                      <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                        <span className="font-medium whitespace-nowrap">Contato:</span>
+                        <InputTransparente value={orcamento.nomeContato || ""} onChange={e => updateOrcamentoField('nomeContato', e.target.value)} className="w-full" />
+                      </div>
+                      {/* Tel. Contato - editável */}
+                      <div className="flex items-center gap-1 col-span-2 md:col-span-1">
+                        <span className="font-medium whitespace-nowrap">Tel. Contato:</span>
+                        <InputTransparente value={orcamento.telefoneContato || ""} onChange={e => updateOrcamentoField('telefoneContato', e.target.value)} className="w-full" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-accent p-2 rounded-md text-xs grid grid-cols-2 gap-x-4 gap-y-1">
+                      <p className="col-span-2 md:col-span-1">
+                        <span className="font-medium">Nome:</span> {orcamento.cliente?.nome || ""}
+                      </p>
+                      <p className="col-span-2 md:col-span-1">
+                        <span className="font-medium">CNPJ:</span> {orcamento.cliente?.cnpj || ""}
+                      </p>
+                      <p className="col-span-2">
+                        <span className="font-medium">Endereço:</span> {orcamento.cliente?.endereco || ""}
+                      </p>
+                      <p className="col-span-2 md:col-span-1">
+                        <span className="font-medium">Email:</span> {orcamento.cliente?.email || ""}
+                      </p>
+                      <p className="col-span-2 md:col-span-1">
+                        <span className="font-medium">Telefone:</span> {orcamento.cliente?.telefone || ""}
+                      </p>
+                      <p className="col-span-2 md:col-span-1">
+                        <span className="font-medium">Contato:</span> {orcamento.nomeContato || ""}
+                      </p>
+                      <p className="col-span-2 md:col-span-1">
+                        <span className="font-medium">Tel. Contato:</span> {orcamento.telefoneContato || ""}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Dados Empresa (Direita) */}
-                <div className="text-right bg-white/10 p-2 rounded-md backdrop-blur-sm">
-                  <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome || "OneBase Uniformes"}</h2>
-                  <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj || "57.855.073/0001-82"}</p>
-                  <p className="text-white/80 text-xs">{dadosEmpresa?.email || "onebase.store@gmail.com"}</p>
-                  <p className="text-white/80 text-xs">{dadosEmpresa?.telefone || "(11) 99541-6072"}</p>
+                {/* Itens */}
+                <div className="mb-2">
+                  <div className="flex justify-between mb-2 items-end">
+                    <h3 className="font-bold text-base text-primary">ITENS DO ORÇAMENTO</h3>
+                    {modoEdicao ? (
+                      <div className="text-xs bg-accent px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                        Data: <input type="date" value={orcamento.data} onChange={e => updateOrcamentoField('data', e.target.value)} className="bg-transparent border-none p-0 text-xs w-24" />
+                      </div>
+                    ) : (
+                      <p className="text-xs bg-accent px-2 py-1 rounded-full font-medium">
+                        Data: {new Date(orcamento.data + "T12:00:00").toLocaleDateString("pt-BR")}
+                      </p>
+                    )}
+                  </div>
+
+                  <table className="w-full pdf-table text-xs border-collapse">
+                    <thead className="bg-primary text-white">
+                      <tr>
+                        {modoEdicao && <th className="p-2 text-center rounded-tl-md w-[40px] print:hidden"></th>}
+                        <th className={cn("p-2 text-center w-[6%]", !modoEdicao && "rounded-tl-md")}>#</th>
+                        <th className="p-2 text-left w-[24%]">Produto</th>
+                        <th className="p-2 text-left w-[22%]">Tamanhos</th>
+                        <th className="p-2 text-center w-[8%]">Qtd.</th>
+                        <th className="p-2 text-right w-[12%]">Valor Unit.</th>
+                        <th className="p-2 text-right w-[10%]">Desc. %</th>
+                        <th className="p-2 text-right rounded-tr-md w-[15%]">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orcamento.itens.map((item, idx) => (
+                        <React.Fragment key={item.id}>
+                          {modoEdicao && dragOverItemId === item.id && (
+                            <tr className="border-t">
+                              <td colSpan={7} className="p-0">
+                                <div className="h-1 bg-primary animate-pulse rounded-full mx-2"></div>
+                              </td>
+                            </tr>
+                          )}
+                          <tr
+                            className={cn(
+                              "border-b",
+                              modoEdicao && "hover:bg-gray-50 group relative cursor-move",
+                              modoEdicao && dragOverItemId === item.id && "bg-primary/5"
+                            )}
+                            draggable={modoEdicao}
+                            onDragStart={(e) => {
+                              if (!modoEdicao) return
+                              e.dataTransfer.setData("text/plain", item.id)
+                              e.currentTarget.classList.add("opacity-50")
+                            }}
+                            onDragEnd={(e) => {
+                              if (!modoEdicao) return
+                              e.currentTarget.classList.remove("opacity-50")
+                              setDragOverItemId(null)
+                            }}
+                            onDragOver={(e) => {
+                              if (!modoEdicao) return
+                              e.preventDefault()
+                              e.dataTransfer.dropEffect = "move"
+                              if (dragOverItemId !== item.id) {
+                                setDragOverItemId(item.id)
+                              }
+                            }}
+                            onDragLeave={(e) => {
+                              if (!modoEdicao) return
+                              const relatedTarget = e.relatedTarget as Node
+                              if (!e.currentTarget.contains(relatedTarget)) {
+                                setDragOverItemId(null)
+                              }
+                            }}
+                            onDrop={(e) => {
+                              if (!modoEdicao) return
+                              e.preventDefault()
+                              setDragOverItemId(null)
+                              const draggedItemId = e.dataTransfer.getData("text/plain")
+                              const draggedIndex = orcamentoRef.current.itens.findIndex((i) => i.id === draggedItemId)
+                              const targetIndex = idx
+
+                              if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
+                                const novosItens = [...orcamentoRef.current.itens]
+                                const [itemRemovido] = novosItens.splice(draggedIndex, 1)
+                                novosItens.splice(targetIndex, 0, itemRemovido)
+                                setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
+                              }
+                            }}
+                          >
+                            {modoEdicao && (
+                              <td className="py-0.5 px-1 align-middle text-center print:hidden">
+                                <div className="flex flex-col items-center gap-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => moverItemParaCima(idx)}
+                                    disabled={idx === 0}
+                                    className="h-4 w-4 rounded-full hover:bg-primary/10"
+                                    title="Mover para cima"
+                                  >
+                                    <ChevronUp className="h-2.5 w-2.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => moverItemParaBaixo(idx)}
+                                    disabled={idx >= orcamento.itens.length - 1}
+                                    className="h-4 w-4 rounded-full hover:bg-primary/10 mt-0.5"
+                                    title="Mover para baixo"
+                                  >
+                                    <ChevronDown className="h-2.5 w-2.5" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
+                            <td className="py-0.5 px-1 align-middle text-center font-semibold text-gray-600">
+                              {modoEdicao ? (
+                                <div className="relative mx-auto h-6 w-full max-w-[56px]">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute left-0 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-red-500 opacity-0 transition-opacity group-hover:opacity-100"
+                                    title="Remover item"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      removeItem(item.id)
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">{idx + 1}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-primary opacity-0 transition-opacity group-hover:opacity-100"
+                                    title="Clonar item completo"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      cloneItemCompleto(item.id)
+                                    }}
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                idx + 1
+                              )}
+                            </td>
+                            <td className="py-0.5 px-2 align-top">
+                              {modoEdicao ? (
+                                <div className="relative leading-tight">
+                                  <Popover open={openProduto === item.id} onOpenChange={o => setOpenProduto(o ? item.id : null)}>
+                                    <PopoverTrigger asChild>
+                                      <div className="font-bold cursor-pointer hover:text-primary hover:underline">
+                                        {item.produto?.nome ? (
+                                          <>
+                                            {item.produto.codigo && (
+                                              <span className="font-mono text-[10px] font-normal text-gray-400 mr-1">[{item.produto.codigo}]</span>
+                                            )}
+                                            {item.produto.nome}
+                                          </>
+                                        ) : "Selecione um produto..."}
+                                      </div>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-0 w-[300px]" align="start">
+                                      <Command>
+                                        <CommandInput placeholder="Buscar produto..." />
+                                        <CommandList>
+                                          <CommandGroup>
+                                            {produtos.map(p => (
+                                              <CommandItem key={p.id} value={`${p.codigo} ${p.nome}`} onSelect={() => {
+                                                const itemAtual = orcamentoRef.current.itens.find(i => i.id === item.id)
+                                                if (itemAtual?.produtoId && itemAtual.produtoId !== p.id) {
+                                                  setSwapPendente({ itemId: item.id, novoProduto: p })
+                                                  setOpenProduto(null)
+                                                } else {
+                                                  updateItem(item.id, 'produtoId', p.id)
+                                                  setOpenProduto(null)
+                                                }
+                                              }}>
+                                                <span className="font-mono text-[10px] text-gray-400 mr-2 shrink-0">{p.codigo}</span>
+                                                {p.nome}
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                  <InputTransparente
+                                    key={`obs-comercial-${item.id}`}
+                                    value={item.observacaoComercial || ""}
+                                    onChange={e => updateItem(item.id, 'observacaoComercial', e.target.value)}
+                                    placeholder="Obs. Comercial"
+                                    className="text-[10px] text-gray-500 italic w-full mt-0.5 h-5 px-0"
+                                  />
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="font-medium text-xs leading-tight mb-1">
+                                    {item.produto?.codigo && <span className="font-mono text-[10px] font-normal text-gray-400 mr-1">[{item.produto.codigo}]</span>}
+                                    {item.produto?.nome}
+                                  </p>
+                                  {item.observacaoComercial && (
+                                    <div className="text-gray-600 italic text-[10px] leading-relaxed">{item.observacaoComercial}</div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-0.5 px-2 align-top">
+                              <div className="flex flex-wrap gap-0.5 leading-tight">
+                                {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, quantidade]) => (
+                                  <span
+                                    key={tamanho}
+                                    className="text-[10px] text-sky-700 font-medium whitespace-nowrap"
+                                    title={`${tamanho}: ${quantidade} unidades`}
+                                  >
+                                    {tamanho}-{quantidade}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-0.5 px-2 text-center align-middle font-bold">
+                              {item.quantidade}
+                            </td>
+                            <td className="py-0.5 px-2 text-right align-middle">
+                              {modoEdicao ? (
+                                <InputTransparente
+                                  type="number"
+                                  step="0.01"
+                                  value={item.valorUnitario}
+                                  onChange={e => updateItem(item.id, 'valorUnitario', Number(e.target.value))}
+                                  className="text-right w-full"
+                                />
+                              ) : (
+                                <span>R$ {item.valorUnitario.toFixed(2)}</span>
+                              )}
+                            </td>
+                            <td className="py-0.5 px-2 text-right align-middle">
+                              {modoEdicao ? (
+                                <InputTransparente
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max="100"
+                                  value={item.descontoUnitarioPercentual || 0}
+                                  onChange={e => updateItem(item.id, 'descontoUnitarioPercentual', Number(e.target.value))}
+                                  className="text-right w-full text-orange-600"
+                                  placeholder="0%"
+                                />
+                              ) : (
+                                <span className={item.descontoUnitarioPercentual && item.descontoUnitarioPercentual > 0 ? "text-orange-600 font-medium" : ""}>
+                                  {item.descontoUnitarioPercentual && item.descontoUnitarioPercentual > 0 ? `${item.descontoUnitarioPercentual.toFixed(1)}%` : "-"}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-0.5 px-2 text-right align-middle font-bold text-primary">
+                              {(() => {
+                                const descontoPercentual = item.descontoUnitarioPercentual || 0
+                                const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
+                                const total = item.quantidade * valorComDesconto
+                                return `R$ ${total.toFixed(2)}`
+                              })()}
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-accent font-medium text-xs">
+                      {modoEdicao && (
+                        <tr>
+                          <td colSpan={7} className="p-0 text-center">
+                            <Button variant="ghost" className="w-full h-8 text-xs text-primary hover:bg-primary/10" onClick={addItem}>
+                              <Plus className="w-3 h-3 mr-1" /> Adicionar Item
+                            </Button>
+                          </td>
+                        </tr>
+                      )}
+                      {/* Mostrar subtotal bruto (sem descontos unitários) */}
+                      <tr>
+                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t border-primary text-gray-600">
+                          Subtotal Bruto:
+                        </td>
+                        <td className="p-2 text-right border-t border-primary text-gray-600">
+                          R$ {orcamento.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0).toFixed(2)}
+                        </td>
+                      </tr>
+
+                      {/* Mostrar desconto unitário total se houver */}
+                      {(() => {
+                        const totalDescontoUnitario = orcamento.itens.reduce((total, item) => {
+                          const descontoPercentual = item.descontoUnitarioPercentual || 0
+                          if (descontoPercentual > 0) {
+                            const valorDesconto = item.quantidade * item.valorUnitario * (descontoPercentual / 100)
+                            return total + valorDesconto
+                          }
+                          return total
+                        }, 0)
+
+                        if (totalDescontoUnitario > 0 || modoEdicao) {
+                          return (
+                            <tr>
+                              <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right text-orange-600">
+                                Desconto Unitário (%):
+                              </td>
+                              <td className="p-2 text-right text-orange-600">
+                                - R$ {totalDescontoUnitario.toFixed(2)}
+                              </td>
+                            </tr>
+                          )
+                        }
+                        return null
+                      })()}
+
+                      <tr>
+                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t border-primary">Valor dos Produtos:</td>
+                        <td className="p-2 text-right border-t border-primary">R$ {calcularTotal().toFixed(2)}</td>
+                      </tr>
+                      {(modoEdicao || (orcamento.valorFrete !== undefined && orcamento.valorFrete > 0)) && (
+                        <tr>
+                          <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right">
+                            {modoEdicao ? (
+                              <div className="flex justify-end items-center gap-2">
+                                Frete: R$ <InputTransparente type="number" value={orcamento.valorFrete || 0} onChange={e => updateOrcamentoField('valorFrete', Number(e.target.value))} className="w-16 text-right" />
+                              </div>
+                            ) : (
+                              <span>Valor do Frete:</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-right">R$ {(orcamento.valorFrete || 0).toFixed(2)}</td>
+                        </tr>
+                      )}
+                      {(modoEdicao || (orcamento.valorDesconto !== undefined && orcamento.valorDesconto > 0)) && (
+                        <tr>
+                          <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right">
+                            {modoEdicao ? (
+                              <div className="flex justify-end items-center gap-2">
+                                Desconto Geral:
+                                <InputTransparente
+                                  type="number"
+                                  value={orcamento.valorDesconto || 0}
+                                  onChange={e => updateOrcamentoField('valorDesconto', Number(e.target.value))}
+                                  className="w-16 text-right"
+                                />
+                              </div>
+                            ) : (
+                              <span>Desconto Geral (R$):</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-right text-red-600">
+                            - R$ {(orcamento.valorDesconto || 0).toFixed(2)}
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="font-bold text-primary">
+                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t-2 border-primary">TOTAL:</td>
+                        <td className="p-2 text-right border-t-2 border-primary">R$ {(() => {
+                          const subtotal = calcularTotal() + (orcamento.valorFrete || 0)
+                          const desconto = orcamento.valorDesconto || 0
+                          return (subtotal - desconto).toFixed(2)
+                        })()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Observações Footer */}
+                <div className="space-y-2 mt-4">
+                  <div>
+                    <h3 className="font-bold mb-1 text-primary text-sm">OBSERVAÇÕES</h3>
+                    {modoEdicao ? (
+                      <TextareaTransparente
+                        key={`obs-orcamento-${orcamento.id || 'new'}`}
+                        value={orcamento.observacoes || ""}
+                        onChange={e => updateOrcamentoField('observacoes', e.target.value)}
+                        className="text-xs bg-accent p-2 rounded-md w-full min-h-[40px]"
+                        placeholder="Observações gerais do orçamento..."
+                      />
+                    ) : (
+                      <p className="text-xs bg-accent p-2 rounded-md" style={{ minHeight: "24px" }}>
+                        {orcamento.observacoes || "Nenhuma observação."}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-accent p-2 rounded-md">
+                      <h4 className="font-bold text-primary mb-1 text-xs">Condições de Pagamento</h4>
+                      {modoEdicao ? (
+                        <InputTransparente value={orcamento.condicoesPagamento} onChange={e => updateOrcamentoField('condicoesPagamento', e.target.value)} className="w-full text-xs" />
+                      ) : (
+                        <p className="text-xs leading-tight">{orcamento.condicoesPagamento}</p>
+                      )}
+                    </div>
+                    <div className="bg-accent p-2 rounded-md">
+                      <h4 className="font-bold text-primary mb-1 text-xs">Prazo de Entrega</h4>
+                      {modoEdicao ? (
+                        <InputTransparente value={orcamento.prazoEntrega} onChange={e => updateOrcamentoField('prazoEntrega', e.target.value)} className="w-full text-xs" />
+                      ) : (
+                        <p className="text-xs leading-tight">{orcamento.prazoEntrega}</p>
+                      )}
+                    </div>
+                    <div className="bg-accent p-2 rounded-md">
+                      <h4 className="font-bold text-primary mb-1 text-xs">Validade do Orçamento</h4>
+                      {modoEdicao ? (
+                        <InputTransparente value={orcamento.validadeOrcamento} onChange={e => updateOrcamentoField('validadeOrcamento', e.target.value)} className="w-full text-xs" />
+                      ) : (
+                        <p className="text-xs leading-tight">{orcamento.validadeOrcamento}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Content */}
-            <div className="p-4 space-y-3">
-              {/* Dados Cliente */}
-              <div className="border-b pb-3">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-bold text-primary text-base">DADOS DO CLIENTE</h3>
-                  {modoEdicao && (
-                    <Popover open={openCliente} onOpenChange={setOpenCliente}>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-400 hover:text-primary"><Search className="w-3 h-3 mr-1" /> Buscar Cliente</Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0" align="end">
-                        <Command>
-                          <CommandInput placeholder="Buscar cliente..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                            <CommandGroup>
-                              {clientes.map(cliente => (
-                                <CommandItem key={cliente.id} onSelect={() => {
-                                  setOrcamentoRef.current({ ...orcamentoRef.current, cliente: cliente, nomeContato: cliente.contato || "", telefoneContato: cliente.telefone || "" })
-                                  setOpenCliente(false)
-                                }}>
-                                  {cliente.nome}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
+          {/* 2. FICHA TÉCNICA */}
+          {(modoExportacao === "completo" || modoExportacao === "ficha") && orcamento.itens.map((item, idx) => (
+            <div
+              key={item.id}
+              className="border border-gray-300 rounded-md shadow-sm ficha-tecnica bg-white page-break-before pdf-section"
+              style={{
+                width: '210mm',
+                minHeight: '297mm',
+                flexShrink: 0,
+                zoom: (zoom / 100) as any,
+              }}
+            >
+              {/* Header Ficha */}
+              <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center" style={{ width: "50px", height: "50px" }}>
+                      {dadosEmpresa?.logo_url ? (
+                        <img
+                          src={dadosEmpresa.logo_url}
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5" />
+                          <path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5" />
+                          <path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <div>
+                        <h1 className="text-xl font-bold text-white font-sans tracking-tight uppercase">
+                          FICHA TÉCNICA - {orcamento.numero.split(" - ")[0]}
+                        </h1>
+                        <p className="text-white/90 text-sm uppercase">
+                          {orcamento.cliente?.nome || "EMPRESA"} - {orcamento.nomeContato || orcamento.cliente?.contato || "CONTATO"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right bg-white/10 p-2 rounded-md backdrop-blur-sm">
+                    <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome}</h2>
+                    <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj}</p>
+                    <p className="text-white/80 text-xs">{dadosEmpresa?.email}</p>
+                    <p className="text-white/80 text-xs">{dadosEmpresa?.telefone}</p>
+                  </div>
                 </div>
-
-                {modoEdicao ? (
-                  <div className="bg-accent p-2 rounded-md text-xs grid grid-cols-2 gap-x-4 gap-y-1">
-                    {/* Nome - apenas visualização */}
-                    <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                      <span className="font-medium whitespace-nowrap">Nome:</span>
-                      <span className="font-bold w-full">{orcamento.cliente?.nome || "-"}</span>
-                    </div>
-                    {/* CNPJ - apenas visualização */}
-                    <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                      <span className="font-medium whitespace-nowrap">CNPJ:</span>
-                      <span className="w-full">{orcamento.cliente?.cnpj || "-"}</span>
-                    </div>
-                    {/* Endereço - apenas visualização com quebra de linha */}
-                    <div className="flex items-start gap-1 col-span-2">
-                      <span className="font-medium whitespace-nowrap">Endereço:</span>
-                      <span className="w-full break-words whitespace-normal">{orcamento.cliente?.endereco || "-"}</span>
-                    </div>
-                    {/* Email - apenas visualização */}
-                    <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                      <span className="font-medium whitespace-nowrap">Email:</span>
-                      <span className="w-full">{orcamento.cliente?.email || "-"}</span>
-                    </div>
-                    {/* Telefone - apenas visualização */}
-                    <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                      <span className="font-medium whitespace-nowrap">Telefone:</span>
-                      <span className="w-full">{orcamento.cliente?.telefone || "-"}</span>
-                    </div>
-                    {/* Contato - editável */}
-                    <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                      <span className="font-medium whitespace-nowrap">Contato:</span>
-                      <InputTransparente value={orcamento.nomeContato || ""} onChange={e => updateOrcamentoField('nomeContato', e.target.value)} className="w-full" />
-                    </div>
-                    {/* Tel. Contato - editável */}
-                    <div className="flex items-center gap-1 col-span-2 md:col-span-1">
-                      <span className="font-medium whitespace-nowrap">Tel. Contato:</span>
-                      <InputTransparente value={orcamento.telefoneContato || ""} onChange={e => updateOrcamentoField('telefoneContato', e.target.value)} className="w-full" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-accent p-2 rounded-md text-xs grid grid-cols-2 gap-x-4 gap-y-1">
-                    <p className="col-span-2 md:col-span-1">
-                      <span className="font-medium">Nome:</span> {orcamento.cliente?.nome || ""}
-                    </p>
-                    <p className="col-span-2 md:col-span-1">
-                      <span className="font-medium">CNPJ:</span> {orcamento.cliente?.cnpj || ""}
-                    </p>
-                    <p className="col-span-2">
-                      <span className="font-medium">Endereço:</span> {orcamento.cliente?.endereco || ""}
-                    </p>
-                    <p className="col-span-2 md:col-span-1">
-                      <span className="font-medium">Email:</span> {orcamento.cliente?.email || ""}
-                    </p>
-                    <p className="col-span-2 md:col-span-1">
-                      <span className="font-medium">Telefone:</span> {orcamento.cliente?.telefone || ""}
-                    </p>
-                    <p className="col-span-2 md:col-span-1">
-                      <span className="font-medium">Contato:</span> {orcamento.nomeContato || ""}
-                    </p>
-                    <p className="col-span-2 md:col-span-1">
-                      <span className="font-medium">Tel. Contato:</span> {orcamento.telefoneContato || ""}
-                    </p>
-                  </div>
-                )}
               </div>
 
-              {/* Itens */}
-              <div className="mb-2">
-                <div className="flex justify-between mb-2 items-end">
-                  <h3 className="font-bold text-base text-primary">ITENS DO ORÇAMENTO</h3>
-                  {modoEdicao ? (
-                    <div className="text-xs bg-accent px-2 py-1 rounded-full font-medium flex items-center gap-1">
-                      Data: <input type="date" value={orcamento.data} onChange={e => updateOrcamentoField('data', e.target.value)} className="bg-transparent border-none p-0 text-xs w-24" />
-                    </div>
-                  ) : (
-                    <p className="text-xs bg-accent px-2 py-1 rounded-full font-medium">
-                      Data: {new Date(orcamento.data + "T12:00:00").toLocaleDateString("pt-BR")}
-                    </p>
-                  )}
-                </div>
+              <div className="p-4 space-y-3">
+                <h3 className="font-bold text-base mb-2 text-primary border-b border-primary pb-1 flex justify-between">
+                  {item.produto?.nome}
+                  <span className="text-xs font-normal text-gray-500">Item {idx + 1}</span>
+                </h3>
 
-                <table className="w-full pdf-table text-xs border-collapse">
-                  <thead className="bg-primary text-white">
-                    <tr>
-                      {modoEdicao && <th className="p-2 text-center rounded-tl-md w-[40px] print:hidden"></th>}
-                      <th className={cn("p-2 text-center w-[6%]", !modoEdicao && "rounded-tl-md")}>#</th>
-                      <th className="p-2 text-left w-[24%]">Produto</th>
-                      <th className="p-2 text-left w-[22%]">Tamanhos</th>
-                      <th className="p-2 text-center w-[8%]">Qtd.</th>
-                      <th className="p-2 text-right w-[12%]">Valor Unit.</th>
-                      <th className="p-2 text-right w-[10%]">Desc. %</th>
-                      <th className="p-2 text-right rounded-tr-md w-[15%]">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orcamento.itens.map((item, idx) => (
-                      <React.Fragment key={item.id}>
-                        {modoEdicao && dragOverItemId === item.id && (
-                          <tr className="border-t">
-                            <td colSpan={7} className="p-0">
-                              <div className="h-1 bg-primary animate-pulse rounded-full mx-2"></div>
-                            </td>
-                          </tr>
-                        )}
-                        <tr
-                          className={cn(
-                            "border-b",
-                            modoEdicao && "hover:bg-gray-50 group relative cursor-move",
-                            modoEdicao && dragOverItemId === item.id && "bg-primary/5"
+                <div className="space-y-3">
+                  {/* Imagem Upload */}
+                  <div
+                    className={cn(
+                      "text-center border-2 border-dashed border-gray-200 rounded-lg p-2 relative flex items-center justify-center h-[280px]",
+                      modoEdicao && "hover:bg-gray-50 transition-colors group cursor-pointer focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:outline-none",
+                      dragOverItemId === item.id && "border-primary bg-primary/5"
+                    )}
+                    tabIndex={modoEdicao ? 0 : -1}
+                    onPaste={modoEdicao ? (e) => handleImagePaste(e, item.id) : undefined}
+                    onDragOver={modoEdicao ? (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setDragOverItemId(item.id)
+                    } : undefined}
+                    onDragLeave={modoEdicao ? (e) => {
+                      e.preventDefault()
+                      setDragOverItemId(null)
+                    } : undefined}
+                    onDrop={modoEdicao ? (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setDragOverItemId(null)
+                      const files = e.dataTransfer?.files
+                      if (files && files.length > 0) {
+                        const file = files[0]
+                        if (file.type.startsWith('image/')) {
+                          const reader = new FileReader()
+                          reader.onload = (ev) => {
+                            if (ev.target?.result) {
+                              updateItem(item.id, 'imagem', ev.target.result as string)
+                            }
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }
+                    } : undefined}
+                    onClick={modoEdicao ? (e) => {
+                      // Apenas dá foco no container para permitir Ctrl+V
+                      e.currentTarget.focus()
+                    } : undefined}
+                    title={modoEdicao ? "Clique para selecionar ou cole uma imagem (Ctrl+V)" : undefined}
+                  >
+                    <img
+                      src={item.imagem || "/placeholder.svg"}
+                      className="max-h-full max-w-[65%] mx-auto object-contain pointer-events-none"
+                    />
+                    {modoEdicao && (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          id={`file-input-${item.id}`}
+                          className="hidden"
+                          onChange={e => handleImageUpload(e, item.id)}
+                        />
+                        <div
+                          className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity pointer-events-none group-hover:pointer-events-auto"
+                        >
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement
+                                input?.click()
+                              }}
+                            >
+                              <Upload className="w-4 h-4" /> Selecionar Arquivo
+                            </button>
+                            <button
+                              type="button"
+                              className="bg-primary text-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-primary/90"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleClipboardRead(item.id)
+                              }}
+                            >
+                              <Copy className="w-4 h-4" /> Colar da Área de Transferência
+                            </button>
+                          </div>
+                          {!!item.imagem && (
+                            <button
+                              type="button"
+                              className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-red-50 text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                updateItem(item.id, 'imagem', null)
+                                const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement
+                                if (input) input.value = ""
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" /> Remover
+                            </button>
                           )}
-                          draggable={modoEdicao}
-                          onDragStart={(e) => {
-                            if (!modoEdicao) return
-                            e.dataTransfer.setData("text/plain", item.id)
-                            e.currentTarget.classList.add("opacity-50")
-                          }}
-                          onDragEnd={(e) => {
-                            if (!modoEdicao) return
-                            e.currentTarget.classList.remove("opacity-50")
-                            setDragOverItemId(null)
-                          }}
-                          onDragOver={(e) => {
-                            if (!modoEdicao) return
-                            e.preventDefault()
-                            e.dataTransfer.dropEffect = "move"
-                            if (dragOverItemId !== item.id) {
-                              setDragOverItemId(item.id)
-                            }
-                          }}
-                          onDragLeave={(e) => {
-                            if (!modoEdicao) return
-                            const relatedTarget = e.relatedTarget as Node
-                            if (!e.currentTarget.contains(relatedTarget)) {
-                              setDragOverItemId(null)
-                            }
-                          }}
-                          onDrop={(e) => {
-                            if (!modoEdicao) return
-                            e.preventDefault()
-                            setDragOverItemId(null)
-                            const draggedItemId = e.dataTransfer.getData("text/plain")
-                            const draggedIndex = orcamentoRef.current.itens.findIndex((i) => i.id === draggedItemId)
-                            const targetIndex = idx
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                            if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
-                              const novosItens = [...orcamentoRef.current.itens]
-                              const [itemRemovido] = novosItens.splice(draggedIndex, 1)
-                              novosItens.splice(targetIndex, 0, itemRemovido)
+                  {/* Specs Grid */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Tecido + Cor */}
+                    <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card col-span-1">
+                      <div className="bg-primary/10 p-1.5 border-b border-primary/10 font-medium text-primary text-xs flex justify-between items-center">
+                        <span>Tecido / Cor</span>
+                      </div>
+                      <div className="p-2 space-y-1.5">
+                        {/* Tecido */}
+                        <div>
+                          <p className="text-[10px] text-gray-600 mb-0.5">Tecido</p>
+                          {modoEdicao ? (
+                            <>
+                              <Select value={item.tecidoSelecionado?.nome} onValueChange={val => {
+                                const t = item.produto?.tecidos.find(x => x.nome === val)
+                                if (t) updateItem(item.id, 'tecidoSelecionado', t)
+                              }}>
+                                <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                  {item.produto?.tecidos && item.produto.tecidos.length > 0
+                                    ? item.produto.tecidos.map((t, tIdx) => <SelectItem key={`${item.id}-tecido-${tIdx}`} value={t.nome}>{t.nome}</SelectItem>)
+                                    : <div className="p-2 text-[10px] text-gray-500 text-center">Sem tecidos cadastrados</div>
+                                  }
+                                </SelectContent>
+                              </Select>
+                              <p className="text-[10px] text-gray-500 mt-0.5">{item.tecidoSelecionado?.composicao || "Composição..."}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-bold text-[10px]">{item.tecidoSelecionado?.nome || "Não selecionado"}</p>
+                              <p className="text-[10px] text-gray-500">{item.tecidoSelecionado?.composicao || "Composição não especificada"}</p>
+                            </>
+                          )}
+                        </div>
+                        {/* Cor */}
+                        <div className="pt-1 border-t border-primary/5">
+                          <p className="text-[10px] text-gray-600 mb-0.5">Cor</p>
+                          {modoEdicao ? (
+                            <div className="flex items-center gap-2">
+                              <Select value={item.corSelecionada} onValueChange={val => updateItem(item.id, 'corSelecionada', val)}>
+                                <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold min-w-[80px]"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                  {item.produto?.cores && item.produto.cores.length > 0
+                                    ? item.produto.cores.map((c, cIdx) => <SelectItem key={`${item.id}-cor-${cIdx}`} value={c}>{c}</SelectItem>)
+                                    : <div className="p-2 text-[10px] text-gray-500 text-center">Sem cores cadastradas</div>
+                                  }
+                                </SelectContent>
+                              </Select>
+                              <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-[10px]">{item.corSelecionada || "Não selecionada"}</p>
+                              <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Artes - ocupa duas colunas, com mais largura */}
+                    <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card col-span-2">
+                      <div className="bg-primary/10 p-1.5 border-b border-primary/10 font-medium text-primary flex justify-between items-center">
+                        <span className="text-xs">Artes</span>
+                        {modoEdicao && (
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
+                            const novasEstampas = [...(item.estampas || []), { id: crypto.randomUUID(), tipo: TIPOS_ARTE[0], posicao: POSICOES_ARTE[0], largura: 10, comprimento: 10 }]
+                            updateItem(item.id, 'estampas', novasEstampas)
+                          }}><Plus className="h-3 w-3" /></Button>
+                        )}
+                      </div>
+                      <div className="p-1.5 space-y-0.5">
+                        {item.estampas?.map((est, i) => (
+                          <div key={est.id} className={cn("text-[10px]", modoEdicao && "relative group pr-5")}>
+                            <div className="flex items-center gap-1">
+                              <span className="bg-primary/10 text-primary rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px] flex-shrink-0">{i + 1}</span>
+                              {modoEdicao ? (
+                                <>
+                                  <Select value={est.posicao} onValueChange={val => {
+                                    const news = item.estampas!.map(x => x.id === est.id ? { ...x, posicao: val } : x)
+                                    updateItem(item.id, 'estampas', news)
+                                  }}>
+                                    <SelectTrigger className="h-5 text-[9px] bg-transparent border-none p-0 font-bold w-[110px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {POSICOES_ARTE.map(pos => (
+                                        <SelectItem key={pos} value={pos} className="text-[10px]">{pos}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={est.tipo} onValueChange={val => {
+                                    const news = item.estampas!.map(x => x.id === est.id ? { ...x, tipo: val } : x)
+                                    updateItem(item.id, 'estampas', news)
+                                  }}>
+                                    <SelectTrigger className="h-5 text-[9px] bg-transparent border-none p-0 w-[70px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {TIPOS_ARTE.map(tipo => (
+                                        <SelectItem key={tipo} value={tipo} className="text-[10px]">{tipo}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <span>-</span>
+                                  <InputTransparente type="number" value={est.largura} onChange={e => {
+                                    const news = item.estampas!.map(x => x.id === est.id ? { ...x, largura: Number(e.target.value) } : x)
+                                    updateItem(item.id, 'estampas', news)
+                                  }} className="w-12 p-0 h-5 text-center text-[9px]" />
+                                  <span className="text-[9px]">x</span>
+                                  <InputTransparente type="number" value={est.comprimento} onChange={e => {
+                                    const news = item.estampas!.map(x => x.id === est.id ? { ...x, comprimento: Number(e.target.value) } : x)
+                                    updateItem(item.id, 'estampas', news)
+                                  }} className="w-12 p-0 h-5 text-center text-[9px]" />
+                                  <span className="text-[9px] font-semibold">CM</span>
+                                </>
+                              ) : (
+                                <span className="ml-1">{est.posicao} • {est.tipo} • {est.largura}x{est.comprimento} cm</span>
+                              )}
+                            </div>
+                            {modoEdicao && (
+                              <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-4 w-4 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => {
+                                updateItem(item.id, 'estampas', item.estampas!.filter(x => x.id !== est.id))
+                              }}><Trash2 className="w-2.5 h-2.5" /></Button>
+                            )}
+                          </div>
+                        ))}
+                        {(!item.estampas || item.estampas.length === 0) && <p className="text-gray-400 italic text-[10px]">Sem artes.</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tabela Tamanhos Item */}
+                  <div className="mt-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <h4 className="font-bold text-primary text-sm">Tabela de Tamanhos</h4>
+                      {modoEdicao && tiposTamanho.length > 0 && (
+                        <Select
+                          value={item.tipoTamanhoSelecionado || ""}
+                          onValueChange={(value) => {
+                            const tipoSelecionado = tiposTamanho.find(t => t.id === value)
+                            if (tipoSelecionado) {
+                              // Criar novo objeto de tamanhos com os tamanhos do tipo selecionado
+                              const novosTamanhos: Record<string, number> = {}
+                              tipoSelecionado.tamanhos?.forEach(tamanho => {
+                                novosTamanhos[tamanho] = item.tamanhos[tamanho] || 0
+                              })
+                              // Atualizar ambos os campos em uma única operação
+                              const novosItens = orcamentoRef.current.itens.map(i =>
+                                i.id === item.id
+                                  ? { ...i, tipoTamanhoSelecionado: value, tamanhos: novosTamanhos }
+                                  : i
+                              )
                               setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
                             }
                           }}
                         >
-                          {modoEdicao && (
-                            <td className="py-0.5 px-1 align-middle text-center print:hidden">
-                              <div className="flex flex-col items-center gap-0">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => moverItemParaCima(idx)}
-                                  disabled={idx === 0}
-                                  className="h-4 w-4 rounded-full hover:bg-primary/10"
-                                  title="Mover para cima"
-                                >
-                                  <ChevronUp className="h-2.5 w-2.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => moverItemParaBaixo(idx)}
-                                  disabled={idx >= orcamento.itens.length - 1}
-                                  className="h-4 w-4 rounded-full hover:bg-primary/10 mt-0.5"
-                                  title="Mover para baixo"
-                                >
-                                  <ChevronDown className="h-2.5 w-2.5" />
-                                </Button>
-                              </div>
-                            </td>
-                          )}
-                          <td className="py-0.5 px-1 align-middle text-center font-semibold text-gray-600">
-                            {modoEdicao ? (
-                              <div className="relative mx-auto h-6 w-full max-w-[56px]">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute left-0 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-red-500 opacity-0 transition-opacity group-hover:opacity-100"
-                                  title="Remover item"
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    removeItem(item.id)
-                                  }}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                                <span className="pointer-events-none absolute inset-0 flex items-center justify-center">{idx + 1}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-0 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-primary opacity-0 transition-opacity group-hover:opacity-100"
-                                  title="Clonar item completo"
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    cloneItemCompleto(item.id)
-                                  }}
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              idx + 1
-                            )}
-                          </td>
-                          <td className="py-0.5 px-2 align-top">
-                            {modoEdicao ? (
-                              <div className="relative leading-tight">
-                                <Popover open={openProduto === item.id} onOpenChange={o => setOpenProduto(o ? item.id : null)}>
-                                  <PopoverTrigger asChild>
-                                    <div className="font-bold cursor-pointer hover:text-primary hover:underline">
-                                      {item.produto?.nome ? (
-                                        <>
-                                          {item.produto.codigo && (
-                                            <span className="font-mono text-[10px] font-normal text-gray-400 mr-1">[{item.produto.codigo}]</span>
-                                          )}
-                                          {item.produto.nome}
-                                        </>
-                                      ) : "Selecione um produto..."}
-                                    </div>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="p-0 w-[300px]" align="start">
-                                    <Command>
-                                      <CommandInput placeholder="Buscar produto..." />
-                                      <CommandList>
-                                        <CommandGroup>
-                                          {produtos.map(p => (
-                                            <CommandItem key={p.id} value={`${p.codigo} ${p.nome}`} onSelect={() => {
-                                              const itemAtual = orcamentoRef.current.itens.find(i => i.id === item.id)
-                                              if (itemAtual?.produtoId && itemAtual.produtoId !== p.id) {
-                                                setSwapPendente({ itemId: item.id, novoProduto: p })
-                                                setOpenProduto(null)
-                                              } else {
-                                                updateItem(item.id, 'produtoId', p.id)
-                                                setOpenProduto(null)
-                                              }
-                                            }}>
-                                              <span className="font-mono text-[10px] text-gray-400 mr-2 shrink-0">{p.codigo}</span>
-                                              {p.nome}
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                                <InputTransparente
-                                  key={`obs-comercial-${item.id}`}
-                                  value={item.observacaoComercial || ""}
-                                  onChange={e => updateItem(item.id, 'observacaoComercial', e.target.value)}
-                                  placeholder="Obs. Comercial"
-                                  className="text-[10px] text-gray-500 italic w-full mt-0.5 h-5 px-0"
-                                />
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="font-medium text-xs leading-tight mb-1">
-                {item.produto?.codigo && <span className="font-mono text-[10px] font-normal text-gray-400 mr-1">[{item.produto.codigo}]</span>}
-                {item.produto?.nome}
-              </p>
-                                {item.observacaoComercial && (
-                                  <div className="text-gray-600 italic text-[10px] leading-relaxed">{item.observacaoComercial}</div>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-0.5 px-2 align-top">
-                            <div className="flex flex-wrap gap-0.5 leading-tight">
-                              {ordenarTamanhos(item.tamanhos || {}).map(([tamanho, quantidade]) => (
-                                <span
-                                  key={tamanho}
-                                  className="text-[10px] text-sky-700 font-medium whitespace-nowrap"
-                                  title={`${tamanho}: ${quantidade} unidades`}
-                                >
-                                  {tamanho}-{quantidade}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="py-0.5 px-2 text-center align-middle font-bold">
-                            {item.quantidade}
-                          </td>
-                          <td className="py-0.5 px-2 text-right align-middle">
-                            {modoEdicao ? (
-                              <InputTransparente
-                                type="number"
-                                step="0.01"
-                                value={item.valorUnitario}
-                                onChange={e => updateItem(item.id, 'valorUnitario', Number(e.target.value))}
-                                className="text-right w-full"
-                              />
-                            ) : (
-                              <span>R$ {item.valorUnitario.toFixed(2)}</span>
-                            )}
-                          </td>
-                          <td className="py-0.5 px-2 text-right align-middle">
-                            {modoEdicao ? (
-                              <InputTransparente
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="100"
-                                value={item.descontoUnitarioPercentual || 0}
-                                onChange={e => updateItem(item.id, 'descontoUnitarioPercentual', Number(e.target.value))}
-                                className="text-right w-full text-orange-600"
-                                placeholder="0%"
-                              />
-                            ) : (
-                              <span className={item.descontoUnitarioPercentual && item.descontoUnitarioPercentual > 0 ? "text-orange-600 font-medium" : ""}>
-                                {item.descontoUnitarioPercentual && item.descontoUnitarioPercentual > 0 ? `${item.descontoUnitarioPercentual.toFixed(1)}%` : "-"}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-0.5 px-2 text-right align-middle font-bold text-primary">
-                            {(() => {
-                              const descontoPercentual = item.descontoUnitarioPercentual || 0
-                              const valorComDesconto = item.valorUnitario * (1 - descontoPercentual / 100)
-                              const total = item.quantidade * valorComDesconto
-                              return `R$ ${total.toFixed(2)}`
-                            })()}
-                          </td>
-                        </tr>
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-accent font-medium text-xs">
-                    {modoEdicao && (
-                      <tr>
-                        <td colSpan={7} className="p-0 text-center">
-                          <Button variant="ghost" className="w-full h-8 text-xs text-primary hover:bg-primary/10" onClick={addItem}>
-                            <Plus className="w-3 h-3 mr-1" /> Adicionar Item
-                          </Button>
-                        </td>
-                      </tr>
-                    )}
-                    {/* Mostrar subtotal bruto (sem descontos unitários) */}
-                    <tr>
-                      <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t border-primary text-gray-600">
-                        Subtotal Bruto:
-                      </td>
-                      <td className="p-2 text-right border-t border-primary text-gray-600">
-                        R$ {orcamento.itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0).toFixed(2)}
-                      </td>
-                    </tr>
-                    
-                    {/* Mostrar desconto unitário total se houver */}
-                    {(() => {
-                      const totalDescontoUnitario = orcamento.itens.reduce((total, item) => {
-                        const descontoPercentual = item.descontoUnitarioPercentual || 0
-                        if (descontoPercentual > 0) {
-                          const valorDesconto = item.quantidade * item.valorUnitario * (descontoPercentual / 100)
-                          return total + valorDesconto
-                        }
-                        return total
-                      }, 0)
-                      
-                      if (totalDescontoUnitario > 0 || modoEdicao) {
-                        return (
-                          <tr>
-                            <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right text-orange-600">
-                              Desconto Unitário (%):
-                            </td>
-                            <td className="p-2 text-right text-orange-600">
-                              - R$ {totalDescontoUnitario.toFixed(2)}
-                            </td>
-                          </tr>
-                        )
-                      }
-                      return null
-                    })()}
-                    
-                    <tr>
-                      <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t border-primary">Valor dos Produtos:</td>
-                      <td className="p-2 text-right border-t border-primary">R$ {calcularTotal().toFixed(2)}</td>
-                    </tr>
-                    {(modoEdicao || (orcamento.valorFrete !== undefined && orcamento.valorFrete > 0)) && (
-                      <tr>
-                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right">
-                          {modoEdicao ? (
-                            <div className="flex justify-end items-center gap-2">
-                              Frete: R$ <InputTransparente type="number" value={orcamento.valorFrete || 0} onChange={e => updateOrcamentoField('valorFrete', Number(e.target.value))} className="w-16 text-right" />
-                            </div>
-                          ) : (
-                            <span>Valor do Frete:</span>
-                          )}
-                        </td>
-                        <td className="p-2 text-right">R$ {(orcamento.valorFrete || 0).toFixed(2)}</td>
-                      </tr>
-                    )}
-                    {(modoEdicao || (orcamento.valorDesconto !== undefined && orcamento.valorDesconto > 0)) && (
-                      <tr>
-                        <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right">
-                          {modoEdicao ? (
-                            <div className="flex justify-end items-center gap-2">
-                              Desconto Geral:
-                              <InputTransparente 
-                                type="number" 
-                                value={orcamento.valorDesconto || 0} 
-                                onChange={e => updateOrcamentoField('valorDesconto', Number(e.target.value))} 
-                                className="w-16 text-right" 
-                              />
-                            </div>
-                          ) : (
-                            <span>Desconto Geral (R$):</span>
-                          )}
-                        </td>
-                        <td className="p-2 text-right text-red-600">
-                          - R$ {(orcamento.valorDesconto || 0).toFixed(2)}
-                        </td>
-                      </tr>
-                    )}
-                    <tr className="font-bold text-primary">
-                      <td colSpan={modoEdicao ? 7 : 6} className="p-2 text-right border-t-2 border-primary">TOTAL:</td>
-                      <td className="p-2 text-right border-t-2 border-primary">R$ {(() => {
-                        const subtotal = calcularTotal() + (orcamento.valorFrete || 0)
-                        const desconto = orcamento.valorDesconto || 0
-                        return (subtotal - desconto).toFixed(2)
-                      })()}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Observações Footer */}
-              <div className="space-y-2 mt-4">
-                <div>
-                  <h3 className="font-bold mb-1 text-primary text-sm">OBSERVAÇÕES</h3>
-                  {modoEdicao ? (
-                    <TextareaTransparente
-                      key={`obs-orcamento-${orcamento.id || 'new'}`}
-                      value={orcamento.observacoes || ""}
-                      onChange={e => updateOrcamentoField('observacoes', e.target.value)}
-                      className="text-xs bg-accent p-2 rounded-md w-full min-h-[40px]"
-                      placeholder="Observações gerais do orçamento..."
-                    />
-                  ) : (
-                    <p className="text-xs bg-accent p-2 rounded-md" style={{ minHeight: "24px" }}>
-                      {orcamento.observacoes || "Nenhuma observação."}
-                    </p>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="bg-accent p-2 rounded-md">
-                    <h4 className="font-bold text-primary mb-1 text-xs">Condições de Pagamento</h4>
-                    {modoEdicao ? (
-                      <InputTransparente value={orcamento.condicoesPagamento} onChange={e => updateOrcamentoField('condicoesPagamento', e.target.value)} className="w-full text-xs" />
-                    ) : (
-                      <p className="text-xs leading-tight">{orcamento.condicoesPagamento}</p>
-                    )}
-                  </div>
-                  <div className="bg-accent p-2 rounded-md">
-                    <h4 className="font-bold text-primary mb-1 text-xs">Prazo de Entrega</h4>
-                    {modoEdicao ? (
-                      <InputTransparente value={orcamento.prazoEntrega} onChange={e => updateOrcamentoField('prazoEntrega', e.target.value)} className="w-full text-xs" />
-                    ) : (
-                      <p className="text-xs leading-tight">{orcamento.prazoEntrega}</p>
-                    )}
-                  </div>
-                  <div className="bg-accent p-2 rounded-md">
-                    <h4 className="font-bold text-primary mb-1 text-xs">Validade do Orçamento</h4>
-                    {modoEdicao ? (
-                      <InputTransparente value={orcamento.validadeOrcamento} onChange={e => updateOrcamentoField('validadeOrcamento', e.target.value)} className="w-full text-xs" />
-                    ) : (
-                      <p className="text-xs leading-tight">{orcamento.validadeOrcamento}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 2. FICHA TÉCNICA */}
-        {(modoExportacao === "completo" || modoExportacao === "ficha") && orcamento.itens.map((item, idx) => (
-          <div 
-            key={item.id} 
-            className="border border-gray-300 rounded-md shadow-sm ficha-tecnica bg-white page-break-before pdf-section"
-            style={{
-              width: '210mm',
-              minHeight: '297mm',
-              flexShrink: 0,
-              zoom: (zoom / 100) as any,
-            }}
-          >
-            {/* Header Ficha */}
-            <div className="bg-gradient-to-r from-primary to-primary-dark p-4 pdf-header w-full">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-md shadow-md flex items-center justify-center" style={{ width: "50px", height: "50px" }}>
-                    {dadosEmpresa?.logo_url ? (
-                      <img
-                        src={dadosEmpresa.logo_url}
-                        className="max-w-full max-h-full object-contain"
-                      />
-                    ) : (
-                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L4 5v14.5c0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5V5l-8-3z" fill="#0f4c81" stroke="#0f4c81" strokeWidth="1.5"/>
-                        <path d="M12 6.5c-1.93 0-3.5 1.57-3.5 3.5v1.5h7v-1.5c0-1.93-1.57-3.5-3.5-3.5z" fill="white" stroke="white" strokeWidth="0.5"/>
-                        <path d="M12 14.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z" fill="white" stroke="white" strokeWidth="0.5"/>
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <div>
-                      <h1 className="text-xl font-bold text-white font-sans tracking-tight uppercase">
-                        FICHA TÉCNICA - {orcamento.numero.split(" - ")[0]}
-                      </h1>
-                      <p className="text-white/90 text-sm uppercase">
-                        {orcamento.cliente?.nome || "EMPRESA"} - {orcamento.nomeContato || orcamento.cliente?.contato || "CONTATO"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right bg-white/10 p-2 rounded-md backdrop-blur-sm">
-                  <h2 className="text-lg font-bold text-white font-sans tracking-tight">{dadosEmpresa?.nome}</h2>
-                  <p className="text-white/80 text-xs">CNPJ: {dadosEmpresa?.cnpj}</p>
-                  <p className="text-white/80 text-xs">{dadosEmpresa?.email}</p>
-                  <p className="text-white/80 text-xs">{dadosEmpresa?.telefone}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 space-y-3">
-              <h3 className="font-bold text-base mb-2 text-primary border-b border-primary pb-1 flex justify-between">
-                {item.produto?.nome}
-                <span className="text-xs font-normal text-gray-500">Item {idx + 1}</span>
-              </h3>
-
-              <div className="space-y-3">
-                {/* Imagem Upload */}
-                <div 
-                  className={cn(
-                    "text-center border-2 border-dashed border-gray-200 rounded-lg p-2 relative flex items-center justify-center h-[280px]",
-                    modoEdicao && "hover:bg-gray-50 transition-colors group cursor-pointer"
-                  )}
-                  tabIndex={modoEdicao ? 0 : -1}
-                  onPaste={modoEdicao ? (e) => handleImagePaste(e, item.id) : undefined}
-                  onClick={modoEdicao ? (e) => {
-                    // Apenas dá foco no container para permitir Ctrl+V
-                    e.currentTarget.focus()
-                  } : undefined}
-                  title={modoEdicao ? "Clique para selecionar ou cole uma imagem (Ctrl+V)" : undefined}
-                >
-                  <img
-                    src={item.imagem || "/placeholder.svg"}
-                    className="max-h-full max-w-[65%] mx-auto object-contain pointer-events-none"
-                  />
-                  {modoEdicao && (
-                    <>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        id={`file-input-${item.id}`}
-                        className="hidden" 
-                        onChange={e => handleImageUpload(e, item.id)} 
-                      />
-                      <div 
-                        className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity pointer-events-none group-hover:pointer-events-auto"
-                      >
-                        <button 
-                          type="button"
-                          className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-gray-100"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            // Abre o seletor de arquivo
-                            const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement
-                            input?.click()
-                          }}
-                        >
-                          <Upload className="w-4 h-4" /> Alterar Imagem (ou Ctrl+V)
-                        </button>
-                        {!!item.imagem && (
-                          <button
-                            type="button"
-                            className="bg-white p-2 rounded shadow text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-red-50 text-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              updateItem(item.id, 'imagem', null)
-                              const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement
-                              if (input) input.value = ""
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" /> Remover
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Specs Grid */}
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Tecido + Cor */}
-                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card col-span-1">
-                    <div className="bg-primary/10 p-1.5 border-b border-primary/10 font-medium text-primary text-xs flex justify-between items-center">
-                      <span>Tecido / Cor</span>
-                    </div>
-                    <div className="p-2 space-y-1.5">
-                      {/* Tecido */}
-                      <div>
-                        <p className="text-[10px] text-gray-600 mb-0.5">Tecido</p>
-                        {modoEdicao ? (
-                          <>
-                            <Select value={item.tecidoSelecionado?.nome} onValueChange={val => {
-                              const t = item.produto?.tecidos.find(x => x.nome === val)
-                              if (t) updateItem(item.id, 'tecidoSelecionado', t)
-                            }}>
-                              <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                              <SelectContent>
-                                {item.produto?.tecidos && item.produto.tecidos.length > 0 
-                                  ? item.produto.tecidos.map((t, tIdx) => <SelectItem key={`${item.id}-tecido-${tIdx}`} value={t.nome}>{t.nome}</SelectItem>)
-                                  : <div className="p-2 text-[10px] text-gray-500 text-center">Sem tecidos cadastrados</div>
-                                }
-                              </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{item.tecidoSelecionado?.composicao || "Composição..."}</p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="font-bold text-[10px]">{item.tecidoSelecionado?.nome || "Não selecionado"}</p>
-                            <p className="text-[10px] text-gray-500">{item.tecidoSelecionado?.composicao || "Composição não especificada"}</p>
-                          </>
-                        )}
-                      </div>
-                      {/* Cor */}
-                      <div className="pt-1 border-t border-primary/5">
-                        <p className="text-[10px] text-gray-600 mb-0.5">Cor</p>
-                        {modoEdicao ? (
-                          <div className="flex items-center gap-2">
-                            <Select value={item.corSelecionada} onValueChange={val => updateItem(item.id, 'corSelecionada', val)}>
-                              <SelectTrigger className="h-7 text-[10px] bg-transparent border-none p-0 font-bold min-w-[80px]"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                              <SelectContent>
-                                {item.produto?.cores && item.produto.cores.length > 0 
-                                  ? item.produto.cores.map((c, cIdx) => <SelectItem key={`${item.id}-cor-${cIdx}`} value={c}>{c}</SelectItem>)
-                                  : <div className="p-2 text-[10px] text-gray-500 text-center">Sem cores cadastradas</div>
-                                }
-                              </SelectContent>
-                            </Select>
-                            <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-[10px]">{item.corSelecionada || "Não selecionada"}</p>
-                            <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: getCorHex(item.corSelecionada) }} />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Artes - ocupa duas colunas, com mais largura */}
-                  <div className="bg-accent/30 rounded-lg border border-primary/10 spec-card col-span-2">
-                    <div className="bg-primary/10 p-1.5 border-b border-primary/10 font-medium text-primary flex justify-between items-center">
-                      <span className="text-xs">Artes</span>
-                      {modoEdicao && (
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
-                          const novasEstampas = [...(item.estampas || []), { id: crypto.randomUUID(), tipo: TIPOS_ARTE[0], posicao: POSICOES_ARTE[0], largura: 10, comprimento: 10 }]
-                          updateItem(item.id, 'estampas', novasEstampas)
-                        }}><Plus className="h-3 w-3" /></Button>
+                          <SelectTrigger className="w-[200px] h-8 text-xs">
+                            <SelectValue placeholder="Selecione o tipo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tiposTamanho.map(tipo => (
+                              <SelectItem key={tipo.id} value={tipo.id}>
+                                {tipo.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     </div>
-                    <div className="p-1.5 space-y-0.5">
-                      {item.estampas?.map((est, i) => (
-                        <div key={est.id} className={cn("text-[10px]", modoEdicao && "relative group pr-5")}> 
-                          <div className="flex items-center gap-1">
-                            <span className="bg-primary/10 text-primary rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px] flex-shrink-0">{i + 1}</span>
-                            {modoEdicao ? (
-                              <>
-                                <Select value={est.posicao} onValueChange={val => {
-                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, posicao: val } : x)
-                                  updateItem(item.id, 'estampas', news)
-                                }}>
-                                  <SelectTrigger className="h-5 text-[9px] bg-transparent border-none p-0 font-bold w-[110px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {POSICOES_ARTE.map(pos => (
-                                      <SelectItem key={pos} value={pos} className="text-[10px]">{pos}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Select value={est.tipo} onValueChange={val => {
-                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, tipo: val } : x)
-                                  updateItem(item.id, 'estampas', news)
-                                }}>
-                                  <SelectTrigger className="h-5 text-[9px] bg-transparent border-none p-0 w-[70px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {TIPOS_ARTE.map(tipo => (
-                                      <SelectItem key={tipo} value={tipo} className="text-[10px]">{tipo}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <span>-</span>
-                                <InputTransparente type="number" value={est.largura} onChange={e => {
-                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, largura: Number(e.target.value) } : x)
-                                  updateItem(item.id, 'estampas', news)
-                                }} className="w-12 p-0 h-5 text-center text-[9px]" />
-                                <span className="text-[9px]">x</span>
-                                <InputTransparente type="number" value={est.comprimento} onChange={e => {
-                                  const news = item.estampas!.map(x => x.id === est.id ? { ...x, comprimento: Number(e.target.value) } : x)
-                                  updateItem(item.id, 'estampas', news)
-                                }} className="w-12 p-0 h-5 text-center text-[9px]" />
-                                <span className="text-[9px] font-semibold">CM</span>
-                              </>
-                            ) : (
-                              <span className="ml-1">{est.posicao} • {est.tipo} • {est.largura}x{est.comprimento} cm</span>
-                            )}
+                    <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
+                      {(() => {
+                        // Determinar quais tamanhos mostrar
+                        let tamanhosParaMostrar: string[] = []
+
+                        if (item.tipoTamanhoSelecionado) {
+                          const tipoSelecionado = tiposTamanho.find(t => t.id === item.tipoTamanhoSelecionado)
+                          tamanhosParaMostrar = tipoSelecionado?.tamanhos || []
+                        } else if (item.produto?.tamanhosDisponiveis && item.produto.tamanhosDisponiveis.length > 0) {
+                          tamanhosParaMostrar = item.produto.tamanhosDisponiveis
+                        } else if (item.tamanhos && Object.keys(item.tamanhos).length > 0) {
+                          tamanhosParaMostrar = Object.keys(item.tamanhos)
+                        }
+
+                        // Garantir ordem consistente dos tamanhos
+                        if (tamanhosParaMostrar.length > 0) {
+                          tamanhosParaMostrar = ordenarLabelsTamanhos(tamanhosParaMostrar)
+                        }
+
+                        return tamanhosParaMostrar.length > 0 ? (
+                          <table className="w-full border-collapse" style={{ fontSize: "0.9rem", tableLayout: "fixed" }}>
+                            <tbody>
+                              <tr>
+                                <th className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
+                                  Tam.
+                                </th>
+                                {tamanhosParaMostrar.map(t => (
+                                  <th key={`header-${t}`} className="p-2 text-center bg-gray-100 border border-gray-200 font-medium text-primary" style={{ minWidth: "50px", width: `${100 / (tamanhosParaMostrar.length + 2)}%` }}>
+                                    {t}
+                                  </th>
+                                ))}
+                                <th className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
+                                  TOTAL
+                                </th>
+                              </tr>
+                              <tr>
+                                <td className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
+                                  Qtd.
+                                </td>
+                                {tamanhosParaMostrar.map(t => (
+                                  <td key={`qty-${t}`} className="p-1 text-center border border-gray-200">
+                                    {modoEdicao ? (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={item.tamanhos[t] || 0}
+                                        onChange={e => updateTamanho(item.id, t, Number(e.target.value))}
+                                        className="w-full text-center bg-transparent border-none focus:bg-white focus:ring-1 focus:ring-primary/30 rounded font-medium"
+                                        style={{ fontSize: "0.85rem", padding: "2px 0" }}
+                                      />
+                                    ) : (
+                                      <span className="font-medium">{item.tamanhos[t] || 0}</span>
+                                    )}
+                                  </td>
+                                ))}
+                                <td className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
+                                  {item.quantidade}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div className="py-3 px-3 text-center text-gray-500 italic">
+                            {modoEdicao ? "Selecione um tipo de tamanho acima para começar" : "Nenhum tamanho especificado"}
                           </div>
-                          {modoEdicao && (
-                            <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-4 w-4 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => {
-                              updateItem(item.id, 'estampas', item.estampas!.filter(x => x.id !== est.id))
-                            }}><Trash2 className="w-2.5 h-2.5" /></Button>
-                          )}
-                        </div>
-                      ))}
-                      {(!item.estampas || item.estampas.length === 0) && <p className="text-gray-400 italic text-[10px]">Sem artes.</p>}
+                        )
+                      })()}
                     </div>
                   </div>
-                </div>
 
-                {/* Tabela Tamanhos Item */}
-                <div className="mt-3">
-                  <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-bold text-primary text-sm">Tabela de Tamanhos</h4>
-                    {modoEdicao && tiposTamanho.length > 0 && (
-                      <Select
-                        value={item.tipoTamanhoSelecionado || ""}
-                        onValueChange={(value) => {
-                          const tipoSelecionado = tiposTamanho.find(t => t.id === value)
-                          if (tipoSelecionado) {
-                            // Criar novo objeto de tamanhos com os tamanhos do tipo selecionado
-                            const novosTamanhos: Record<string, number> = {}
-                            tipoSelecionado.tamanhos?.forEach(tamanho => {
-                              novosTamanhos[tamanho] = item.tamanhos[tamanho] || 0
-                            })
-                            // Atualizar ambos os campos em uma única operação
-                            const novosItens = orcamentoRef.current.itens.map(i => 
-                              i.id === item.id 
-                                ? { ...i, tipoTamanhoSelecionado: value, tamanhos: novosTamanhos }
-                                : i
-                            )
-                            setOrcamentoRef.current({ ...orcamentoRef.current, itens: novosItens })
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-[200px] h-8 text-xs">
-                          <SelectValue placeholder="Selecione o tipo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tiposTamanho.map(tipo => (
-                            <SelectItem key={tipo.id} value={tipo.id}>
-                              {tipo.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {/* Obs Tecnica */}
+                  <div>
+                    <h4 className="font-bold mb-0.5 text-primary text-xs">Observações Técnicas</h4>
+                    {modoEdicao ? (
+                      <TextareaTransparente
+                        key={`obs-tecnica-${item.id}`}
+                        value={item.observacaoTecnica || ""}
+                        onChange={e => updateItem(item.id, 'observacaoTecnica', e.target.value)}
+                        className="text-[10px] bg-accent p-2 rounded-md w-full min-h-[40px]"
+                        placeholder="Detalhes técnicos de produção..."
+                      />
+                    ) : (
+                      <p className="text-[10px] bg-accent p-2 rounded-md" style={{ whiteSpace: "pre-wrap" }}>
+                        {item.observacaoTecnica || "Nenhuma observação técnica."}
+                      </p>
                     )}
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
-                    {(() => {
-                      // Determinar quais tamanhos mostrar
-                      let tamanhosParaMostrar: string[] = []
-                      
-                      if (item.tipoTamanhoSelecionado) {
-                        const tipoSelecionado = tiposTamanho.find(t => t.id === item.tipoTamanhoSelecionado)
-                        tamanhosParaMostrar = tipoSelecionado?.tamanhos || []
-                      } else if (item.produto?.tamanhosDisponiveis && item.produto.tamanhosDisponiveis.length > 0) {
-                        tamanhosParaMostrar = item.produto.tamanhosDisponiveis
-                      } else if (item.tamanhos && Object.keys(item.tamanhos).length > 0) {
-                        tamanhosParaMostrar = Object.keys(item.tamanhos)
-                      }
-
-                      // Garantir ordem consistente dos tamanhos
-                      if (tamanhosParaMostrar.length > 0) {
-                        tamanhosParaMostrar = ordenarLabelsTamanhos(tamanhosParaMostrar)
-                      }
-                      
-                      return tamanhosParaMostrar.length > 0 ? (
-                        <table className="w-full border-collapse" style={{ fontSize: "0.9rem", tableLayout: "fixed" }}>
-                          <tbody>
-                            <tr>
-                              <th className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
-                                Tam.
-                              </th>
-                              {tamanhosParaMostrar.map(t => (
-                                <th key={`header-${t}`} className="p-2 text-center bg-gray-100 border border-gray-200 font-medium text-primary" style={{ minWidth: "50px", width: `${100 / (tamanhosParaMostrar.length + 2)}%` }}>
-                                  {t}
-                                </th>
-                              ))}
-                              <th className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
-                                TOTAL
-                              </th>
-                            </tr>
-                            <tr>
-                              <td className="p-2 text-left bg-gray-100 border border-gray-200 font-semibold text-primary" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
-                                Qtd.
-                              </td>
-                              {tamanhosParaMostrar.map(t => (
-                                <td key={`qty-${t}`} className="p-1 text-center border border-gray-200">
-                                  {modoEdicao ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      value={item.tamanhos[t] || 0}
-                                      onChange={e => updateTamanho(item.id, t, Number(e.target.value))}
-                                      className="w-full text-center bg-transparent border-none focus:bg-white focus:ring-1 focus:ring-primary/30 rounded font-medium"
-                                      style={{ fontSize: "0.85rem", padding: "2px 0" }}
-                                    />
-                                  ) : (
-                                    <span className="font-medium">{item.tamanhos[t] || 0}</span>
-                                  )}
-                                </td>
-                              ))}
-                              <td className="p-2 text-center bg-gray-100 border border-gray-200 font-bold text-sky-700" style={{ width: "60px", minWidth: "60px", maxWidth: "60px" }}>
-                                {item.quantidade}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div className="py-3 px-3 text-center text-gray-500 italic">
-                          {modoEdicao ? "Selecione um tipo de tamanho acima para começar" : "Nenhum tamanho especificado"}
-                        </div>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* Obs Tecnica */}
-                <div>
-                  <h4 className="font-bold mb-0.5 text-primary text-xs">Observações Técnicas</h4>
-                  {modoEdicao ? (
-                    <TextareaTransparente
-                      key={`obs-tecnica-${item.id}`}
-                      value={item.observacaoTecnica || ""}
-                      onChange={e => updateItem(item.id, 'observacaoTecnica', e.target.value)}
-                      className="text-[10px] bg-accent p-2 rounded-md w-full min-h-[40px]"
-                      placeholder="Detalhes técnicos de produção..."
-                    />
-                  ) : (
-                    <p className="text-[10px] bg-accent p-2 rounded-md" style={{ whiteSpace: "pre-wrap" }}>
-                      {item.observacaoTecnica || "Nenhuma observação técnica."}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
 
         </div>
       </div>

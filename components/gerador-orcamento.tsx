@@ -1108,47 +1108,26 @@ export function GeradorOrcamento({
           }
         }
 
-        // Para cada produto, buscar seus tecidos
-        const produtosCompletos = await Promise.all(
-          produtosData.map(async (produto) => {
-            // Buscar tecidos do produto
-            const { data: tecidosData, error: tecidosError } = await supabase
-              .from("tecidos")
-              .select("*")
-              .eq("produto_id", produto.id)
+        // Carregar materiais globais (cores e tecidos)
+        const { data: coresGlobais } = await supabase.from("cores").select("nome")
+        const { data: tecidosGlobais } = await supabase.from("tecidos_base").select("nome, composicao")
 
-            if (tecidosError) {
-              console.error("Erro ao listar tecidos do produto:", tecidosError)
-              return {
-                id: produto.id,
-                codigo: produto.codigo || `P${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`, // Código aleatório se não existir
-                nome: produto.nome,
-                valorBase: Number(produto.valor_base),
-                tecidos: [],
-                cores: produto.cores || [],
-                tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
-                categoria: produto.categoria || "Outros",
-              }
-            }
+        const coresArray = coresGlobais ? coresGlobais.map((c) => c.nome) : []
+        const tecidosArray = tecidosGlobais
+          ? tecidosGlobais.map((t) => ({ nome: t.nome, composicao: t.composicao || "" }))
+          : []
 
-            // Converter para o formato da aplicação
-            return {
-              id: produto.id,
-              codigo: produto.codigo || `P${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`, // Código aleatório se não existir
-              nome: produto.nome,
-              valorBase: Number(produto.valor_base),
-              tecidos: tecidosData
-                ? tecidosData.map((t) => ({
-                  nome: t.nome,
-                  composicao: t.composicao || "",
-                }))
-                : [],
-              cores: produto.cores || [],
-              tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
-              categoria: produto.categoria || "Outros",
-            } as Produto
-          }),
-        )
+        // Montar produtos com materiais globais
+        const produtosCompletos = produtosData.map((produto) => ({
+          id: produto.id,
+          codigo: produto.codigo || `P${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`,
+          nome: produto.nome,
+          valorBase: Number(produto.valor_base),
+          tecidos: tecidosArray,
+          cores: coresArray,
+          tamanhosDisponiveis: produto.tamanhos_disponiveis || [],
+          categoria: produto.categoria || "Outros",
+        } as Produto))
 
         setProdutos(produtosCompletos)
       } else if (produtos.length === 0) {
@@ -1494,20 +1473,9 @@ export function GeradorOrcamento({
                 id: item.produtoId,
                 nome: item.produto.nome,
                 valor_base: item.produto.valorBase,
-                cores: item.produto.cores || [],
+                cores: [],
                 tamanhos_disponiveis: item.produto.tamanhosDisponiveis || [],
               })
-
-              // Inserir tecidos do produto se existirem
-              if (item.produto.tecidos && item.produto.tecidos.length > 0) {
-                const tecidosParaInserir = item.produto.tecidos.map((tecido) => ({
-                  nome: tecido.nome,
-                  composicao: tecido.composicao,
-                  produto_id: item.produtoId,
-                }))
-
-                await supabase.from("tecidos").insert(tecidosParaInserir)
-              }
             }
           }
 
@@ -1886,24 +1854,21 @@ export function GeradorOrcamento({
             // Buscar o produto completo com tecidos
             let produto: Produto | undefined = undefined
             if (item.produto) {
-              const { data: tecidosData, error: tecidosError } = await supabase
-                .from("tecidos")
-                .select("*")
-                .eq("produto_id", item.produto.id)
-
-              if (tecidosError) throw tecidosError
+              // Carregar materiais globais
+              const { data: coresGlobais } = await supabase.from("cores").select("nome")
+              const { data: tecidosGlobais } = await supabase.from("tecidos_base").select("nome, composicao")
 
               produto = {
                 id: item.produto.id,
                 nome: item.produto.nome,
                 valorBase: Number(item.produto.valor_base),
-                tecidos: tecidosData
-                  ? tecidosData.map((t) => ({
+                tecidos: tecidosGlobais
+                  ? tecidosGlobais.map((t) => ({
                     nome: t.nome,
                     composicao: t.composicao || "",
                   }))
                   : [],
-                cores: item.produto.cores || [],
+                cores: coresGlobais ? coresGlobais.map((c) => c.nome) : [],
                 tamanhosDisponiveis: item.produto.tamanhos_disponiveis || [],
               }
 
