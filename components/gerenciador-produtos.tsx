@@ -1,20 +1,37 @@
 "use client"
 
 import React from "react"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
 import {
-  Plus,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Package,
   DollarSign,
-  Shirt,
-  AlertCircle,
   FileText,
-  Search,
   ChevronUp,
   ChevronDown,
   FolderOpen,
@@ -22,19 +39,20 @@ import {
   Tag,
   Pencil,
   Trash2,
-  X,
   Save,
   Palette,
-  Ruler,
+  Info,
 } from "lucide-react"
 import type { Produto } from "@/types/types"
 import { supabase } from "@/lib/supabase"
 import { useCurrentUser } from "@/hooks/use-current-user"
-
-// Materiais (cores, tecidos, tamanhos) são gerenciados globalmente via aba Materiais
-
 import { type Categoria, CORES_CATEGORIAS } from "./gerenciador-categorias"
 import GerenciadorCategorias from "./gerenciador-categorias"
+import { CrudPageLayout } from "@/components/ui/crud-page-layout"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { DataPagination } from "@/components/ui/data-pagination"
+import { toast } from "sonner"
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -45,10 +63,9 @@ const generateUUID = () => {
   })
 }
 
-// Function to fetch the next sequential product code from Supabase
+// Function to fetch the next sequential product code
 const obterProximoCodigoProduto = async (): Promise<string> => {
   try {
-    // Now that we know the column exists, we can directly query it
     const { data, error } = await supabase
       .from("produtos")
       .select("codigo")
@@ -57,35 +74,27 @@ const obterProximoCodigoProduto = async (): Promise<string> => {
 
     if (error) {
       console.error("Erro ao obter o último código do produto:", error)
-      return "P0001" // Default code if there's an error
+      return "P0001"
     }
 
     if (data && data.length > 0 && data[0].codigo) {
-      // Extract the numeric part from the code (remove the 'P' prefix)
       const ultimoCodigo = data[0].codigo
       const numeroMatch = ultimoCodigo.match(/^P?(\d+)$/)
 
       if (numeroMatch && numeroMatch[1]) {
         const numero = Number.parseInt(numeroMatch[1], 10) + 1
-        return "P" + String(numero).padStart(4, "0") // Format the new code
+        return "P" + String(numero).padStart(4, "0")
       }
     }
 
-    // If no valid code was found, start with P0001
     return "P0001"
   } catch (error) {
     console.error("Erro ao obter o próximo código do produto:", error)
-    return "P0001" // Return a default code in case of any error
+    return "P0001"
   }
 }
 
-interface GerenciadorProdutosProps {
-  produtos: Produto[]
-  adicionarProduto: (produto: Produto) => void
-  setProdutos: (produtos: Produto[]) => void
-}
-
-// Modificar as categorias padrão para estarem em maiúsculas
+// Default categories
 const CATEGORIAS_PADRAO: Categoria[] = [
   { id: generateUUID(), nome: "CAMISETAS", descricao: "CAMISETAS EM GERAL", cor: CORES_CATEGORIAS[0] },
   { id: generateUUID(), nome: "CAMISAS", descricao: "CAMISAS SOCIAIS E POLOS", cor: CORES_CATEGORIAS[1] },
@@ -94,413 +103,293 @@ const CATEGORIAS_PADRAO: Categoria[] = [
   { id: generateUUID(), nome: "OUTROS", descricao: "OUTROS TIPOS DE PRODUTOS", cor: CORES_CATEGORIAS[7] },
 ]
 
+type SortField = "codigo" | "nome" | "valorBase" | "categoria" | null
+type SortDirection = "asc" | "desc" | null
+
+const PAGE_SIZE = 20
+
+interface GerenciadorProdutosProps {
+  produtos: Produto[]
+  adicionarProduto: (produto: Produto) => void
+  setProdutos: (produtos: Produto[]) => void
+}
+
+const FORM_VAZIO: Partial<Produto> = {
+  codigo: "",
+  nome: "",
+  valorBase: 0,
+  tecidos: [],
+  cores: [],
+  tamanhosDisponiveis: [],
+  categoria: "",
+}
+
 export default function GerenciadorProdutos({ produtos, adicionarProduto, setProdutos }: GerenciadorProdutosProps) {
   const { tenantId } = useCurrentUser()
 
-  // Modificar o estado do novo produto para incluir o código e categoria
-  const [novoProduto, setNovoProduto] = useState<Partial<Produto>>({
-    codigo: "",
-    nome: "",
-    valorBase: 0,
-    tecidos: [],
-    cores: [],
-    tamanhosDisponiveis: [], // Manter array vazio para compatibilidade
-    categoria: "", // Inicializar categoria vazia
-  })
-
-  const [editandoId, setEditandoId] = useState<string | null>(null)
-  const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null)
+  // UI States
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [filtro, setFiltro] = useState("")
+  const [sortField, setSortField] = useState<SortField>("codigo")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const [currentPage, setCurrentPage] = useState(1)
 
+  // Dialog states
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create")
+  const [formData, setFormData] = useState<Partial<Produto>>(FORM_VAZIO)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
-  // Materiais agora são globais - não precisam ser gerenciados por produto
+  // Confirm dialog
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmData, setConfirmData] = useState<{
+    title: string
+    description: string
+    onConfirm: () => void
+  } | null>(null)
 
-  // Adicione um estado para controlar a visibilidade do formulário de novo produto:
-  const [mostrarFormulario, setMostrarFormulario] = useState(false)
-
-  // Estado para pesquisa e ordenação
-  const [termoPesquisa, setTermoPesquisa] = useState("")
-  const [ordenacao, setOrdenacao] = useState<{ campo: string; direcao: "asc" | "desc" }>({
-    campo: "codigo",
-    direcao: "asc",
-  })
-
-  // Estado para controlar categorias expandidas
+  // Category states
   const [categoriasExpandidas, setCategoriasExpandidas] = useState<Record<string, boolean>>({})
-
-  // Estado para controlar o modal de gerenciamento de categorias
   const [mostrarGerenciadorCategorias, setMostrarGerenciadorCategorias] = useState(false)
-
-  // Estado para armazenar as categorias disponíveis - inicializar com categorias padrão
   const [categorias, setCategorias] = useState<Categoria[]>(CATEGORIAS_PADRAO)
 
-  // Carregar produtos e categorias do Supabase ao montar o componente
+  // Initialize categories on load
   useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        setIsLoading(true)
-
-        // Buscar categorias - versão simplificada que não depende do banco de dados
-        setCategorias(CATEGORIAS_PADRAO)
-
-        // Inicializar todas as categorias como compactadas
-        const categorias = [...new Set(produtos.map((p) => p.categoria || "Outros"))]
-        const estadoInicial = categorias.reduce(
-          (acc, cat) => {
-            acc[cat] = false // Inicialmente compactadas
-            return acc
-          },
-          {} as Record<string, boolean>,
-        )
-        setCategoriasExpandidas(estadoInicial)
-
-        // Materiais (cores, tecidos, tamanhos) são gerenciados globalmente na aba Materiais
-      } catch (error) {
-        console.error("Erro ao carregar produtos:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    carregarDados()
+    const cats = [...new Set(produtos.map((p) => p.categoria || "OUTROS"))]
+    const estadoInicial = cats.reduce((acc, cat) => {
+      acc[cat] = true // Start expanded
+      return acc
+    }, {} as Record<string, boolean>)
+    setCategoriasExpandidas(estadoInicial)
   }, [produtos])
 
-  // Modificar o método handleAdicionarProduto para converter para maiúsculas
-  const handleAdicionarProduto = async () => {
-    if (novoProduto.nome && novoProduto.valorBase) {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        // Gerar um UUID para o novo produto
-        const produtoId = generateUUID()
-
-        // Obter o próximo código sequencial
-        const codigo = novoProduto.codigo || (await obterProximoCodigoProduto())
-
-        // Verificar se a coluna 'categoria' existe
-        let colunaExiste = false
-        try {
-          // Tentar obter informações sobre a tabela
-          const { data: tableInfo, error: tableError } = await supabase.from("produtos").select("categoria").limit(1)
-
-          // Se não houver erro, a coluna existe
-          if (!tableError) {
-            colunaExiste = true
-          }
-        } catch (error) {
-          console.log("A coluna 'categoria' não existe na tabela 'produtos'")
-          colunaExiste = false
-        }
-
-        // Preparar dados para inserção com valores em maiúsculas
-        const insertData: {
-          id: string
-          codigo: string
-          nome: string
-          valor_base: number
-          cores: string[]
-          tamanhos_disponiveis: string[]
-          categoria?: string
-          tenant_id?: string
-        } = {
-          id: produtoId,
-          codigo,
-          nome: novoProduto.nome.toUpperCase(),
-          valor_base: novoProduto.valorBase,
-          cores: [], // Cores agora são globais - gerenciadas na aba Materiais
-          tamanhos_disponiveis: [], // Tamanhos agora são globais - gerenciados na aba Materiais
-          ...(tenantId ? { tenant_id: tenantId } : {}),
-        }
-
-        // Adicionar categoria apenas se a coluna existir
-        if (colunaExiste) {
-          insertData.categoria = novoProduto.categoria ? novoProduto.categoria.toUpperCase() : "OUTROS"
-        }
-
-        // Inserir produto no Supabase
-        const { data: insertedData, error: produtoError } = await supabase.from("produtos").insert(insertData).select()
-
-        if (produtoError) throw produtoError
-
-        if (insertedData && insertedData[0]) {
-          // Tecidos são globais - não inserir mais por produto
-
-          // Converter para o formato da aplicação
-          const novoProdutoFormatado: Produto = {
-            id: insertedData[0].id,
-            codigo: insertedData[0].codigo || codigo,
-            nome: insertedData[0].nome,
-            valorBase: Number(insertedData[0].valor_base),
-            tecidos: [], // Tecidos são globais
-            cores: [], // Cores são globais
-            tamanhosDisponiveis: insertedData[0].tamanhos_disponiveis || [],
-            categoria: insertedData[0].categoria || novoProduto.categoria?.toUpperCase() || "OUTROS",
-          }
-
-          // Adicionar à lista local
-          adicionarProduto(novoProdutoFormatado)
-
-          // Limpar formulário
-          setNovoProduto({
-            codigo: "",
-            nome: "",
-            valorBase: 0,
-            tecidos: [],
-            cores: [],
-            tamanhosDisponiveis: [], // Manter para compatibilidade
-            categoria: "",
-          })
-          setMostrarFormulario(false)
-        }
-      } catch (error) {
-        const supabaseError = error as { message?: string; details?: string; hint?: string; code?: string }
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : supabaseError?.message || supabaseError?.details || JSON.stringify(error) || "Erro desconhecido"
-        console.error("Erro ao adicionar produto:", JSON.stringify(error, null, 2))
-        setError(`Erro ao adicionar produto: ${errorMessage}`)
-      } finally {
-        setIsLoading(false)
-      }
+  // Sort toggle
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") setSortDirection("desc")
+      else { setSortField(null); setSortDirection(null) }
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
     }
   }
 
-  const handleRemoverProduto = async (id: string) => {
-    // Confirmar antes de excluir
-    if (!window.confirm("Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.")) {
-      return
-    }
+  // Open new dialog
+  const handleNew = () => {
+    setFormData(FORM_VAZIO)
+    setDialogMode("create")
+    setEditingId(null)
+    setDialogOpen(true)
+  }
+
+  // Open edit dialog
+  const handleEdit = (produto: Produto) => {
+    setFormData({ ...produto })
+    setDialogMode("edit")
+    setEditingId(produto.id)
+    setDialogOpen(true)
+  }
+
+  // Save (create or edit)
+  const handleSave = async () => {
+    if (!formData.nome || !formData.valorBase) return
 
     try {
       setIsLoading(true)
       setError(null)
 
-      // Verificar se o produto está sendo usado em algum item de orçamento
-      const { data: itensRelacionados, error: itensError } = await supabase
-        .from("itens_orcamento")
-        .select("id, orcamento_id")
-        .eq("produto_id", id)
+      if (dialogMode === "create") {
+        const produtoId = generateUUID()
+        const codigo = await obterProximoCodigoProduto()
 
-      if (itensError) throw itensError
+        // Check if 'categoria' column exists
+        let colunaExiste = false
+        try {
+          const { error: tableError } = await supabase.from("produtos").select("categoria").limit(1)
+          if (!tableError) colunaExiste = true
+        } catch { colunaExiste = false }
 
-      // Se existirem itens relacionados, perguntar ao usuário se deseja excluí-los também
-      if (itensRelacionados && itensRelacionados.length > 0) {
-        const confirmarExclusao = window.confirm(
-          `Este produto está sendo usado em ${itensRelacionados.length} item(ns) de orçamento. Todos esses itens serão excluídos também. Deseja continuar?`,
-        )
-
-        if (!confirmarExclusao) {
-          setIsLoading(false)
-          return
+        const insertData: Record<string, unknown> = {
+          id: produtoId,
+          codigo,
+          nome: formData.nome.toUpperCase(),
+          valor_base: formData.valorBase,
+          cores: [],
+          tamanhos_disponiveis: [],
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         }
 
-        // Excluir os itens de orçamento relacionados
-        const { error: deleteItensError } = await supabase.from("itens_orcamento").delete().eq("produto_id", id)
+        if (colunaExiste) {
+          insertData.categoria = formData.categoria ? formData.categoria.toUpperCase() : "OUTROS"
+        }
 
-        if (deleteItensError) throw deleteItensError
+        const { data: insertedData, error: produtoError } = await supabase
+          .from("produtos")
+          .insert(insertData)
+          .select()
+
+        if (produtoError) throw produtoError
+
+        if (insertedData && insertedData[0]) {
+          const novoProdutoFormatado: Produto = {
+            id: insertedData[0].id,
+            codigo: insertedData[0].codigo || codigo,
+            nome: insertedData[0].nome,
+            valorBase: Number(insertedData[0].valor_base),
+            tecidos: [],
+            cores: [],
+            tamanhosDisponiveis: insertedData[0].tamanhos_disponiveis || [],
+            categoria: insertedData[0].categoria || formData.categoria?.toUpperCase() || "OUTROS",
+          }
+          adicionarProduto(novoProdutoFormatado)
+          toast.success("Produto adicionado com sucesso!")
+        }
+      } else {
+        // Edit mode
+        let colunaExiste = false
+        try {
+          const { error: tableError } = await supabase.from("produtos").select("categoria").limit(1)
+          if (!tableError) colunaExiste = true
+        } catch { colunaExiste = false }
+
+        const updateData: Record<string, unknown> = {
+          codigo: formData.codigo,
+          nome: formData.nome!.toUpperCase(),
+          valor_base: formData.valorBase,
+          cores: [],
+          tamanhos_disponiveis: [],
+          updated_at: new Date().toISOString(),
+        }
+
+        if (colunaExiste) {
+          updateData.categoria = formData.categoria ? formData.categoria.toUpperCase() : "OUTROS"
+        }
+
+        const { error: produtoError } = await supabase
+          .from("produtos")
+          .update(updateData)
+          .eq("id", editingId!)
+
+        if (produtoError) throw produtoError
+
+        setProdutos(
+          produtos.map((p) =>
+            p.id === editingId
+              ? {
+                ...p,
+                nome: formData.nome!.toUpperCase(),
+                valorBase: formData.valorBase || p.valorBase,
+                categoria: formData.categoria?.toUpperCase() || p.categoria,
+              }
+              : p
+          )
+        )
+        toast.success("Produto atualizado com sucesso!")
       }
 
-      // Remover tecidos do produto
-      const { error: tecidosError } = await supabase.from("tecidos").delete().eq("produto_id", id)
-
-      if (tecidosError) throw tecidosError
-
-      // Remover produto
-      const { error: produtoError } = await supabase.from("produtos").delete().eq("id", id)
-
-      if (produtoError) throw produtoError
-
-      // Remover da lista local
-      setProdutos(produtos.filter((produto) => produto.id !== id))
+      setDialogOpen(false)
+      setFormData(FORM_VAZIO)
     } catch (error) {
-      console.error("Erro ao remover produto:", error)
-      setError(`Erro ao remover produto: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      const supabaseError = error as { message?: string; details?: string }
+      const errorMessage = error instanceof Error
+        ? error.message
+        : supabaseError?.message || supabaseError?.details || "Erro desconhecido"
+      console.error("Erro ao salvar produto:", error)
+      setError(`Erro ao salvar produto: ${errorMessage}`)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const iniciarEdicao = (produto: Produto) => {
-    setEditandoId(produto.id)
-    setProdutoEditando({ ...produto })
-  }
-
-  const cancelarEdicao = () => {
-    setEditandoId(null)
-    setProdutoEditando(null)
-  }
-
-  // Modificar o método salvarEdicao para converter para maiúsculas
-  const salvarEdicao = async () => {
-    if (produtoEditando) {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        // Primeiro, verificar se a coluna 'categoria' existe
-        let colunaExiste = false
+  // Delete product
+  const handleDelete = (produto: Produto) => {
+    setConfirmData({
+      title: "Excluir produto",
+      description: `Tem certeza que deseja excluir o produto "${produto.nome}" (${produto.codigo})? Esta ação não pode ser desfeita.`,
+      onConfirm: async () => {
         try {
-          // Tentar obter informações sobre a tabela
-          const { data: tableInfo, error: tableError } = await supabase.from("produtos").select("categoria").limit(1)
+          setIsLoading(true)
+          setError(null)
 
-          // Se não houver erro, a coluna existe
-          if (!tableError) {
-            colunaExiste = true
+          // Check linked items
+          const { data: itensRelacionados, error: itensError } = await supabase
+            .from("itens_orcamento")
+            .select("id, orcamento_id")
+            .eq("produto_id", produto.id)
+
+          if (itensError) throw itensError
+
+          if (itensRelacionados && itensRelacionados.length > 0) {
+            setConfirmOpen(false)
+            setConfirmData({
+              title: "Produto vinculado a orçamentos",
+              description: `Este produto está sendo usado em ${itensRelacionados.length} item(ns) de orçamento. Todos esses itens serão excluídos também. Deseja continuar?`,
+              onConfirm: async () => {
+                try {
+                  await supabase.from("itens_orcamento").delete().eq("produto_id", produto.id)
+                  await supabase.from("tecidos").delete().eq("produto_id", produto.id)
+                  const { error } = await supabase.from("produtos").delete().eq("id", produto.id)
+                  if (error) throw error
+                  setProdutos(produtos.filter((p) => p.id !== produto.id))
+                  toast.success("Produto e itens vinculados excluídos com sucesso!")
+                  setConfirmOpen(false)
+                } catch (err) {
+                  console.error("Erro ao remover produto:", err)
+                  setError(`Erro: ${err instanceof Error ? err.message : "Erro desconhecido"}`)
+                  setConfirmOpen(false)
+                } finally {
+                  setIsLoading(false)
+                }
+              },
+            })
+            setTimeout(() => setConfirmOpen(true), 100)
+            return
           }
+
+          // No linked items — delete directly
+          await supabase.from("tecidos").delete().eq("produto_id", produto.id)
+          const { error } = await supabase.from("produtos").delete().eq("id", produto.id)
+          if (error) throw error
+          setProdutos(produtos.filter((p) => p.id !== produto.id))
+          toast.success("Produto excluído com sucesso!")
+          setConfirmOpen(false)
         } catch (error) {
-          console.log("A coluna 'categoria' não existe na tabela 'produtos'")
-          colunaExiste = false
+          console.error("Erro ao remover produto:", error)
+          setError(`Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+          setConfirmOpen(false)
+        } finally {
+          setIsLoading(false)
         }
-
-        // Atualizar o produto com ou sem o campo categoria, com valores em maiúsculas
-        const updateData = {
-          codigo: produtoEditando.codigo,
-          nome: produtoEditando.nome.toUpperCase(),
-          valor_base: produtoEditando.valorBase,
-          cores: [], // Cores agora são globais
-          tamanhos_disponiveis: [], // Tamanhos agora são globais
-          updated_at: new Date().toISOString(),
-        }
-
-        // Adicionar categoria apenas se a coluna existir
-        if (colunaExiste) {
-          updateData.categoria = produtoEditando.categoria ? produtoEditando.categoria.toUpperCase() : "OUTROS"
-        }
-
-        const { error: produtoError } = await supabase.from("produtos").update(updateData).eq("id", produtoEditando.id)
-
-        if (produtoError) throw produtoError
-
-        // Tecidos são globais - não gerenciar mais por produto
-
-        // Atualizar na lista local
-        setProdutos(produtos.map((produto) => (produto.id === produtoEditando.id ? produtoEditando : produto)))
-        setEditandoId(null)
-        setProdutoEditando(null)
-      } catch (error) {
-        console.error("Erro ao atualizar produto:", error)
-        setError(`Erro ao atualizar produto: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+      },
+    })
+    setConfirmOpen(true)
   }
 
-  // Materiais são globais - funções de remoção não são mais necessárias
-
-
-  // Função para alternar a ordenação
-  const alternarOrdenacao = (campo: string) => {
-    if (ordenacao.campo === campo) {
-      setOrdenacao({
-        campo,
-        direcao: ordenacao.direcao === "asc" ? "desc" : "asc",
-      })
-    } else {
-      setOrdenacao({
-        campo,
-        direcao: "asc",
-      })
-    }
-  }
-
-  // Função para alternar a expansão de uma categoria
+  // Category expand/collapse
   const alternarCategoria = (categoria: string) => {
-    setCategoriasExpandidas((prev) => ({
-      ...prev,
-      [categoria]: !prev[categoria],
-    }))
+    setCategoriasExpandidas((prev) => ({ ...prev, [categoria]: !prev[categoria] }))
   }
 
-  // Função para filtrar e ordenar produtos
-  const produtosFiltradosEOrdenados = () => {
-    // Primeiro filtra os produtos
-    const produtosFiltrados = produtos.filter((produto) => {
-      if (!termoPesquisa) return true
-
-      const termoLowerCase = termoPesquisa.toLowerCase()
-      return (
-        produto.codigo.toLowerCase().includes(termoLowerCase) ||
-        produto.nome.toLowerCase().includes(termoLowerCase) ||
-        produto.categoria?.toLowerCase().includes(termoLowerCase) ||
-        produto.tecidos.some((t) => t.nome.toLowerCase().includes(termoPesquisa)) ||
-        produto.cores.some((c) => c.toLowerCase().includes(termoPesquisa))
-      )
-    })
-
-    // Depois ordena os produtos filtrados
-    return produtosFiltrados.sort((a, b) => {
-      let valorA, valorB
-
-      switch (ordenacao.campo) {
-        case "codigo":
-          valorA = a.codigo
-          valorB = b.codigo
-          break
-        case "nome":
-          valorA = a.nome
-          valorB = b.nome
-          break
-        case "valorBase":
-          valorA = a.valorBase
-          valorB = b.valorBase
-          break
-        case "categoria":
-          valorA = a.categoria || "Outros"
-          valorB = b.categoria || "Outros"
-          break
-        default:
-          valorA = a.codigo
-          valorB = b.codigo
-      }
-
-      if (typeof valorA === "string" && typeof valorB === "string") {
-        return ordenacao.direcao === "asc" ? valorA.localeCompare(valorB) : valorB.localeCompare(valorA)
-      } else {
-        return ordenacao.direcao === "asc"
-          ? (valorA as number) - (valorB as number)
-          : (valorB as number) - (valorA as number)
-      }
-    })
+  // Color for category
+  const getCorCategoria = (nomeCategoria: string): string => {
+    const categoria = categorias.find((cat) => cat.nome === nomeCategoria)
+    return categoria?.cor || "#4f46e5"
   }
 
-  // Agrupar produtos por categoria
-  const agruparPorCategoria = (produtos: Produto[]) => {
-    const grupos: Record<string, Produto[]> = {}
-
-    produtos.forEach((produto) => {
-      const categoria = produto.categoria || "Outros"
-      if (!grupos[categoria]) {
-        grupos[categoria] = []
-      }
-      grupos[categoria].push(produto)
-    })
-
-    return grupos
-  }
-
-  // Obter produtos filtrados e ordenados
-  const produtosExibidos = produtosFiltradosEOrdenados()
-  const produtosAgrupados = agruparPorCategoria(produtosExibidos)
-
-  // Funções para gerenciar categorias
+  // Category management callbacks
   const handleCategoriaAdded = (categoria: Categoria) => {
     setCategorias([...categorias, categoria])
   }
 
   const handleCategoriaUpdated = (categoriaAtualizada: Categoria) => {
     setCategorias(categorias.map((cat) => (cat.id === categoriaAtualizada.id ? categoriaAtualizada : cat)))
-
-    // Atualizar produtos com a categoria antiga para a nova
     const categoriaAntiga = categorias.find((cat) => cat.id === categoriaAtualizada.id)
     if (categoriaAntiga && categoriaAntiga.nome !== categoriaAtualizada.nome) {
       setProdutos(
         produtos.map((produto) =>
-          produto.categoria === categoriaAntiga.nome ? { ...produto, categoria: categoriaAtualizada.nome } : produto,
-        ),
+          produto.categoria === categoriaAntiga.nome ? { ...produto, categoria: categoriaAtualizada.nome } : produto
+        )
       )
     }
   }
@@ -508,456 +397,364 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
   const handleCategoriaDeleted = (id: string) => {
     const categoriaRemovida = categorias.find((cat) => cat.id === id)
     setCategorias(categorias.filter((cat) => cat.id !== id))
-
-    // Mover produtos da categoria removida para "Outros"
     if (categoriaRemovida) {
       setProdutos(
         produtos.map((produto) =>
-          produto.categoria === categoriaRemovida.nome ? { ...produto, categoria: "Outros" } : produto,
-        ),
+          produto.categoria === categoriaRemovida.nome ? { ...produto, categoria: "OUTROS" } : produto
+        )
       )
     }
   }
 
-  // Obter a cor da categoria para exibição
-  const getCorCategoria = (nomeCategoria: string): string => {
-    const categoria = categorias.find((cat) => cat.nome === nomeCategoria)
-    return categoria?.cor || "#4f46e5" // Cor padrão se não encontrar
-  }
+  // Filter + Sort + Group
+  const produtosFiltradosEOrdenados = useMemo(() => {
+    return produtos
+      .filter((produto) => {
+        if (!filtro) return true
+        const termo = filtro.toLowerCase()
+        return (
+          produto.codigo.toLowerCase().includes(termo) ||
+          produto.nome.toLowerCase().includes(termo) ||
+          produto.categoria?.toLowerCase().includes(termo)
+        )
+      })
+      .sort((a, b) => {
+        if (!sortField || !sortDirection) return 0
+        let valA: string | number, valB: string | number
+        switch (sortField) {
+          case "codigo": valA = a.codigo; valB = b.codigo; break
+          case "nome": valA = a.nome; valB = b.nome; break
+          case "valorBase": valA = a.valorBase; valB = b.valorBase; break
+          case "categoria": valA = a.categoria || "OUTROS"; valB = b.categoria || "OUTROS"; break
+          default: return 0
+        }
+        if (typeof valA === "string" && typeof valB === "string") {
+          return sortDirection === "asc"
+            ? valA.localeCompare(valB, "pt-BR")
+            : valB.localeCompare(valA, "pt-BR")
+        }
+        return sortDirection === "asc"
+          ? (valA as number) - (valB as number)
+          : (valB as number) - (valA as number)
+      })
+  }, [produtos, filtro, sortField, sortDirection])
+
+  // Group by category
+  const produtosAgrupados = useMemo(() => {
+    const grupos: Record<string, Produto[]> = {}
+    produtosFiltradosEOrdenados.forEach((produto) => {
+      const categoria = produto.categoria || "OUTROS"
+      if (!grupos[categoria]) grupos[categoria] = []
+      grupos[categoria].push(produto)
+    })
+    return grupos
+  }, [produtosFiltradosEOrdenados])
+
+  // Reset page when filter changes
+  useEffect(() => { setCurrentPage(1) }, [filtro])
+
+  // Sortable Header component
+  const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <TableHead
+      className={`cursor-pointer select-none hover:bg-muted/60 transition-colors ${className || ""}`}
+      onClick={() => toggleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field && (
+          sortDirection === "asc"
+            ? <ChevronUp className="h-3.5 w-3.5 text-primary" />
+            : <ChevronDown className="h-3.5 w-3.5 text-primary" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-primary flex items-center gap-2">
-          <span className="bg-primary text-white p-1 rounded-md text-xs">PRODUTOS</span>
-          Gerenciar Produtos
-        </h3>
-        <span className="text-sm text-gray-500">{produtos.length} produtos cadastrados</span>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-
-      <div className="flex justify-between items-center gap-4 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Pesquisar produtos por código, nome, categoria, tecido ou cor..."
-            value={termoPesquisa}
-            onChange={(e) => setTermoPesquisa(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full"
-          />
-        </div>
-        <div className="flex gap-2">
+    <>
+      <CrudPageLayout
+        title="Produtos"
+        icon={<Package className="h-5 w-5" />}
+        totalItems={produtos.length}
+        itemLabel="produtos cadastrados"
+        searchValue={filtro}
+        onSearchChange={setFiltro}
+        searchPlaceholder="Pesquisar por código, nome ou categoria..."
+        newButtonLabel="Novo Produto"
+        onNew={handleNew}
+        extraActions={
           <Button
             onClick={() => setMostrarGerenciadorCategorias(true)}
             variant="outline"
-            className="border-primary text-primary hover:bg-primary/10"
+            size="sm"
+            className="text-muted-foreground gap-1.5"
           >
-            <Tag className="h-4 w-4 mr-2" /> Gerenciar Categorias
+            <Tag className="h-4 w-4" />
+            Categorias
           </Button>
-          <Button
-            onClick={() => setMostrarFormulario(true)}
-            className="bg-primary hover:bg-primary-dark text-white transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Novo Produto
-          </Button>
-        </div>
-      </div>
-
-      <div className="rounded-md border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50">
-                <th
-                  className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                  onClick={() => alternarOrdenacao("codigo")}
-                >
-                  <div className="flex items-center">
-                    Código
-                    {ordenacao.campo === "codigo" &&
-                      (ordenacao.direcao === "asc" ? (
-                        <ChevronUp className="ml-1 h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      ))}
-                  </div>
-                </th>
-                <th
-                  className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                  onClick={() => alternarOrdenacao("categoria")}
-                >
-                  <div className="flex items-center">
-                    Categoria
-                    {ordenacao.campo === "categoria" &&
-                      (ordenacao.direcao === "asc" ? (
-                        <ChevronUp className="ml-1 h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      ))}
-                  </div>
-                </th>
-                <th
-                  className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                  onClick={() => alternarOrdenacao("nome")}
-                >
-                  <div className="flex items-center">
-                    Descrição
-                    {ordenacao.campo === "nome" &&
-                      (ordenacao.direcao === "asc" ? (
-                        <ChevronUp className="ml-1 h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      ))}
-                  </div>
-                </th>
-                <th
-                  className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                  onClick={() => alternarOrdenacao("valorBase")}
-                >
-                  <div className="flex items-center">
-                    Valor Base
-                    {ordenacao.campo === "valorBase" &&
-                      (ordenacao.direcao === "asc" ? (
-                        <ChevronUp className="ml-1 h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      ))}
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && produtos.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-4 text-center text-muted-foreground">
-                    Carregando produtos...
-                  </td>
-                </tr>
-              ) : produtosExibidos.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-4 text-center text-muted-foreground">
-                    {termoPesquisa ? "Nenhum produto encontrado para esta pesquisa." : "Nenhum produto cadastrado."}
-                  </td>
-                </tr>
-              ) : (
-                // Renderizar produtos agrupados por categoria
-                Object.entries(produtosAgrupados).map(([categoria, produtosCategoria]) => (
-                  <React.Fragment key={categoria}>
-                    {/* Linha de cabeçalho da categoria */}
-                    <tr className="border-t border-b" style={{ backgroundColor: `${getCorCategoria(categoria)}20` }}>
-                      <td colSpan={8} className="px-4 py-2">
-                        <button
-                          className="flex items-center gap-2 w-full text-left font-medium"
-                          style={{ color: getCorCategoria(categoria) }}
-                          onClick={() => alternarCategoria(categoria)}
-                        >
-                          {categoriasExpandidas[categoria] ? (
-                            <FolderOpen className="h-4 w-4" />
-                          ) : (
-                            <FolderClosed className="h-4 w-4" />
-                          )}
-                          {categoria}{" "}
-                          <span className="text-xs text-gray-500">({produtosCategoria.length} produtos)</span>
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* Produtos da categoria (mostrar apenas se expandido) */}
-                    {categoriasExpandidas[categoria] &&
-                      produtosCategoria.map((produto) => (
-                        <tr key={produto.id} className="border-t hover:bg-muted/50">
-                          {editandoId === produto.id && produtoEditando ? (
-                            <td colSpan={8} className="p-4">
-                              <div className="space-y-4 bg-accent/50 p-4 rounded-md">
-                                {/* Formulário de edição */}
-                                <div className="grid grid-cols-4 gap-4">
-                                  <div>
-                                    <Label
-                                      htmlFor={`edit-codigo-${produto.id}`}
-                                      className="text-primary flex items-center gap-2"
-                                    >
-                                      <FileText className="h-4 w-4" />
-                                      Código
-                                    </Label>
-                                    <Input
-                                      id={`edit-codigo-${produto.id}`}
-                                      value={produtoEditando.codigo}
-                                      onChange={(e) =>
-                                        setProdutoEditando({
-                                          ...produtoEditando,
-                                          codigo: e.target.value,
-                                        })
-                                      }
-                                      className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                                      disabled={true} // Código não deve ser editável manualmente
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label
-                                      htmlFor={`edit-categoria-${produto.id}`}
-                                      className="text-primary flex items-center gap-2"
-                                    >
-                                      <Tag className="h-4 w-4" />
-                                      Categoria
-                                    </Label>
-                                    <select
-                                      id={`edit-categoria-${produto.id}`}
-                                      value={produtoEditando.categoria || "Outros"}
-                                      onChange={(e) =>
-                                        setProdutoEditando({
-                                          ...produtoEditando,
-                                          categoria: e.target.value,
-                                        })
-                                      }
-                                      className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:ring-1 focus:ring-primary"
-                                    >
-                                      {categorias.map((cat) => (
-                                        <option key={cat.id} value={cat.nome}>
-                                          {cat.nome}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <Label
-                                      htmlFor={`edit-nome-${produto.id}`}
-                                      className="text-primary flex items-center gap-2"
-                                    >
-                                      <Package className="h-4 w-4" />
-                                      Nome
-                                    </Label>
-                                    <Input
-                                      id={`edit-nome-${produto.id}`}
-                                      value={produtoEditando.nome}
-                                      onChange={(e) =>
-                                        setProdutoEditando({
-                                          ...produtoEditando,
-                                          nome: e.target.value.toUpperCase(),
-                                        })
-                                      }
-                                      className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label
-                                      htmlFor={`edit-valor-${produto.id}`}
-                                      className="text-primary flex items-center gap-2"
-                                    >
-                                      <DollarSign className="h-4 w-4" />
-                                      Valor Base
-                                    </Label>
-                                    <Input
-                                      id={`edit-valor-${produto.id}`}
-                                      type="number"
-                                      value={produtoEditando.valorBase}
-                                      onChange={(e) =>
-                                        setProdutoEditando({
-                                          ...produtoEditando,
-                                          valorBase: Number.parseFloat(e.target.value),
-                                        })
-                                      }
-                                      className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Materiais globais - Aviso */}
-                                <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-md text-sm flex items-center gap-2">
-                                  <Palette className="h-4 w-4" />
-                                  <span>Cores, tecidos e tamanhos são gerenciados globalmente na aba <strong>Materiais</strong>. Todos os produtos compartilham os mesmos materiais.</span>
-                                </div>
-
-
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={cancelarEdicao}
-                                    className="text-gray-500 hover:text-gray-700"
-                                  >
-                                    <X className="h-4 w-4 mr-2" /> Cancelar
-                                  </Button>
-                                  <Button
-                                    onClick={salvarEdicao}
-                                    className="bg-primary hover:bg-primary-dark text-white"
-                                    disabled={isLoading}
-                                  >
-                                    <Save className="h-4 w-4 mr-2" /> {isLoading ? "Salvando..." : "Salvar"}
-                                  </Button>
-                                </div>
-                              </div>
-                            </td>
-                          ) : (
-                            <>
-                              <td className="px-4 py-3 align-middle">
-                                <span className="font-medium text-primary">{produto.codigo}</span>
-                              </td>
-                              <td className="px-4 py-3 align-middle">
-                                <span
-                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                  style={{
-                                    backgroundColor: `${getCorCategoria(produto.categoria)}20`,
-                                    color: getCorCategoria(produto.categoria),
-                                  }}
-                                >
-                                  {produto.categoria || "Outros"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 align-middle">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{produto.nome}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 align-middle">
-                                <span className="font-medium">R$ {produto.valorBase.toFixed(2)}</span>
-                              </td>
-                              <td className="px-4 py-3 align-middle">
-                                <div className="flex justify-center gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => iniciarEdicao(produto)}
-                                    className="h-8 w-8 text-primary hover:text-primary-dark hover:bg-primary/10"
-                                    disabled={isLoading}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleRemoverProduto(produto.id)}
-                                    className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50"
-                                    disabled={isLoading}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))}
-                  </React.Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Formulário de adição de produto */}
-      {mostrarFormulario && (
-        <Card className="overflow-hidden shadow-sm border-0 border-t-4 border-t-primary">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-medium text-primary flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Adicionar Novo Produto
-              </h4>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMostrarFormulario(false)}
-                className="h-8 w-8 text-gray-500"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {/* Adicionar campo de código e categoria no formulário de novo produto */}
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="codigo-produto" className="text-primary flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Código
-                  </Label>
-                  <Input
-                    id="codigo-produto"
-                    value={novoProduto.codigo}
-                    className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    disabled={true} // Código será gerado automaticamente
-                    placeholder="Gerado automaticamente"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="categoria-produto" className="text-primary flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Categoria
-                  </Label>
-                  <select
-                    id="categoria-produto"
-                    value={novoProduto.categoria || ""}
-                    onChange={(e) => setNovoProduto({ ...novoProduto, categoria: e.target.value })}
-                    className="w-full rounded-md border border-gray-300 p-2 focus:border-primary focus:ring-1 focus:ring-primary"
+        }
+        error={error}
+        isLoading={isLoading}
+        footer={
+          <DataPagination
+            currentPage={currentPage}
+            totalItems={produtosFiltradosEOrdenados.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        }
+      >
+        {isLoading && produtos.length === 0 ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            Carregando produtos...
+          </div>
+        ) : produtosFiltradosEOrdenados.length === 0 ? (
+          <EmptyState
+            icon={<Package className="h-8 w-8" />}
+            title={filtro ? "Nenhum produto encontrado" : "Nenhum produto cadastrado"}
+            description={
+              filtro
+                ? `Nenhum resultado para "${filtro}". Tente uma pesquisa diferente.`
+                : "Comece adicionando seu primeiro produto para gerenciar seus orçamentos."
+            }
+            actionLabel={!filtro ? "Adicionar Primeiro Produto" : undefined}
+            onAction={!filtro ? handleNew : undefined}
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <SortableHeader field="codigo" className="w-[100px]">Código</SortableHeader>
+                <SortableHeader field="categoria">Categoria</SortableHeader>
+                <SortableHeader field="nome">Descrição</SortableHeader>
+                <SortableHeader field="valorBase" className="w-[130px]">Valor Base</SortableHeader>
+                <TableHead className="w-[100px] text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(produtosAgrupados).map(([categoria, produtosCategoria]) => (
+                <React.Fragment key={categoria}>
+                  {/* Category header row */}
+                  <TableRow
+                    className="border-t cursor-pointer hover:bg-muted/40"
+                    style={{ backgroundColor: `${getCorCategoria(categoria)}08` }}
+                    onClick={() => alternarCategoria(categoria)}
                   >
-                    <option value="" disabled>
-                      Selecione uma categoria
-                    </option>
-                    {categorias.map((cat) => (
-                      <option key={cat.id} value={cat.nome}>
-                        {cat.nome}
-                      </option>
+                    <TableCell colSpan={5} className="py-2">
+                      <div
+                        className="flex items-center gap-2 font-medium text-sm"
+                        style={{ color: getCorCategoria(categoria) }}
+                      >
+                        {categoriasExpandidas[categoria]
+                          ? <FolderOpen className="h-4 w-4" />
+                          : <FolderClosed className="h-4 w-4" />
+                        }
+                        {categoria}
+                        <span className="text-xs text-muted-foreground font-normal">
+                          ({produtosCategoria.length} {produtosCategoria.length === 1 ? "produto" : "produtos"})
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Products within category */}
+                  {categoriasExpandidas[categoria] &&
+                    produtosCategoria.map((produto) => (
+                      <TableRow key={produto.id} className="group">
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {produto.codigo || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: `${getCorCategoria(produto.categoria || "OUTROS")}15`,
+                              color: getCorCategoria(produto.categoria || "OUTROS"),
+                            }}
+                          >
+                            {produto.categoria || "OUTROS"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-medium">{produto.nome}</TableCell>
+                        <TableCell className="font-medium tabular-nums">
+                          R$ {produto.valorBase.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(produto)}
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              disabled={isLoading}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(produto)}
+                              className="h-8 w-8 text-muted-foreground hover:text-red-600"
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="nome-produto" className="text-primary flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Nome
-                  </Label>
-                  <Input
-                    id="nome-produto"
-                    value={novoProduto.nome}
-                    onChange={(e) => setNovoProduto({ ...novoProduto, nome: e.target.value.toUpperCase() })}
-                    className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="valor-base" className="text-primary flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Valor Base
-                  </Label>
-                  <Input
-                    id="valor-base"
-                    type="number"
-                    value={novoProduto.valorBase || ""}
-                    onChange={(e) =>
-                      setNovoProduto({
-                        ...novoProduto,
-                        valorBase: Number.parseFloat(e.target.value),
-                      })
-                    }
-                    className="border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
-                </div>
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CrudPageLayout>
+
+      {/* Dialog de Criar/Editar Produto */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {dialogMode === "create" ? (
+                <>
+                  <Package className="h-5 w-5 text-primary" />
+                  Novo Produto
+                </>
+              ) : (
+                <>
+                  <Pencil className="h-5 w-5 text-primary" />
+                  Editar Produto
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogMode === "create"
+                ? "Preencha os dados do novo produto. O código será gerado automaticamente."
+                : "Altere os dados do produto conforme necessário."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Código (read only) */}
+            {dialogMode === "edit" && (
+              <div>
+                <Label htmlFor="dlg-codigo" className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                  <FileText className="h-3.5 w-3.5" />
+                  Código
+                </Label>
+                <Input
+                  id="dlg-codigo"
+                  value={formData.codigo || ""}
+                  disabled
+                  className="bg-muted/50"
+                />
               </div>
+            )}
 
-              {/* Materiais globais - Aviso */}
-              <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-md text-sm flex items-center gap-2">
-                <Palette className="h-4 w-4" />
-                <span>Cores, tecidos e tamanhos são gerenciados globalmente na aba <strong>Materiais</strong>. Todos os produtos compartilham os mesmos materiais.</span>
-              </div>
-
-
-              <Button
-                onClick={handleAdicionarProduto}
-                className="w-full bg-primary hover:bg-primary-dark text-white transition-colors"
-                disabled={isLoading || !novoProduto.nome || !novoProduto.valorBase || !novoProduto.categoria}
+            {/* Categoria */}
+            <div>
+              <Label htmlFor="dlg-categoria" className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                Categoria *
+              </Label>
+              <Select
+                value={formData.categoria || ""}
+                onValueChange={(value) => setFormData({ ...formData, categoria: value })}
               >
-                <Plus className="h-4 w-4 mr-2" /> {isLoading ? "Adicionando..." : "Adicionar Produto"}
-              </Button>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.nome}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: cat.cor }}
+                        />
+                        {cat.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Nome */}
+            <div>
+              <Label htmlFor="dlg-nome" className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                <Package className="h-3.5 w-3.5" />
+                Nome do Produto *
+              </Label>
+              <Input
+                id="dlg-nome"
+                value={formData.nome || ""}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
+                placeholder="Ex: CAMISA POLO MASCULINA"
+              />
+            </div>
+
+            {/* Valor Base */}
+            <div>
+              <Label htmlFor="dlg-valor" className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Valor Base (R$) *
+              </Label>
+              <Input
+                id="dlg-valor"
+                type="number"
+                value={formData.valorBase || ""}
+                onChange={(e) => setFormData({ ...formData, valorBase: Number.parseFloat(e.target.value) })}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+
+            {/* Materials info */}
+            <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400">
+              <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>
+                Cores, tecidos e tamanhos são gerenciados globalmente na aba <strong>Materiais</strong>.
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isLoading}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isLoading || !formData.nome || !formData.valorBase || !formData.categoria}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isLoading
+                ? "Salvando..."
+                : dialogMode === "create"
+                  ? "Adicionar Produto"
+                  : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Dialog */}
+      {confirmData && (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={confirmData.title}
+          description={confirmData.description}
+          confirmLabel="Excluir"
+          destructive
+          onConfirm={confirmData.onConfirm}
+          isLoading={isLoading}
+        />
       )}
 
-      {/* Modal de gerenciamento de categorias */}
+      {/* Categories Manager Modal */}
       {mostrarGerenciadorCategorias && (
         <GerenciadorCategorias
           onClose={() => setMostrarGerenciadorCategorias(false)}
@@ -966,6 +763,6 @@ export default function GerenciadorProdutos({ produtos, adicionarProduto, setPro
           onCategoriaDeleted={handleCategoriaDeleted}
         />
       )}
-    </div>
+    </>
   )
 }
