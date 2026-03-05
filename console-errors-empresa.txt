@@ -1,0 +1,8 @@
+Total messages: 27 (Errors: 5, Warnings: 0)
+Returning 5 messages for level "error"
+
+[ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/favicon.ico:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://fpejkwmapomxfyxmxqrd.supabase.co/rest/v1/produtos?select=nome&id=eq.733d4a48-ef28-4a0a-8477-8bcaecce19a1:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://fpejkwmapomxfyxmxqrd.supabase.co/rest/v1/produtos?select=nome&id=eq.733d4a48-ef28-4a0a-8477-8bcaecce19a1:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://fpejkwmapomxfyxmxqrd.supabase.co/rest/v1/produtos?select=nome&id=eq.eb4f6157-8f0b-4503-9c4f-481b24d3a26a:0
+[ERROR] Failed to load resource: the server responded with a status of 406 () @ https://fpejkwmapomxfyxmxqrd.supabase.co/rest/v1/produtos?select=nome&id=eq.eb4f6157-8f0b-4503-9c4f-481b24d3a26a:0

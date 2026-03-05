@@ -60,6 +60,36 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
   }
   const router = useRouter()
   const pathname = usePathname()
+
+  // Derive the active route from pathname (prefer over abaAtiva prop)
+  const getActiveRoute = () => {
+    if (!pathname) return abaAtiva
+
+    // Extract the last segment of the path
+    const segments = pathname.split("/").filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+
+    // Map specific routes to menu item IDs
+    const routeMap: Record<string, string> = {
+      "orcamentos": "orcamentos",
+      "clientes": "clientes",
+      "produtos": "produtos",
+      "categorias": "categorias",
+      "materiais": "materiais",
+      "planejamento": "planejamento",
+      "lixeira": "lixeira",
+      "empresa": "empresa",
+      "usuarios": "usuarios",
+      "gastos-receitas": "gastos-receitas",
+      "dashboard": "dashboard",
+      "orcamento-otimizado": "orcamento-otimizado",
+    }
+
+    return routeMap[lastSegment] || abaAtiva
+  }
+
+  const activeRoute = getActiveRoute()
+
   const [expandido, setExpandido] = useState(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth >= 1024
@@ -86,14 +116,8 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
       setIsMobileMenuOpen(false)
     }
 
-    if (isExternal) {
-      // Para rotas externas (páginas separadas), usa router.push
-      router.push(`/${aba}`)
-    } else {
-      // Para navegação interna (hash), usa a função setAbaAtiva do pai
-      // que sincroniza com o hash da URL automaticamente via useEffect no ClientPage
-      setAbaAtiva(aba)
-    }
+    // Always use router.push for navigation (new routes system)
+    router.push(`/${aba}`)
   }
 
   const menuSections = [
@@ -217,7 +241,6 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
           <Button
             onClick={() => {
               criarNovoOrcamento()
-              router.push("/orcamento-otimizado")
             }}
             className={`w-full ${expandido ? "justify-start" : "justify-center px-0"}`}
             size={expandido ? "default" : "icon"}
@@ -248,7 +271,8 @@ export function AppSidebar({ abaAtiva, setAbaAtiva, criandoNovoOrcamento, criarN
                 <div className="space-y-1">
                   {section.items.map((item: any) => {
                     const IconComponent = item.icon
-                    const isActive = abaAtiva === item.id
+                    // Use pathname-based active state for new routes, fall back to abaAtiva for hash navigation
+                    const isActive = activeRoute === item.id
                     const isDestructive = item.variant === "destructive"
                     const isExternal = item.isExternal === true
 

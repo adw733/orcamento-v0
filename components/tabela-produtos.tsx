@@ -227,12 +227,14 @@ export default function TabelaProdutos() {
             .eq("id", produtoId)
             .single()
 
-          if (produtoError) {
-            console.error(`Erro ao buscar produto ${produtoId}:`, produtoError)
-            continue
+          // Se o produto não for encontrado ou houver erro, usar nome padrão
+          let produtoNome = "Produto não encontrado"
+          if (!produtoError && produtoData?.nome) {
+            produtoNome = produtoData.nome
+          } else if (produtoError && produtoError.code !== 'PGRST116') {
+            // Só logar erro se não for "not found"
+            console.warn(`Produto ${produtoId} não encontrado ou foi deletado`)
           }
-
-          const produtoNome = produtoData?.nome || "Produto não encontrado"
           const cor = item.corSelecionada || "Não especificada"
           
           // Obter a observação comercial do item (priorizar do JSON, senão buscar no banco)

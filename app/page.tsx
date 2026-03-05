@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import ClientPage from "./client-page"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -16,5 +15,6 @@ export default async function Home() {
     redirect("/login")
   }
 
-  return <ClientPage />
+  // Redirect to the new dashboard route
+  redirect("/orcamentos")
 }
